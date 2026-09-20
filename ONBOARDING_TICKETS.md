@@ -1,17 +1,17 @@
 # Onboarding tickets
 
-18 tickets, week one. **No feature work.** The point is that everybody gets the
+18 tickets, week one. **No feature work.** The point is that everyone gets the
 app running, understands what we are building, and tells me enough about
 themselves that I can hand out real work that suits them.
 
 Paste these into Linear. Suggested labels: `onboarding`, plus the phase.
 
-| Phase | Tickets | What it is |
-| --- | --- | --- |
-| **A. Setup** | ONB-01…05 | Tools installed, app running on your machine |
-| **B. Learn** | ONB-06…11 | Product, architecture, stack, both user journeys |
+| Phase           | Tickets   | What it is                                       |
+| --------------- | --------- | ------------------------------------------------ |
+| **A. Setup**    | ONB-01…05 | Tools installed, app running on your machine     |
+| **B. Learn**    | ONB-06…11 | Product, architecture, stack, both user journeys |
 | **C. First PR** | ONB-12…14 | Something tiny merged, so the pipeline is proven |
-| **D. Signal** | ONB-15…18 | Who you are, what you want, what you'd change |
+| **D. Signal**   | ONB-15…18 | Who you are, what you want, what you'd change    |
 
 **Order matters between phases, not inside them.** Finish A before B. Inside a
 phase, do them in any order.
@@ -147,7 +147,7 @@ Back as the **teacher**:
 never see this app with fresh eyes again. That list is the deliverable, more
 than the click-through. Save it for ONB-17.
 
-**Expect to get stuck at a group barrier.** Some steps wait for *all* group
+**Expect to get stuck at a group barrier.** Some steps wait for _all_ group
 members. `student1` and `student2` are both in group 1 — open a third window and
 finish resume review on both to release it. If you are truly stuck, that is what
 the teacher's force-advance is for.
@@ -414,7 +414,7 @@ students and something just went wrong.** What would you want to exist?
 
 # For me (lead), not the team
 
-- Phase A and B are ~15h. Phase C and D ~7h. One week at 10 hrs/wk for most people, two for anyone newer.
+- Phase A and B are ~15h, Phase C and D ~7h. One week at 10 hrs/wk for most people, two for anyone newer.
 - **ONB-14 and ONB-17 are the ones I actually read.** Everything else is scaffolding.
 - Phase D is the whole point. Do not let anyone skip it to start "real work" early.
 - Watch who finishes Phase A unassisted vs who needs help. That is my first real signal on experience level, and it's more honest than the form.

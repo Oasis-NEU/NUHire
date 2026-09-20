@@ -202,9 +202,9 @@ grep -rn "FRONT_URL" api/src           # server-side redirects
 ### 10. Check SELF-WORK.md before you touch a file
 
 [SELF-WORK.md](SELF-WORK.md) is where people declare work that is not on the
-board yet, including which files they expect to touch. Eight contributors and
-their assistants share this repo, and the usual failure is two of them quietly
-editing the same file for days.
+board yet, including which files they expect to touch. We share this repo with
+each other and with our assistants, and the usual failure is two of them
+quietly editing the same file for days.
 
 Before starting, read the **In progress** section. If your change overlaps
 someone's declared files, say so rather than editing around them silently. If

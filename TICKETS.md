@@ -1,6 +1,6 @@
 # NUHire Backlog
 
-**Team:** 8 devs, 10 hrs/wk, one 12-week semester.
+**Team:** ~10 hrs/wk each, one 12-week semester.
 **Goal:** pilot-ready by end of term, run in one CS1210 section (~30 students).
 
 New here? Read [docs/WHAT_IS_NUHIRE.md](docs/WHAT_IS_NUHIRE.md), then
@@ -32,11 +32,11 @@ only the grouping moved.
 `[LEAD]` lead does this; a dev can't bootstrap it
 `[SEC]` security
 
-**Capacity.** 8 × 10 × 12 = 960 nominal hours. The first two weeks go to setup
-and onboarding and nobody gets their full hours every week, so plan on **~550
-shipped**. What is open below is roughly 850 hours, so this is deliberately
-oversubscribed: it is a priority queue, not a to-do list. Do not try to finish
-it. Work top-down within each section.
+**Capacity.** Multiply headcount by ~10 hrs/wk by 12 weeks, then take a bit
+over half: the first two weeks go to setup and onboarding, and nobody gets
+their full hours every week. What is open below is roughly 850 hours, which is
+more than we have on purpose. This is a priority queue, not a to-do list. Do
+not try to finish it. Work top-down within each section.
 
 ---
 
@@ -99,7 +99,7 @@ Also landed, previously untracked:
 # START HERE: week 1
 
 Three lead tickets must land **before** devs pick anything up: `INFRA-1`,
-`INFRA-2`, `INFRA-3`. Without them eight people show up with nothing they can do.
+`INFRA-2`, `INFRA-3`. Without them the team shows up with nothing they can do.
 
 Then these six. All independent, all different files, so six people can start
 at once without colliding. Two are deliberately hard: the team is experienced
@@ -143,7 +143,7 @@ emits or listens for. Add to `docs/walkthroughs/`.
 ## Short term
 
 **INFRA-1 [LEAD] [HARD] 10h — One-command local stack**
-Highest-leverage ticket. If eight people each burn six hours on Docker, that is
+Highest-leverage ticket. If everyone burns six hours on Docker, that is
 48 hours gone before any code. `.local/compose.yaml` works and is now tracked;
 promote it properly.
 
@@ -450,7 +450,7 @@ TA cannot both run the console. The socket handler and `emitToClassModerators`
 already loop over multiple moderators; the schema forbids it.
 
 **API-20 [HARD] 14h — Split `group.controller.ts` (737 lines)** — deps: INFRA-8
-Also where to establish one controller shape so eight people stop inventing eight.
+Also where to establish one controller shape, so we stop inventing a new one per PR.
 
 ---
 
@@ -497,7 +497,7 @@ different color. The cheapest possible start on `UI-10`.
 
 **UI-10 [HARD] EPIC — Design system foundation** (children UI-11 … UI-17)
 There is **no shared component layer at all**. Until primitives exist, every
-visual fix must be applied 15 times and eight people will each invent a different
+visual fix must be applied 15 times and everyone will invent a different
 button. Two incompatible visual languages coexist: student pages use `bg-sand` +
 `font-rubik`; the advisor's main screen uses `bg-gray-50` + `font-sans`. **It
 does not look like the same product.**
@@ -631,7 +631,7 @@ Copy was written by co-ops who are gone and reads that way. The timer shows a ra
 `{n} sec` with no mm:ss and no warning state.
 
 **UI-30 [HARD] 8h — axe-core in CI as a regression gate** — deps: INFRA-2, UI-18
-Without a gate, eight people writing new UI erode the baseline by week 14 and the
+Without a gate, new UI erodes the baseline by week 14 and the
 next lead inherits this exact problem.
 
 **STU-16 [HARD] [SPEC] 18h — Collapse the three progress vocabularies** — deps: INFRA-10, API-3
@@ -793,7 +793,7 @@ and **no restart mechanism exists**.
 `INFRA-1` setup · `INFRA-2` CI · `INFRA-3` seed data · `SEC-14` secrets (external
 clock) · a groomed board
 
-Without `INFRA-1` and a groomed board, eight people show up with nothing they can do.
+Without `INFRA-1` and a groomed board, the team shows up with nothing to do.
 
 ## Weeks 1–4
 
