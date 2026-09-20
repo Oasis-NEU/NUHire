@@ -8,7 +8,11 @@ export default (db: Pool): Router => {
   const offerController = new OfferController(db);
 
   router.post('/', requireAuth, offerController.createOffer);
-  router.get('/group/:group_id/class/:class_id', requireAuth, offerController.getOffersByGroupAndClass);
+  router.get(
+    '/group/:group_id/class/:class_id',
+    requireAuth,
+    offerController.getOffersByGroupAndClass
+  );
   router.get('/class/:class_id', requireAuth, offerController.getOffersByClass);
   router.put('/:offer_id', requireAuth, offerController.updateOffer);
 

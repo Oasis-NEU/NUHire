@@ -20,4 +20,4 @@ export default (db: Pool, io: SocketIOServer): Router => {
   router.get('/check/:email', userController.check);
 
   return router;
-}; 
+};

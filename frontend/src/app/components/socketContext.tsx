@@ -32,11 +32,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  return (
-    <SocketContext.Provider value={socket}>
-      {children}
-    </SocketContext.Provider>
-  );
+  return <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>;
 }
 
 export function useSocket() {

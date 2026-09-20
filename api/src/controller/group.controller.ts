@@ -5,17 +5,20 @@ import { AuthRequest } from '../models/types';
 import { Pool } from 'mysql2';
 
 export class GroupController {
-  constructor(private db: Pool, private io: any) {}
+  constructor(
+    private db: Pool,
+    private io: any
+  ) {}
 
   getGroups = async (req: AuthRequest, res: Response): Promise<void> => {
     const { class: classId } = req.query;
 
     try {
       const promiseDb = this.db.promise();
-      const [groupsResult] = await promiseDb.query(
+      const [groupsResult] = (await promiseDb.query(
         'SELECT DISTINCT group_id FROM `GroupsInfo` WHERE class_id = ? ORDER BY group_id',
         [classId]
-      ) as any[];
+      )) as any[];
 
       if (groupsResult.length === 0) {
         console.log(`No groups found for class ${classId}`);
@@ -42,16 +45,20 @@ export class GroupController {
 
     const queries = students.map((email: string) => {
       return new Promise((resolve, reject) => {
-        this.db.query('UPDATE Users SET `group_id` = ? WHERE email = ?', [group_id, email], (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        });
+        this.db.query(
+          'UPDATE Users SET `group_id` = ? WHERE email = ?',
+          [group_id, email],
+          (err, result) => {
+            if (err) reject(err);
+            resolve(result);
+          }
+        );
       });
     });
 
     Promise.all(queries)
       .then(() => res.json({ message: 'Group updated successfully!' }))
-      .catch(error => res.status(500).json({ error: (error as any).message }));
+      .catch((error) => res.status(500).json({ error: (error as any).message }));
   };
 
   createGroups = (req: AuthRequest, res: Response): void => {
@@ -61,71 +68,79 @@ export class GroupController {
 
     if (!class_id || !num_groups) {
       res.status(400).json({
-        error: 'Missing required fields: class_id, num_groups'
+        error: 'Missing required fields: class_id, num_groups',
       });
       return;
     }
 
-    this.db.query('SELECT COUNT(*) as group_count FROM `GroupsInfo` WHERE class_id = ?', [class_id], (err, result: any[]) => {
-      if (err) {
-        console.error('Error checking existing groups:', err);
-        res.status(500).json({ error: 'Failed to check existing groups' });
-        return;
-      }
+    this.db.query(
+      'SELECT COUNT(*) as group_count FROM `GroupsInfo` WHERE class_id = ?',
+      [class_id],
+      (err, result: any[]) => {
+        if (err) {
+          console.error('Error checking existing groups:', err);
+          res.status(500).json({ error: 'Failed to check existing groups' });
+          return;
+        }
 
-      const existingGroupCount = result[0].group_count;
+        const existingGroupCount = result[0].group_count;
 
-      if (existingGroupCount > 0) {
-        console.log(`Groups already exist for class ${class_id}`);
-        res.status(400).json({
-          error: 'Groups already exist for this class',
-          existing_groups: existingGroupCount
-        });
-        return;
-      }
+        if (existingGroupCount > 0) {
+          console.log(`Groups already exist for class ${class_id}`);
+          res.status(400).json({
+            error: 'Groups already exist for this class',
+            existing_groups: existingGroupCount,
+          });
+          return;
+        }
 
-      const insertPromises = [];
-      for (let i = 1; i <= num_groups; i++) {
-        const insertPromise = new Promise((resolve, reject) => {
-          const query = `
+        const insertPromises = [];
+        for (let i = 1; i <= num_groups; i++) {
+          const insertPromise = new Promise((resolve, reject) => {
+            const query = `
             INSERT INTO GroupsInfo (class_id, group_id, started) 
             VALUES (?, ?, 0)
           `;
 
-          this.db.query(query, [class_id, i], (insertErr, insertResult: any) => {
-            if (insertErr) {
-              reject({ id: i, error: insertErr.message });
-            } else {
-              resolve({
-                id: i,
-                insertId: insertResult.insertId
-              });
-            }
+            this.db.query(query, [class_id, i], (insertErr, insertResult: any) => {
+              if (insertErr) {
+                reject({ id: i, error: insertErr.message });
+              } else {
+                resolve({
+                  id: i,
+                  insertId: insertResult.insertId,
+                });
+              }
+            });
           });
-        });
 
-        insertPromises.push(insertPromise);
-      }
-
-      Promise.allSettled(insertPromises).then(results => {
-        const successful = results.filter(r => r.status === 'fulfilled').map(r => (r as any).value);
-        const failed = results.filter(r => r.status === 'rejected').map(r => (r as any).reason);
-
-        console.log(`✅ Created ${successful.length} groups for class ${class_id}`);
-
-        if (failed.length > 0) {
-          console.error(`❌ Failed to create ${failed.length} groups:`, failed);
+          insertPromises.push(insertPromise);
         }
 
-        res.json({
-          message: 'Groups created successfully',
-          class_id: parseInt(class_id),
-          groups_created: successful.length,
-          groups_failed: failed.length,
-          groups: successful
+        Promise.allSettled(insertPromises).then((results) => {
+          const successful = results
+            .filter((r) => r.status === 'fulfilled')
+            .map((r) => (r as any).value);
+          const failed = results
+            .filter((r) => r.status === 'rejected')
+            .map((r) => (r as any).reason);
+
+          console.log(`✅ Created ${successful.length} groups for class ${class_id}`);
+
+          if (failed.length > 0) {
+            console.error(`❌ Failed to create ${failed.length} groups:`, failed);
+          }
+
+          res.json({
+            message: 'Groups created successfully',
+            class_id: parseInt(class_id),
+            groups_created: successful.length,
+            groups_failed: failed.length,
+            groups: successful,
+          });
         });
-      });
-    });
+      }
+    );
   };
 
   getClassInfo = (req: AuthRequest, res: Response): void => {
@@ -167,7 +182,7 @@ export class GroupController {
 
     if (!email || !class_id || !group_id) {
       res.status(400).json({
-        error: 'Missing required fields: email, class_id, group_id'
+        error: 'Missing required fields: email, class_id, group_id',
       });
       return;
     }
@@ -199,7 +214,7 @@ export class GroupController {
         res.status(400).json({
           error: 'Group is full',
           current_students: current_students,
-          max_students: max_students
+          max_students: max_students,
         });
         return;
       }
@@ -218,7 +233,9 @@ export class GroupController {
           return;
         }
 
-        console.log(`✅ Student ${email} successfully joined group ${group_id} in class ${class_id}`);
+        console.log(
+          `✅ Student ${email} successfully joined group ${group_id} in class ${class_id}`
+        );
         console.log(`📡 Emitting studentJoinedGroup event to class_${class_id}`);
 
         this.io.to(`class_${class_id}`).emit('studentJoinedGroup', { class_id });
@@ -226,7 +243,7 @@ export class GroupController {
         res.json({
           message: 'Successfully joined group',
           group_id: group_id,
-          class_id: class_id
+          class_id: class_id,
         });
       });
     });
@@ -258,7 +275,7 @@ export class GroupController {
 
     if (!email || !new_group_id || !class_id) {
       res.status(400).json({
-        error: 'Missing required fields: email, new_group_id, class_id'
+        error: 'Missing required fields: email, new_group_id, class_id',
       });
       return;
     }
@@ -277,13 +294,15 @@ export class GroupController {
         return;
       }
 
-      console.log(`✅ Student ${email} successfully reassigned to group ${new_group_id} in class ${class_id}`);
+      console.log(
+        `✅ Student ${email} successfully reassigned to group ${new_group_id} in class ${class_id}`
+      );
 
       // Emit socket event to notify the NEW group
       const roomId = `group_${new_group_id}_class_${class_id}`;
       this.io.to(roomId).emit('studentAddedToGroup', {
         groupId: new_group_id,
-        classId: class_id
+        classId: class_id,
       });
       console.log(`📡 Emitted studentAddedToGroup to room: ${roomId}`);
 
@@ -291,7 +310,7 @@ export class GroupController {
         message: 'Student reassigned successfully',
         email,
         new_group_id,
-        class_id
+        class_id,
       });
     });
   };
@@ -303,14 +322,14 @@ export class GroupController {
 
     if (!email || !class_id) {
       res.status(400).json({
-        error: 'Missing required fields: email, class_id'
+        error: 'Missing required fields: email, class_id',
       });
       return;
     }
 
     // First get the student's group_id before removing them
     const getGroupQuery = 'SELECT group_id FROM Users WHERE email = ? AND class = ?';
-    
+
     this.db.query(getGroupQuery, [email, class_id], (err, results: any) => {
       if (err) {
         console.error('Error fetching student group:', err);
@@ -334,23 +353,25 @@ export class GroupController {
           return;
         }
 
-        console.log(`✅ Student ${email} successfully removed from group ${studentGroupId} in class ${class_id}`);
-        
+        console.log(
+          `✅ Student ${email} successfully removed from group ${studentGroupId} in class ${class_id}`
+        );
+
         // Emit socket event to notify the group
         if (studentGroupId && this.io) {
           const roomId = `group_${studentGroupId}_class_${class_id}`;
           this.io.to(roomId).emit('studentRemovedFromGroup', {
             email,
             groupId: studentGroupId,
-            classId: class_id
+            classId: class_id,
           });
           console.log(`📡 Emitted studentRemovedFromGroup to room: ${roomId}`);
         }
-        
+
         res.json({
           message: 'Student removed from group successfully',
           email,
-          class_id
+          class_id,
         });
       });
     });
@@ -361,7 +382,7 @@ export class GroupController {
 
     if (!class_id) {
       res.status(400).json({
-        error: 'Missing required field: class_id'
+        error: 'Missing required field: class_id',
       });
       return;
     }
@@ -382,7 +403,7 @@ export class GroupController {
 
       res.json({
         message: 'All groups started successfully',
-        class_id
+        class_id,
       });
     });
   };
@@ -392,7 +413,7 @@ export class GroupController {
 
     if (!class_id || !group_id) {
       res.status(400).json({
-        error: 'Missing required fields: class_id, group_id'
+        error: 'Missing required fields: class_id, group_id',
       });
       return;
     }
@@ -412,7 +433,7 @@ export class GroupController {
       res.json({
         message: 'Group started successfully',
         class_id,
-        group_id
+        group_id,
       });
     });
   };
@@ -491,7 +512,7 @@ export class GroupController {
 
     if (!class_id || !group_id) {
       res.status(400).json({
-        error: 'Missing required fields: class_id, group_id'
+        error: 'Missing required fields: class_id, group_id',
       });
       return;
     }
@@ -517,7 +538,7 @@ export class GroupController {
       res.json({
         message: 'Group created successfully',
         class_id: parseInt(class_id),
-        group_id: parseInt(group_id)
+        group_id: parseInt(group_id),
       });
     });
   };
@@ -530,7 +551,7 @@ export class GroupController {
     if (!email || !class_id || !group_id) {
       console.log('❌ Missing required fields:', { email, class_id, group_id });
       res.status(400).json({
-        error: 'Missing required fields: email, class_id, group_id'
+        error: 'Missing required fields: email, class_id, group_id',
       });
       return;
     }
@@ -538,7 +559,7 @@ export class GroupController {
     // Check if the student exists in the database
     const checkStudentQuery = 'SELECT * FROM Users WHERE email = ?';
     console.log('🔍 Checking if student exists:', { email });
-    
+
     this.db.query(checkStudentQuery, [email], (checkErr, checkResults: any[]) => {
       if (checkErr) {
         console.error('❌ Error checking student:', checkErr);
@@ -556,7 +577,7 @@ export class GroupController {
           INSERT INTO Users (email, affiliation, class, group_id) 
           VALUES (?, 'student', ?, ?)
         `;
-        
+
         this.db.query(insertQuery, [email, class_id, group_id], (insertErr, insertResult: any) => {
           if (insertErr) {
             console.error('❌ Error creating student:', insertErr);
@@ -565,15 +586,15 @@ export class GroupController {
           }
 
           console.log('✅ New student created successfully:', insertResult);
-          
+
           // Emit socket event to notify the group
           const roomId = `group_${group_id}_class_${class_id}`;
           this.io.to(roomId).emit('studentAddedToGroup', {
             groupId: group_id,
-            classId: class_id
+            classId: class_id,
           });
           console.log(`📡 Emitted studentAddedToGroup to room: ${roomId}`);
-          
+
           res.status(201).json({
             message: 'Student created and added to group successfully',
             email,
@@ -581,7 +602,7 @@ export class GroupController {
             class_id,
             f_name,
             l_name,
-            action: 'created'
+            action: 'created',
           });
         });
         return;
@@ -590,7 +611,7 @@ export class GroupController {
       // Student exists, check if they're already in this specific class
       const existingStudent = checkResults[0];
       console.log('🔍 Student exists, checking class assignment:', existingStudent);
-      
+
       if (existingStudent.class === class_id) {
         console.log(`❌ Student ${email} already exists in class ${class_id}`);
         res.status(409).json({ error: 'Student already exists in this class' });
@@ -600,7 +621,7 @@ export class GroupController {
       // Student exists but not in this class, update their class and group
       const updateQuery = 'UPDATE Users SET class = ?, group_id = ? WHERE email = ?';
       console.log('📝 Updating student class and group:', { email, class_id, group_id });
-      
+
       this.db.query(updateQuery, [class_id, group_id, email], (updateErr, updateResult: any) => {
         if (updateErr) {
           console.error('❌ Error updating student:', updateErr);
@@ -616,22 +637,24 @@ export class GroupController {
           return;
         }
 
-        console.log(`✅ Student ${email} successfully added to group ${group_id} in class ${class_id}`);
-        
+        console.log(
+          `✅ Student ${email} successfully added to group ${group_id} in class ${class_id}`
+        );
+
         // Emit socket event to notify the group
         const roomId = `group_${group_id}_class_${class_id}`;
         this.io.to(roomId).emit('studentAddedToGroup', {
           groupId: group_id,
-          classId: class_id
+          classId: class_id,
         });
         console.log(`📡 Emitted studentAddedToGroup to room: ${roomId}`);
-        
+
         res.json({
           message: 'Student added to group successfully',
           email,
           group_id,
           class_id,
-          action: 'updated'
+          action: 'updated',
         });
       });
     });
@@ -645,17 +668,21 @@ export class GroupController {
       return;
     }
 
-    this.db.query('DELETE FROM Users WHERE email = ? AND class = ?', [email, class_id], (err, result: any) => {
-      if (err) {
-        res.status(500).json({ error: 'Failed to delete student' });
-        return;
+    this.db.query(
+      'DELETE FROM Users WHERE email = ? AND class = ?',
+      [email, class_id],
+      (err, result: any) => {
+        if (err) {
+          res.status(500).json({ error: 'Failed to delete student' });
+          return;
+        }
+        if (result.affectedRows === 0) {
+          res.status(404).json({ error: 'Student not found' });
+          return;
+        }
+        res.json({ message: 'Student deleted successfully', email, class_id });
       }
-      if (result.affectedRows === 0) {
-        res.status(404).json({ error: 'Student not found' });
-        return;
-      }
-      res.json({ message: 'Student deleted successfully', email, class_id });
-    });
+    );
   };
 
   getProgress = (req: AuthRequest, res: Response): void => {
@@ -675,17 +702,25 @@ export class GroupController {
         res.status(500).json({ error: 'Failed to fetch group progress' });
         return;
       }
-      
+
       console.log(`Group progress for class ${classId}, group ${groupId}:`, results);
-      
-      const stepOrder = ['none', 'job_description', 'res_1', 'res_2', 'interview', 'offer', 'employer'];
-      
+
+      const stepOrder = [
+        'none',
+        'job_description',
+        'res_1',
+        'res_2',
+        'interview',
+        'offer',
+        'employer',
+      ];
+
       const steps = results.map((row: any) => row.step);
-      
+
       const validSteps = steps.filter((step: string) => step !== 'none');
-      
+
       let leftmostStep = 'none';
-      
+
       if (validSteps.length > 0) {
         leftmostStep = validSteps.reduce((earliest: string, current: string) => {
           const earliestIndex = stepOrder.indexOf(earliest);
@@ -695,7 +730,7 @@ export class GroupController {
       }
 
       console.log(`Leftmost progress step for class ${classId}, group ${groupId}:`, leftmostStep);
-      
+
       res.json({ progress: leftmostStep });
     });
   };

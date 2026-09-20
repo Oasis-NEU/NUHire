@@ -9,19 +9,23 @@ import fs from 'fs';
 import path from 'path';
 
 export class JobController {
-  constructor(private db: Pool, private io: any, private onlineStudents: Record<string, string>) {}
+  constructor(
+    private db: Pool,
+    private io: any,
+    private onlineStudents: Record<string, string>
+  ) {}
 
   getAllJobs = (req: AuthRequest, res: Response): void => {
     const { class_id } = req.query; // Get class_id from query params
-    
+
     if (!class_id) {
       res.status(400).json({ error: 'class_id is required' });
       return;
     }
-    
+
     this.db.query(
-      'SELECT * FROM job_descriptions WHERE class_id = ?', 
-      [class_id], 
+      'SELECT * FROM job_descriptions WHERE class_id = ?',
+      [class_id],
       (err, results) => {
         if (err) {
           res.status(500).json({ error: err.message });
@@ -65,8 +69,8 @@ export class JobController {
     }
 
     this.db.query(
-      'SELECT * FROM job_descriptions WHERE title = ? AND class_id = ?', 
-      [title, class_id], 
+      'SELECT * FROM job_descriptions WHERE title = ? AND class_id = ?',
+      [title, class_id],
       (err, results: any[]) => {
         if (err) {
           res.status(500).json({ error: err.message });
@@ -84,58 +88,58 @@ export class JobController {
   };
 
   deleteJobFile = (req: AuthRequest, res: Response): void => {
-  const fileName = req.params.fileName;
-  const classId = req.query.class_id;
-  
-  if (!classId) {
-    res.status(400).json({ error: 'class_id is required' });
-    return;
-  }
+    const fileName = req.params.fileName;
+    const classId = req.query.class_id;
 
-  const filePath = path.join(__dirname, '../../uploads/jobdescription', fileName);
-
-  this.db.query(
-    'DELETE FROM job_descriptions WHERE file_path = ? AND class_id = ?', 
-    [`uploads/jobdescription/${fileName}`, classId], 
-    (err, result: any) => {
-      if (err) {
-        console.error('Database deletion error:', err);
-        res.status(500).json({ error: 'Database deletion failed' });
-        return;
-      }
-      
-      if (result.affectedRows === 0) {
-        res.status(404).json({ error: 'Job description not found for this class' });
-        return;
-      }
-
-      this.db.query(
-        'SELECT COUNT(*) as count FROM job_descriptions WHERE file_path = ?',
-        [`uploads/jobdescription/${fileName}`],
-        (err, results: any[]) => {
-          if (err) {
-            console.error('Error checking file usage:', err);
-            res.json({ 
-              message: `Database entry deleted successfully for class ${classId}. Physical file not removed.` 
-            });
-            return;
-          }
-
-          if (results[0].count === 0 && fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-            res.json({ 
-              message: `File "${fileName}" and database entry deleted successfully.` 
-            });
-          } else {
-            res.json({ 
-              message: `Database entry deleted for class ${classId}. File still in use by other classes.` 
-            });
-          }
-        }
-      );
+    if (!classId) {
+      res.status(400).json({ error: 'class_id is required' });
+      return;
     }
-  );
-};
+
+    const filePath = path.join(__dirname, '../../uploads/jobdescription', fileName);
+
+    this.db.query(
+      'DELETE FROM job_descriptions WHERE file_path = ? AND class_id = ?',
+      [`uploads/jobdescription/${fileName}`, classId],
+      (err, result: any) => {
+        if (err) {
+          console.error('Database deletion error:', err);
+          res.status(500).json({ error: 'Database deletion failed' });
+          return;
+        }
+
+        if (result.affectedRows === 0) {
+          res.status(404).json({ error: 'Job description not found for this class' });
+          return;
+        }
+
+        this.db.query(
+          'SELECT COUNT(*) as count FROM job_descriptions WHERE file_path = ?',
+          [`uploads/jobdescription/${fileName}`],
+          (err, results: any[]) => {
+            if (err) {
+              console.error('Error checking file usage:', err);
+              res.json({
+                message: `Database entry deleted successfully for class ${classId}. Physical file not removed.`,
+              });
+              return;
+            }
+
+            if (results[0].count === 0 && fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+              res.json({
+                message: `File "${fileName}" and database entry deleted successfully.`,
+              });
+            } else {
+              res.json({
+                message: `Database entry deleted for class ${classId}. File still in use by other classes.`,
+              });
+            }
+          }
+        );
+      }
+    );
+  };
 
   assignJobToAllGroups = async (req: AuthRequest, res: Response): Promise<void> => {
     const { class_id, job_title } = req.body;
@@ -144,7 +148,7 @@ export class JobController {
 
     if (!class_id || !job_title) {
       res.status(400).json({
-        error: 'Missing required fields: class_id, job_title'
+        error: 'Missing required fields: class_id, job_title',
       });
       return;
     }
@@ -160,10 +164,10 @@ export class JobController {
       const promiseDb = this.db.promise();
 
       // Get all groups for the class
-      const [groupsResult] = await promiseDb.query(
+      const [groupsResult] = (await promiseDb.query(
         'SELECT DISTINCT group_id FROM `GroupsInfo` WHERE class_id = ? ORDER BY group_id',
         [class_id]
-      ) as any[];
+      )) as any[];
 
       if (groupsResult.length === 0) {
         res.status(404).json({ error: 'No groups found for this class' });
@@ -198,16 +202,28 @@ export class JobController {
         );
 
         // Clear all related data for this group
-        await promiseDb.query('DELETE FROM InterviewPage WHERE class = ? AND group_id = ?', [class_id, groupId]);
-        await promiseDb.query('DELETE FROM Resume WHERE class = ? AND group_id = ?', [class_id, groupId]);
-        await promiseDb.query('DELETE FROM Interview_Status WHERE class = ? AND group_id = ?', [class_id, groupId]);
-        await promiseDb.query('DELETE FROM InterviewPopup WHERE class = ? AND group_id = ?', [class_id, groupId]);
+        await promiseDb.query('DELETE FROM InterviewPage WHERE class = ? AND group_id = ?', [
+          class_id,
+          groupId,
+        ]);
+        await promiseDb.query('DELETE FROM Resume WHERE class = ? AND group_id = ?', [
+          class_id,
+          groupId,
+        ]);
+        await promiseDb.query('DELETE FROM Interview_Status WHERE class = ? AND group_id = ?', [
+          class_id,
+          groupId,
+        ]);
+        await promiseDb.query('DELETE FROM InterviewPopup WHERE class = ? AND group_id = ?', [
+          class_id,
+          groupId,
+        ]);
 
         // Get students in this group and clear their data
-        const [students] = await promiseDb.query(
+        const [students] = (await promiseDb.query(
           "SELECT email FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
           [groupId, class_id]
-        ) as any[];
+        )) as any[];
 
         const emails = students.map(({ email }: any) => email);
 
@@ -232,7 +248,9 @@ export class JobController {
 
       await promiseDb.query('COMMIT');
 
-      console.log(`✅ Successfully assigned job "${job_title}" to ${groupIds.length} groups in class ${class_id}`);
+      console.log(
+        `✅ Successfully assigned job "${job_title}" to ${groupIds.length} groups in class ${class_id}`
+      );
 
       res.json({
         message: 'Job assigned to all groups successfully',
@@ -240,9 +258,7 @@ export class JobController {
         job_title,
         groups_updated: groupIds.length,
         group_ids: groupIds,
-        cleared_tables: [
-          'InterviewPage', 'Resume', 'Interview_Status', 'InterviewPopup', 'Notes'
-        ]
+        cleared_tables: ['InterviewPage', 'Resume', 'Interview_Status', 'InterviewPopup', 'Notes'],
       });
     } catch (error: any) {
       try {
@@ -254,7 +270,7 @@ export class JobController {
       console.error('Error assigning job to all groups:', error);
       res.status(500).json({
         error: 'Database error occurred while assigning job to all groups',
-        details: error.message
+        details: error.message,
       });
     }
   };
@@ -305,15 +321,27 @@ export class JobController {
         [class_id, job_group_id]
       );
 
-      await promiseDb.query('DELETE FROM InterviewPage WHERE class = ? AND group_id = ?', [class_id, job_group_id]);
-      await promiseDb.query('DELETE FROM Resume WHERE class = ? AND group_id = ?', [class_id, job_group_id]);
-      await promiseDb.query('DELETE FROM Interview_Status WHERE class = ? AND group_id = ?', [class_id, job_group_id]);
-      await promiseDb.query('DELETE FROM InterviewPopup WHERE class = ? AND group_id = ?', [class_id, job_group_id]);
+      await promiseDb.query('DELETE FROM InterviewPage WHERE class = ? AND group_id = ?', [
+        class_id,
+        job_group_id,
+      ]);
+      await promiseDb.query('DELETE FROM Resume WHERE class = ? AND group_id = ?', [
+        class_id,
+        job_group_id,
+      ]);
+      await promiseDb.query('DELETE FROM Interview_Status WHERE class = ? AND group_id = ?', [
+        class_id,
+        job_group_id,
+      ]);
+      await promiseDb.query('DELETE FROM InterviewPopup WHERE class = ? AND group_id = ?', [
+        class_id,
+        job_group_id,
+      ]);
 
-      const [students] = await promiseDb.query(
+      const [students] = (await promiseDb.query(
         "SELECT email FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
         [job_group_id, class_id]
-      ) as any[];
+      )) as any[];
 
       const emails = students.map(({ email }: any) => email);
 
@@ -331,27 +359,24 @@ export class JobController {
 
       console.log('Emitting jobUpdated event via Socket.IO to online students in the group/class');
       console.log('Online students record:', this.onlineStudents);
-      console.log("this is the emails", emails);
+      console.log('this is the emails', emails);
       const roomID = `group_${job_group_id}_class_${class_id}`;
-        this.io.to(roomID).emit('jobUpdated', {
-          job: jobTitle,
-        }
+      this.io.to(roomID).emit('jobUpdated', {
+        job: jobTitle,
+      });
+
+      console.log(
+        `Job "${jobTitle}" assigned to Group ${job_group_id} in Class ${class_id}. All related data cleared.`
       );
-
-      
-
-      console.log(`Job "${jobTitle}" assigned to Group ${job_group_id} in Class ${class_id}. All related data cleared.`);
 
       res.json({
         message: 'Group job updated and all related data cleared successfully!',
         job_group_id,
         class_id,
         job: jobTitle,
-        cleared_tables: [
-          'InterviewPage', 'Resume', 'Interview_Status', 'InterviewPopup', 'Notes'
-        ],
+        cleared_tables: ['InterviewPage', 'Resume', 'Interview_Status', 'InterviewPopup', 'Notes'],
         students_affected: emails.length,
-        job_assignment_updated: true
+        job_assignment_updated: true,
       });
     } catch (error: any) {
       try {
@@ -363,7 +388,7 @@ export class JobController {
       console.error('Error updating job and clearing data:', error);
       res.status(500).json({
         error: 'Database error occurred while updating job and clearing data',
-        details: error.message
+        details: error.message,
       });
     }
   };

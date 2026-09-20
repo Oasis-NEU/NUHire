@@ -7,7 +7,10 @@ import { AuthRequest } from '../models/types';
 import { Pool } from 'mysql2';
 
 export class ProgressController {
-  constructor(private db: Pool, private io: any) {}
+  constructor(
+    private db: Pool,
+    private io: any
+  ) {}
 
   getProgressByGroup = (req: AuthRequest, res: Response): void => {
     const { crn, group_id } = req.params;
@@ -29,18 +32,14 @@ export class ProgressController {
   getProgressByUser = (req: AuthRequest, res: Response): void => {
     const { email } = req.params;
 
-    this.db.query(
-      'SELECT * FROM Progress WHERE email = ?',
-      [email],
-      (err, results: any[]) => {
-        if (err) {
-          console.error('Error fetching user progress:', err);
-          res.status(500).json({ error: err.message });
-          return;
-        }
-        res.json(results[0] || null);
+    this.db.query('SELECT * FROM Progress WHERE email = ?', [email], (err, results: any[]) => {
+      if (err) {
+        console.error('Error fetching user progress:', err);
+        res.status(500).json({ error: err.message });
+        return;
       }
-    );
+      res.json(results[0] || null);
+    });
   };
 
   updateProgress = (req: AuthRequest, res: Response): void => {
@@ -48,7 +47,7 @@ export class ProgressController {
 
     if (!crn || !group_id || !step || !email) {
       res.status(400).json({
-        error: 'crn, group_id, step, and email are required'
+        error: 'crn, group_id, step, and email are required',
       });
       return;
     }
@@ -69,19 +68,19 @@ export class ProgressController {
           crn,
           group_id,
           step,
-          email
+          email,
         });
         this.io.emit('progressUpdated', {
           crn,
           group_id,
           step,
-          email
+          email,
         });
         console.log('Progress updated and event emitted', { crn, group_id, step, email });
 
         res.json({
           success: true,
-          message: 'Progress updated successfully'
+          message: 'Progress updated successfully',
         });
       }
     );

@@ -1,4 +1,3 @@
-
 // ============================================
 // src/controllers/moderator.controller.ts
 // ============================================
@@ -24,18 +23,28 @@ export class ModeratorController {
       await promiseDb.query('START TRANSACTION');
 
       // Insert the new class
-      await promiseDb.query(
-        'INSERT INTO Moderator (admin_email, crn) VALUES (?, ?)',
-        [admin_email, crn]
-      );
+      await promiseDb.query('INSERT INTO Moderator (admin_email, crn) VALUES (?, ?)', [
+        admin_email,
+        crn,
+      ]);
 
       // Seed job descriptions
       const jobDescriptions = [
         { title: 'Carbonite', file_path: 'uploads/jobdescription/carbonite-jobdes.pdf' },
-        { title: 'Cygilant', file_path: 'uploads/jobdescription/Cygilant Security Research Job Description.pdf' },
-        { title: 'Motionlogic', file_path: 'uploads/jobdescription/QA Coop Motionlogic (Berlin, Germany).pdf' },
+        {
+          title: 'Cygilant',
+          file_path: 'uploads/jobdescription/Cygilant Security Research Job Description.pdf',
+        },
+        {
+          title: 'Motionlogic',
+          file_path: 'uploads/jobdescription/QA Coop Motionlogic (Berlin, Germany).pdf',
+        },
         { title: 'Source One', file_path: 'uploads/jobdescription/SourceOneJobDescription.pdf' },
-        { title: 'Two Six Labs', file_path: 'uploads/jobdescription/Two Six Labs Data Visualization Co-op Job Description.pdf' }
+        {
+          title: 'Two Six Labs',
+          file_path:
+            'uploads/jobdescription/Two Six Labs Data Visualization Co-op Job Description.pdf',
+        },
       ];
 
       for (const job of jobDescriptions) {
@@ -56,26 +65,26 @@ export class ModeratorController {
         { title: 'sample7', file_path: 'uploads/resumes/sample7.pdf' },
         { title: 'sample8', file_path: 'uploads/resumes/sample8.pdf' },
         { title: 'sample9', file_path: 'uploads/resumes/sample9.pdf' },
-        { title: 'sample10', file_path: 'uploads/resumes/sample10.pdf' }
+        { title: 'sample10', file_path: 'uploads/resumes/sample10.pdf' },
       ];
 
       // Insert resumes and get their IDs
       const resumeIds: number[] = [];
       for (const resume of resumePdfs) {
-        const [result] = await promiseDb.query(
+        const [result] = (await promiseDb.query(
           'INSERT IGNORE INTO Resume_pdfs (title, file_path, class_id) VALUES (?, ?, ?)',
           [resume.title, resume.file_path, crn]
-        ) as any;
-        
+        )) as any;
+
         // Get the inserted ID
         if (result.insertId > 0) {
           resumeIds.push(result.insertId);
         } else {
           // If INSERT IGNORE skipped, fetch the existing ID
-          const [existing] = await promiseDb.query(
+          const [existing] = (await promiseDb.query(
             'SELECT id FROM Resume_pdfs WHERE title = ? AND class_id = ?',
             [resume.title, crn]
-          ) as any;
+          )) as any;
           if (existing.length > 0) {
             resumeIds.push(existing[0].id);
           }
@@ -84,39 +93,134 @@ export class ModeratorController {
 
       // Seed candidates (linked to the resume IDs we just created)
       const candidates = [
-        { resume_index: 0, interview: 'https://www.youtube.com/embed/aA7k6WM4_7A?si=ahwZZpSKUow0-dG2', f_name: 'Aisha', l_name: 'Patel' },
-        { resume_index: 1, interview: 'https://www.youtube.com/embed/4d6v7p0N9Sg?si=nax_IkG0gk3zNae-', f_name: 'Casey', l_name: 'Fisch' },
-        { resume_index: 2, interview: 'https://www.youtube.com/embed/typ4aN11feI?si=7jFsNwhB9ZkKyuo9', f_name: 'Ethan', l_name: 'Martinez' },
-        { resume_index: 3, interview: 'https://www.youtube.com/embed/ySKRfElNPCY?si=2B1cl7djMtE1GLJL', f_name: 'Jason', l_name: 'Jones' },
-        { resume_index: 4, interview: 'https://www.youtube.com/embed/_KGOo1WGKZU?si=aTLlkNgS7di69Sga', f_name: 'Lucas', l_name: 'Nyugen' },
-        { resume_index: 5, interview: 'https://www.youtube.com/embed/AhJrqbDTn1Y?si=_XjOXZJBzSvpN_aM', f_name: 'Maya', l_name: 'Collins' },
-        { resume_index: 6, interview: 'https://www.youtube.com/embed/1dIhJmX4uLo?si=aAna0LIIsxRu8E0K', f_name: 'Paula', l_name: 'McCartney' },
-        { resume_index: 7, interview: 'https://www.youtube.com/embed/cnIv3Zf5nJo?si=aa3ObgHLN5BBP-tp', f_name: 'Alex', l_name: 'Johnson' },
-        { resume_index: 8, interview: 'https://www.youtube.com/embed/0aVcquEhOtQ?si=gzDkWve3Izy9uTFx', f_name: 'Jordan', l_name: 'Lee' },
-        { resume_index: 9, interview: 'https://www.youtube.com/embed/HS3ShcKt288?si=uWmWIVKtNJRvqSu_', f_name: 'Zhiyuan', l_name: 'Yang' }
+        {
+          resume_index: 0,
+          interview: 'https://www.youtube.com/embed/aA7k6WM4_7A?si=ahwZZpSKUow0-dG2',
+          f_name: 'Aisha',
+          l_name: 'Patel',
+        },
+        {
+          resume_index: 1,
+          interview: 'https://www.youtube.com/embed/4d6v7p0N9Sg?si=nax_IkG0gk3zNae-',
+          f_name: 'Casey',
+          l_name: 'Fisch',
+        },
+        {
+          resume_index: 2,
+          interview: 'https://www.youtube.com/embed/typ4aN11feI?si=7jFsNwhB9ZkKyuo9',
+          f_name: 'Ethan',
+          l_name: 'Martinez',
+        },
+        {
+          resume_index: 3,
+          interview: 'https://www.youtube.com/embed/ySKRfElNPCY?si=2B1cl7djMtE1GLJL',
+          f_name: 'Jason',
+          l_name: 'Jones',
+        },
+        {
+          resume_index: 4,
+          interview: 'https://www.youtube.com/embed/_KGOo1WGKZU?si=aTLlkNgS7di69Sga',
+          f_name: 'Lucas',
+          l_name: 'Nyugen',
+        },
+        {
+          resume_index: 5,
+          interview: 'https://www.youtube.com/embed/AhJrqbDTn1Y?si=_XjOXZJBzSvpN_aM',
+          f_name: 'Maya',
+          l_name: 'Collins',
+        },
+        {
+          resume_index: 6,
+          interview: 'https://www.youtube.com/embed/1dIhJmX4uLo?si=aAna0LIIsxRu8E0K',
+          f_name: 'Paula',
+          l_name: 'McCartney',
+        },
+        {
+          resume_index: 7,
+          interview: 'https://www.youtube.com/embed/cnIv3Zf5nJo?si=aa3ObgHLN5BBP-tp',
+          f_name: 'Alex',
+          l_name: 'Johnson',
+        },
+        {
+          resume_index: 8,
+          interview: 'https://www.youtube.com/embed/0aVcquEhOtQ?si=gzDkWve3Izy9uTFx',
+          f_name: 'Jordan',
+          l_name: 'Lee',
+        },
+        {
+          resume_index: 9,
+          interview: 'https://www.youtube.com/embed/HS3ShcKt288?si=uWmWIVKtNJRvqSu_',
+          f_name: 'Zhiyuan',
+          l_name: 'Yang',
+        },
       ];
 
       for (const candidate of candidates) {
         if (resumeIds[candidate.resume_index]) {
           await promiseDb.query(
             'INSERT IGNORE INTO Candidates (resume_id, interview, f_name, l_name) VALUES (?, ?, ?, ?)',
-            [resumeIds[candidate.resume_index], candidate.interview, candidate.f_name, candidate.l_name]
+            [
+              resumeIds[candidate.resume_index],
+              candidate.interview,
+              candidate.f_name,
+              candidate.l_name,
+            ]
           );
         }
       }
 
       // Seed interview videos (using the same resume IDs)
       const interviewVids = [
-        { resume_index: 0, title: 'Interview1', video_path: 'https://www.youtube.com/embed/aA7k6WM4_7A?si=ahwZZpSKUow0-dG2' },
-        { resume_index: 1, title: 'Interview2', video_path: 'https://www.youtube.com/embed/4d6v7p0N9Sg?si=nax_IkG0gk3zNae-' },
-        { resume_index: 2, title: 'Interview3', video_path: 'https://www.youtube.com/embed/typ4aN11feI?si=7jFsNwhB9ZkKyuo9' },
-        { resume_index: 3, title: 'Interview4', video_path: 'https://www.youtube.com/embed/ySKRfElNPCY?si=2B1cl7djMtE1GLJL' },
-        { resume_index: 4, title: 'Interview5', video_path: 'https://www.youtube.com/embed/_KGOo1WGKZU?si=aTLlkNgS7di69Sga' },
-        { resume_index: 5, title: 'Interview6', video_path: 'https://www.youtube.com/embed/AhJrqbDTn1Y?si=_XjOXZJBzSvpN_aM' },
-        { resume_index: 6, title: 'Interview7', video_path: 'https://www.youtube.com/embed/1dIhJmX4uLo?si=aAna0LIIsxRu8E0K' },
-        { resume_index: 7, title: 'Interview8', video_path: 'https://www.youtube.com/embed/cnIv3Zf5nJo?si=aa3ObgHLN5BBP-tp' },
-        { resume_index: 8, title: 'Interview9', video_path: 'https://www.youtube.com/embed/0aVcquEhOtQ?si=gzDkWve3Izy9uTFx' },
-        { resume_index: 9, title: 'Interview10', video_path: 'https://www.youtube.com/embed/HS3ShcKt288?si=uWmWIVKtNJRvqSu_' }
+        {
+          resume_index: 0,
+          title: 'Interview1',
+          video_path: 'https://www.youtube.com/embed/aA7k6WM4_7A?si=ahwZZpSKUow0-dG2',
+        },
+        {
+          resume_index: 1,
+          title: 'Interview2',
+          video_path: 'https://www.youtube.com/embed/4d6v7p0N9Sg?si=nax_IkG0gk3zNae-',
+        },
+        {
+          resume_index: 2,
+          title: 'Interview3',
+          video_path: 'https://www.youtube.com/embed/typ4aN11feI?si=7jFsNwhB9ZkKyuo9',
+        },
+        {
+          resume_index: 3,
+          title: 'Interview4',
+          video_path: 'https://www.youtube.com/embed/ySKRfElNPCY?si=2B1cl7djMtE1GLJL',
+        },
+        {
+          resume_index: 4,
+          title: 'Interview5',
+          video_path: 'https://www.youtube.com/embed/_KGOo1WGKZU?si=aTLlkNgS7di69Sga',
+        },
+        {
+          resume_index: 5,
+          title: 'Interview6',
+          video_path: 'https://www.youtube.com/embed/AhJrqbDTn1Y?si=_XjOXZJBzSvpN_aM',
+        },
+        {
+          resume_index: 6,
+          title: 'Interview7',
+          video_path: 'https://www.youtube.com/embed/1dIhJmX4uLo?si=aAna0LIIsxRu8E0K',
+        },
+        {
+          resume_index: 7,
+          title: 'Interview8',
+          video_path: 'https://www.youtube.com/embed/cnIv3Zf5nJo?si=aa3ObgHLN5BBP-tp',
+        },
+        {
+          resume_index: 8,
+          title: 'Interview9',
+          video_path: 'https://www.youtube.com/embed/0aVcquEhOtQ?si=gzDkWve3Izy9uTFx',
+        },
+        {
+          resume_index: 9,
+          title: 'Interview10',
+          video_path: 'https://www.youtube.com/embed/HS3ShcKt288?si=uWmWIVKtNJRvqSu_',
+        },
       ];
 
       for (const vid of interviewVids) {
@@ -131,19 +235,20 @@ export class ModeratorController {
       // Commit transaction
       await promiseDb.query('COMMIT');
 
-      console.log(`✅ Class ${crn} created with seeded data: ${jobDescriptions.length} jobs, ${resumePdfs.length} resumes, ${candidates.length} candidates`);
+      console.log(
+        `✅ Class ${crn} created with seeded data: ${jobDescriptions.length} jobs, ${resumePdfs.length} resumes, ${candidates.length} candidates`
+      );
 
-      res.status(201).json({ 
-        admin_email, 
+      res.status(201).json({
+        admin_email,
         crn,
         seeded: {
           jobs: jobDescriptions.length,
           resumes: resumePdfs.length,
           candidates: candidates.length,
-          interview_videos: interviewVids.length
-        }
+          interview_videos: interviewVids.length,
+        },
       });
-
     } catch (err: any) {
       // Rollback on error
       try {
@@ -156,7 +261,7 @@ export class ModeratorController {
         res.status(409).json({ error: 'CRN already exists' });
         return;
       }
-      
+
       console.error('Error creating class with seed data:', err);
       res.status(500).json({ error: err.message });
     }
@@ -209,24 +314,20 @@ export class ModeratorController {
           res.status(500).json({ error: err.message });
           return;
         }
-        res.json(results.map(row => row.crn));
+        res.json(results.map((row) => row.crn));
       }
     );
   };
 
   getModeratorClassesFull = (req: AuthRequest, res: Response): void => {
     const { email } = req.params;
-    this.db.query(
-      'SELECT * FROM Moderator WHERE admin_email = ?',
-      [email],
-      (err, results) => {
-        if (err) {
-          res.status(500).json({ error: err.message });
-          return;
-        }
-        res.json(results);
+    this.db.query('SELECT * FROM Moderator WHERE admin_email = ?', [email], (err, results) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
       }
-    );
+      res.json(results);
+    });
   };
 
   updateGroups = (req: AuthRequest, res: Response): void => {
@@ -237,46 +338,51 @@ export class ModeratorController {
       return;
     }
 
-    this.db.query('SELECT COUNT(*) as group_count FROM `GroupsInfo` WHERE class_id = ?', [crn], (err, result: any[]) => {
-      if (err) {
-        res.status(500).json({ error: 'Failed to check existing groups' });
-        return;
-      }
-
-      const existingGroupCount = result[0].group_count;
-
-      if (existingGroupCount > 0) {
-        res.status(400).json({
-          error: 'Groups already exist for this class. Cannot update group count after groups have been created.',
-          existing_groups: existingGroupCount,
-          crn: crn
-        });
-        return;
-      }
-
-      this.db.query(
-        'UPDATE Moderator SET nom_groups = ? WHERE crn = ?',
-        [nom_groups, crn],
-        (err, result: any) => {
-          if (err) {
-            res.status(500).json({ error: err.message });
-            return;
-          }
-
-          if (result.affectedRows === 0) {
-            res.status(404).json({ error: 'CRN not found' });
-            return;
-          }
-
-          res.json({
-            success: true,
-            crn,
-            nom_groups,
-            message: `Group count updated to ${nom_groups} for CRN ${crn}`
-          });
+    this.db.query(
+      'SELECT COUNT(*) as group_count FROM `GroupsInfo` WHERE class_id = ?',
+      [crn],
+      (err, result: any[]) => {
+        if (err) {
+          res.status(500).json({ error: 'Failed to check existing groups' });
+          return;
         }
-      );
-    });
+
+        const existingGroupCount = result[0].group_count;
+
+        if (existingGroupCount > 0) {
+          res.status(400).json({
+            error:
+              'Groups already exist for this class. Cannot update group count after groups have been created.',
+            existing_groups: existingGroupCount,
+            crn: crn,
+          });
+          return;
+        }
+
+        this.db.query(
+          'UPDATE Moderator SET nom_groups = ? WHERE crn = ?',
+          [nom_groups, crn],
+          (err, result: any) => {
+            if (err) {
+              res.status(500).json({ error: err.message });
+              return;
+            }
+
+            if (result.affectedRows === 0) {
+              res.status(404).json({ error: 'CRN not found' });
+              return;
+            }
+
+            res.json({
+              success: true,
+              crn,
+              nom_groups,
+              message: `Group count updated to ${nom_groups} for CRN ${crn}`,
+            });
+          }
+        );
+      }
+    );
   };
 
   addStudent = (req: AuthRequest, res: Response): void => {

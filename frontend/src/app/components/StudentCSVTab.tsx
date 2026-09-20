@@ -32,7 +32,7 @@ export function StudentCSVTab() {
   const [csvStudents, setCsvStudents] = useState<CSVStudent[]>([]);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [dragActive, setDragActive] = useState(false);
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false); // Add submit loading state
   const [submitSuccess, setSubmitSuccess] = useState(false); // Add submit success state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -50,9 +50,9 @@ export function StudentCSVTab() {
 
       try {
         const response = await fetch(`${API_BASE_URL}/moderator/classes-full/${user.email}`, {
-          credentials: 'include'
+          credentials: 'include',
         });
-        
+
         if (response.ok) {
           const classData = await response.json();
           setClasses(classData);
@@ -66,13 +66,15 @@ export function StudentCSVTab() {
   }, [user]);
 
   const parseCSV = (csvText: string): string[][] => {
-    const lines = csvText.split('\n').filter(line => line.trim());
-    return lines.map(line => 
-      line.split(',').map(cell => cell.trim().replace(/^["']|["']$/g, ''))
+    const lines = csvText.split('\n').filter((line) => line.trim());
+    return lines.map((line) =>
+      line.split(',').map((cell) => cell.trim().replace(/^["']|["']$/g, ''))
     );
   };
 
-  const validateAndExtractEmails = (data: string[][]): { students: CSVStudent[], errors: ValidationError[] } => {
+  const validateAndExtractEmails = (
+    data: string[][]
+  ): { students: CSVStudent[]; errors: ValidationError[] } => {
     const students: CSVStudent[] = [];
     const errors: ValidationError[] = [];
 
@@ -82,9 +84,9 @@ export function StudentCSVTab() {
     }
 
     // Find email column
-    const headers = data[0].map(h => h.toLowerCase().trim());
+    const headers = data[0].map((h) => h.toLowerCase().trim());
     console.log('CSV Headers:', headers);
-    const emailIndex = headers.findIndex(h => h.includes('email'));
+    const emailIndex = headers.findIndex((h) => h.includes('email'));
 
     if (emailIndex === -1) {
       errors.push({ row: 1, error: 'No email column found in headers' });
@@ -124,7 +126,7 @@ export function StudentCSVTab() {
       const csvText = e.target?.result as string;
       const parsedData = parseCSV(csvText);
       const { students, errors } = validateAndExtractEmails(parsedData);
-      
+
       setCsvStudents(students);
       setValidationErrors(errors);
     };
@@ -135,7 +137,7 @@ export function StudentCSVTab() {
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragActive(e.type === "dragenter" || e.type === "dragover");
+    setDragActive(e.type === 'dragenter' || e.type === 'dragover');
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -149,8 +151,8 @@ export function StudentCSVTab() {
 
   const updateStudentGroup = (email: string, groupId: number) => {
     console.log('Updating:', email, 'to group:', groupId);
-    setCsvStudents(prev => 
-      prev.map(student => {
+    setCsvStudents((prev) =>
+      prev.map((student) => {
         if (student.email === email) {
           console.log('Found match, updating:', student.email);
           return { ...student, group_id: groupId };
@@ -161,90 +163,99 @@ export function StudentCSVTab() {
   };
 
   // New submit function
-const handleSubmit = async () => {
-  if (!selectedClass || csvStudents.length === 0) {
-    ('Please select a class and upload student data first');
-    return;
-  }
+  const handleSubmit = async () => {
+    if (!selectedClass || csvStudents.length === 0) {
+      ('Please select a class and upload student data first');
+      return;
+    }
 
-  const payload = {
-    class_id: selectedClass,
-    assignments: csvStudents.map(student => ({
-      email: student.email,
-      group_id: student.group_id
-    }))
-  };
-
-  const uniqueGroupIds = [...new Set(csvStudents.map(student => student.group_id))];
-  const numGroups = Math.max(...uniqueGroupIds); 
-  
-  setIsSubmitting(true);
-
-  try {
-    const createPayload = {
+    const payload = {
       class_id: selectedClass,
-      num_groups: numGroups
+      assignments: csvStudents.map((student) => ({
+        email: student.email,
+        group_id: student.group_id,
+      })),
     };
 
-    console.log('Creating groups with payload:', createPayload);
-    
-    const createRes = await fetch(`${API_BASE_URL}/groups/create-groups`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(createPayload),
-    });
+    const uniqueGroupIds = [...new Set(csvStudents.map((student) => student.group_id))];
+    const numGroups = Math.max(...uniqueGroupIds);
 
-    if (!createRes.ok) {
-      const createError = await createRes.json();
-      console.error('Failed to create groups:', createError);
-      if (!createError.error?.includes('already exist')) {
-        throw new Error(`Failed to create groups: ${createError.error}`);
+    setIsSubmitting(true);
+
+    try {
+      const createPayload = {
+        class_id: selectedClass,
+        num_groups: numGroups,
+      };
+
+      console.log('Creating groups with payload:', createPayload);
+
+      const createRes = await fetch(`${API_BASE_URL}/groups/create-groups`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(createPayload),
+      });
+
+      if (!createRes.ok) {
+        const createError = await createRes.json();
+        console.error('Failed to create groups:', createError);
+        if (!createError.error?.includes('already exist')) {
+          throw new Error(`Failed to create groups: ${createError.error}`);
+        } else {
+          console.log('Groups already exist, proceeding with assignment');
+        }
       } else {
-        console.log('Groups already exist, proceeding with assignment');
+        const createResult = await createRes.json();
+        console.log(`✅ Created ${createResult.groups_created} groups for class ${selectedClass}`);
       }
-    } else {
-      const createResult = await createRes.json();
-      console.log(`✅ Created ${createResult.groups_created} groups for class ${selectedClass}`);
-    }
 
-    console.log('Assigning students to groups...');
-    const response = await fetch(`${API_BASE_URL}/csv/import`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(payload),
-    });
+      console.log('Assigning students to groups...');
+      const response = await fetch(`${API_BASE_URL}/csv/import`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
 
-    if (response.ok) {
-      const result = await response.json();
-      setSubmitSuccess(true);
-      setPopup({ headline: 'Success', message: '✅ Group assignments submitted successfully!' });
-    } else {
-      const errorData = await response.json();
-      console.error('❌ Response error:', errorData);
-      setPopup({ headline: 'Error', message: `Failed to submit group assignments: ${errorData.error || 'Unknown error'}` });
+      if (response.ok) {
+        const result = await response.json();
+        setSubmitSuccess(true);
+        setPopup({ headline: 'Success', message: '✅ Group assignments submitted successfully!' });
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Response error:', errorData);
+        setPopup({
+          headline: 'Error',
+          message: `Failed to submit group assignments: ${errorData.error || 'Unknown error'}`,
+        });
+      }
+    } catch (error) {
+      console.error('🔥 Fetch error:', error);
+      setPopup({
+        headline: 'Error',
+        message: 'An error occurred while submitting group assignments. Please try again.',
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-  } catch (error) {
-    console.error('🔥 Fetch error:', error);
-    setPopup({ headline: 'Error', message: 'An error occurred while submitting group assignments. Please try again.' });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const downloadCSV = () => {
     if (!selectedClass || csvStudents.length === 0) {
-      setPopup({ headline: 'Error', message: 'Please select a class and upload student data first' });
+      setPopup({
+        headline: 'Error',
+        message: 'Please select a class and upload student data first',
+      });
       return;
     }
 
     const csvContent = csvStudents
-      .map(student => `${student.group_id},${student.email}`)
+      .map((student) => `${student.group_id},${student.email}`)
       .join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -293,11 +304,11 @@ const handleSubmit = async () => {
     );
   }
 
-return (
-  <div className="bg-northeasternWhite font-rubik">
-    <div className="w-full p-4">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full">
-         {/* Class Selection */}
+  return (
+    <div className="bg-northeasternWhite font-rubik">
+      <div className="w-full p-4">
+        <div className="bg-white rounded-lg shadow-lg p-6 w-full">
+          {/* Class Selection */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Select Class to Assign Groups:
@@ -318,8 +329,10 @@ return (
 
           {/* CSV Upload */}
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Upload CSV with Student Emails</h2>
-            
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Upload CSV with Student Emails
+            </h2>
+
             <div
               className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors mb-4 ${
                 dragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
@@ -330,8 +343,18 @@ return (
               onDrop={handleDrop}
             >
               <div className="flex flex-col items-center">
-                <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                <svg
+                  className="mx-auto h-12 w-12 text-gray-400 mb-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
                 </svg>
                 <p className="text-lg font-medium text-gray-900 mb-2">
                   Drop your CSV file here or{' '}
@@ -355,10 +378,14 @@ return (
 
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <h3 className="font-semibold text-blue-900 mb-2">CSV Format:</h3>
-              <p className="text-blue-800 text-sm mb-2">Must include "Email" column with @northeastern.edu addresses</p>
+              <p className="text-blue-800 text-sm mb-2">
+                Must include "Email" column with @northeastern.edu addresses
+              </p>
               <div className="text-blue-800 text-xs font-mono bg-white p-2 rounded">
-                Email,Name<br/>
-                john.doe@northeastern.edu,John Doe<br/>
+                Email,Name
+                <br />
+                john.doe@northeastern.edu,John Doe
+                <br />
                 jane.smith@northeastern.edu,Jane Smith
               </div>
             </div>
@@ -394,7 +421,10 @@ return (
               <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
                 <div className="space-y-2 p-4">
                   {csvStudents.map((student, index) => (
-                    <div key={`${student.email}-${index}`} className="flex items-center justify-between bg-gray-50 p-3 rounded">
+                    <div
+                      key={`${student.email}-${index}`}
+                      className="flex items-center justify-between bg-gray-50 p-3 rounded"
+                    >
                       <span className="text-sm font-medium">{student.email}</span>
                       <div className="flex items-center space-x-2">
                         <label className="text-sm text-gray-600">Group:</label>
@@ -402,7 +432,9 @@ return (
                           type="number"
                           min="1"
                           value={student.group_id}
-                          onChange={(e) => updateStudentGroup(student.email, parseInt(e.target.value) || 1)}
+                          onChange={(e) =>
+                            updateStudentGroup(student.email, parseInt(e.target.value) || 1)
+                          }
                           className="w-20 p-2 border border-gray-300 rounded text-center focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
@@ -434,7 +466,7 @@ return (
                   'Submit Group Assignments'
                 )}
               </button>
-              
+
               <button
                 onClick={downloadCSV}
                 disabled={!selectedClass}
@@ -446,7 +478,7 @@ return (
               >
                 Download CSV
               </button>
-              
+
               <button
                 onClick={clearData}
                 className="px-6 py-3 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600"
@@ -457,12 +489,8 @@ return (
           )}
         </div>
       </div>
-          {popup && (
-        <Popup
-          headline={popup.headline}
-          message={popup.message}
-          onDismiss={() => setPopup(null)}
-        />
+      {popup && (
+        <Popup headline={popup.headline} message={popup.message} onDismiss={() => setPopup(null)} />
       )}
     </div>
   );

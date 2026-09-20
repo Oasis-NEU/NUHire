@@ -3,11 +3,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../models/types';
 
-export const requireAuth = (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-): void => {
+export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction): void => {
   if (!req.isAuthenticated || !req.isAuthenticated()) {
     res.status(401).json({ message: 'Unauthorized: Please log in' });
     return;
@@ -15,11 +11,7 @@ export const requireAuth = (
   next();
 };
 
-export const requireAdmin = (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-): void => {
+export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction): void => {
   if (!req.isAuthenticated || !req.isAuthenticated()) {
     res.status(401).json({ message: 'Unauthorized: Please log in' });
     return;
@@ -33,11 +25,7 @@ export const requireAdmin = (
   next();
 };
 
-export const requireStudent = (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-): void => {
+export const requireStudent = (req: AuthRequest, res: Response, next: NextFunction): void => {
   if (!req.isAuthenticated || !req.isAuthenticated()) {
     res.status(401).json({ message: 'Unauthorized: Please log in' });
     return;

@@ -1,16 +1,16 @@
-"use client";
-export const dynamic = "force-dynamic";
-import React, { useState, useEffect, use } from "react";
-import { useSocket } from "../components/socketContext";
-import Navbar from "../components/navbar";
-import { usePathname, useRouter } from "next/navigation";
-import { useProgress } from "../components/useProgress";
-import Footer from "../components/footer";
-import Popup from "../components/popup";
-import axios from "axios";
-import Instructions from "../components/instructions";
-import { useProgressManager } from "../components/progress";
-import { useAuth } from "../components/AuthContext";
+'use client';
+export const dynamic = 'force-dynamic';
+import React, { useState, useEffect, use } from 'react';
+import { useSocket } from '../components/socketContext';
+import Navbar from '../components/navbar';
+import { usePathname, useRouter } from 'next/navigation';
+import { useProgress } from '../components/useProgress';
+import Footer from '../components/footer';
+import Popup from '../components/popup';
+import axios from 'axios';
+import Instructions from '../components/instructions';
+import { useProgressManager } from '../components/progress';
+import { useAuth } from '../components/AuthContext';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -48,7 +48,7 @@ export default function MakeOffer() {
   useProgress();
   const socket = useSocket();
   const { user, loading } = useAuth();
-  const {updateProgress, fetchProgress} = useProgressManager();
+  const { updateProgress, fetchProgress } = useProgressManager();
   const [checkedState, setCheckedState] = useState<{ [key: number]: boolean }>({});
   const [voteCounts, setVoteCounts] = useState<{ [key: number]: VoteData }>({});
   const [isConnected, setIsConnected] = useState(false);
@@ -67,23 +67,25 @@ export default function MakeOffer() {
   const [sentIn, setSentIn] = useState<(true | false | 'none')[]>(['none', 'none', 'none', 'none']);
   const [videosLoading, setVideosLoading] = useState(true);
   const [allRejected, setAllRejected] = useState(false);
-  
+
   const offerInstructions = [
-    "Review everything about the candidates you know.",
-    "Discuss as a team which person is getting the job offer.",
-    "Make the offer and wait for the candidate's decision."
-  ];  
+    'Review everything about the candidates you know.',
+    'Discuss as a team which person is getting the job offer.',
+    "Make the offer and wait for the candidate's decision.",
+  ];
   const [groupSize, setGroupSize] = useState(4);
   const selectedCandidateId = Object.entries(checkedState)
     .filter(([_, checked]) => checked)
     .map(([id]) => Number(id))[0];
-  const [offerConfirmations, setOfferConfirmations] = useState<{[candidateId: number]: string[]}>({});
-  const confirmations = selectedCandidateId ? (offerConfirmations[selectedCandidateId] || []) : [];
-  const hasConfirmed = user?.id ? confirmations.includes(user.id.toString()) : false;  
+  const [offerConfirmations, setOfferConfirmations] = useState<{ [candidateId: number]: string[] }>(
+    {}
+  );
+  const confirmations = selectedCandidateId ? offerConfirmations[selectedCandidateId] || [] : [];
+  const hasConfirmed = user?.id ? confirmations.includes(user.id.toString()) : false;
   const confirmationCount = confirmations.length;
   const allConfirmed = confirmationCount >= groupSize;
   const [popupVotes, setPopupVotes] = useState<{ [key: number]: InterviewPopup }>({});
-  
+
   const [existingOffer, setExistingOffer] = useState<Offer | null>(null);
   const [ableToMakeOffer, setAbleToMakeOffer] = useState(true);
   const [checkedStateRestored, setCheckedStateRestored] = useState(false);
@@ -93,43 +95,45 @@ export default function MakeOffer() {
     const totalCandidates = interviewsWithVideos.length;
     if (totalCandidates === 0) return;
 
-    const rejectedCount = sentIn.filter(status => status === false).length;
+    const rejectedCount = sentIn.filter((status) => status === false).length;
     const hasAllRejected = rejectedCount === totalCandidates && rejectedCount > 0;
-    
+
     if (hasAllRejected && !allRejected) {
       setAllRejected(true);
       setPopup({
-        headline: "All Candidates Rejected",
-        message: "Unfortunately, all four candidates have been rejected by the advisor. In the real world you would have to restart the hiring process from the beginning."
+        headline: 'All Candidates Rejected',
+        message:
+          'Unfortunately, all four candidates have been rejected by the advisor. In the real world you would have to restart the hiring process from the beginning.',
       });
     }
   }, [sentIn, interviewsWithVideos, allRejected]);
 
   const checkExistingOffer = async () => {
     if (!user?.group_id || !user?.class) return;
-    
+
     try {
       const response = await fetch(
-        `${API_BASE_URL}/offers/group/${user.group_id}/class/${user.class}`, {credentials: "include"}
+        `${API_BASE_URL}/offers/group/${user.group_id}/class/${user.class}`,
+        { credentials: 'include' }
       );
-      
+
       if (response.ok) {
         const offer = await response.json();
-        
+
         if (offer && offer.id) {
           setExistingOffer(offer);
-          
+
           if (offer.status === 'pending') {
             setOfferPending(true);
           } else if (offer.status === 'accepted') {
             setAcceptedOffer(true);
-            setSentIn(prev => {
+            setSentIn((prev) => {
               const newSentIn = [...prev];
               newSentIn[offer.candidate_id] = true;
               return newSentIn;
             });
           } else if (offer.status === 'rejected') {
-            setSentIn(prev => {
+            setSentIn((prev) => {
               const newSentIn = [...prev];
               newSentIn[offer.candidate_id] = false;
               return newSentIn;
@@ -145,7 +149,7 @@ export default function MakeOffer() {
         setOfferPending(false);
       }
     } catch (error) {
-      console.error("Error checking existing offer:", error);
+      console.error('Error checking existing offer:', error);
       setExistingOffer(null);
       setOfferPending(false);
     }
@@ -176,7 +180,7 @@ export default function MakeOffer() {
     const savedSentIn = localStorage.getItem('makeOffer_sentIn');
     const savedPending = localStorage.getItem('makeOffer_offerPending');
     const savedOfferConfirmations = localStorage.getItem('makeOffer_offerConfirmations');
-    
+
     if (savedOfferConfirmations) setOfferConfirmations(JSON.parse(savedOfferConfirmations));
     if (savedOffer) setExistingOffer(JSON.parse(savedOffer));
     if (savedAccepted) setAcceptedOffer(savedAccepted === 'true');
@@ -219,17 +223,19 @@ export default function MakeOffer() {
 
     const fetchPopupVotes = async () => {
       try {
-        const promises = candidates.map(candidate => 
-          fetch(`${API_BASE_URL}/interview/popup/${candidate.resume_id}/${user.group_id}/${user.class}`, {credentials: "include"})
-            .then(res => res.json())
+        const promises = candidates.map((candidate) =>
+          fetch(
+            `${API_BASE_URL}/interview/popup/${candidate.resume_id}/${user.group_id}/${user.class}`,
+            { credentials: 'include' }
+          ).then((res) => res.json())
         );
-        
+
         const results = await Promise.all(promises);
         const votesMap = results.reduce((acc, vote, index) => {
           acc[candidates[index].resume_id] = vote;
           return acc;
         }, {});
-        
+
         setPopupVotes(votesMap);
       } catch (error) {
         console.error('Error fetching popup votes:', error);
@@ -241,20 +247,24 @@ export default function MakeOffer() {
 
   useEffect(() => {
     if (user && user.email) {
-      socket?.emit("studentOnline", { studentId: user.email });
-      socket?.emit("studentPageChanged", {
+      socket?.emit('studentOnline', { studentId: user.email });
+      socket?.emit('studentPageChanged', {
         studentId: user.email,
         currentPage: pathname,
       });
 
       const updateCurrentPage = async () => {
         try {
-          await axios.post(`${API_BASE_URL}/users/update-currentpage`, {
-            page: "makeofferpage",
-            user_email: user.email,
-          }, { withCredentials: true });
+          await axios.post(
+            `${API_BASE_URL}/users/update-currentpage`,
+            {
+              page: 'makeofferpage',
+              user_email: user.email,
+            },
+            { withCredentials: true }
+          );
         } catch (error) {
-          console.error("Error updating current page:", error);
+          console.error('Error updating current page:', error);
         }
       };
 
@@ -268,12 +278,13 @@ export default function MakeOffer() {
     const fetchInterviews = async () => {
       try {
         const response = await fetch(
-          `${API_BASE_URL}/interview/group/${user.group_id}?class=${user.class}`, {credentials: "include"}
+          `${API_BASE_URL}/interview/group/${user.group_id}?class=${user.class}`,
+          { credentials: 'include' }
         );
         const data = await response.json();
         setInterviews(data);
       } catch (err) {
-        console.error("Error fetching interviews:", err);
+        console.error('Error fetching interviews:', err);
       }
     };
 
@@ -284,13 +295,16 @@ export default function MakeOffer() {
   const fetchGroupSize = async () => {
     if (!user?.group_id) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/interview/group-size/${user.group_id}/${user.class}`, { credentials: "include" });
+      const response = await fetch(
+        `${API_BASE_URL}/interview/group-size/${user.group_id}/${user.class}`,
+        { credentials: 'include' }
+      );
       if (response.ok) {
         const data = await response.json();
         setGroupSize(data.count);
       }
     } catch (err) {
-      console.error("Failed to fetch group size:", err);
+      console.error('Failed to fetch group size:', err);
     }
   };
 
@@ -308,9 +322,9 @@ export default function MakeOffer() {
           interviews.map(async (interview) => {
             const id = interview.candidate_id;
             const url = `${API_BASE_URL}/candidates/resume/${id}`;
-          
+
             try {
-              const res = await fetch(url, {credentials: "include"});
+              const res = await fetch(url, { credentials: 'include' });
 
               if (!res.ok) {
                 console.error(`Invalid response for candidate ${id}`);
@@ -322,23 +336,22 @@ export default function MakeOffer() {
                 console.error(`Invalid content-type for candidate ${id}`);
                 return null;
               }
-              
+
               const responseText = await res.text();
-              
+
               if (!responseText.trim()) {
                 console.error(`Empty response for candidate ${id}`);
                 return null;
               }
 
               const data = JSON.parse(responseText);
-              
+
               if (!data) {
                 console.error(`No data found for candidate ${id}`);
                 return null;
               }
-              
+
               return data;
-              
             } catch (parseError) {
               console.error(`Error processing candidate ${id}:`, parseError);
               return null;
@@ -346,11 +359,10 @@ export default function MakeOffer() {
           })
         );
 
-        const validCandidates = fetchedCandidates.filter(candidate => candidate !== null);
+        const validCandidates = fetchedCandidates.filter((candidate) => candidate !== null);
         setCandidates(validCandidates);
-              
       } catch (err) {
-        console.error("Error in fetchCandidates:", err);
+        console.error('Error in fetchCandidates:', err);
         setCandidates([]);
       } finally {
         setVideosLoading(false);
@@ -364,7 +376,7 @@ export default function MakeOffer() {
     if (selectedCandidateId && groupSize > 0) {
       const confirmations = offerConfirmations[selectedCandidateId] || [];
       if (confirmations.length >= groupSize) {
-        console.log("📡 Group size changed - all remaining members confirmed");
+        console.log('📡 Group size changed - all remaining members confirmed');
       }
     }
   }, [groupSize, offerConfirmations, selectedCandidateId]);
@@ -380,7 +392,7 @@ export default function MakeOffer() {
       window.removeEventListener('showInstructions', handleShowInstructions);
     };
   }, []);
-  
+
   useEffect(() => {
     if (!candidates.length) return;
 
@@ -389,7 +401,9 @@ export default function MakeOffer() {
         const fetchedResumes = await Promise.all(
           candidates.map(async (candidate) => {
             const id = candidate.resume_id;
-            const res = await fetch(`${API_BASE_URL}/resume_pdf/id/${id}`, {credentials: "include"});
+            const res = await fetch(`${API_BASE_URL}/resume_pdf/id/${id}`, {
+              credentials: 'include',
+            });
 
             if (!res.ok) {
               throw new Error(`Invalid response for resume ${candidate.resume_id}`);
@@ -403,13 +417,13 @@ export default function MakeOffer() {
 
         setResumes(fetchedResumes);
       } catch (err) {
-        console.error("Error fetching resumes:", err);
+        console.error('Error fetching resumes:', err);
       }
     };
 
     fetchResumes();
   }, [candidates]);
-  
+
   const groupInterviewsByCandidate = (interviews: any[]) => {
     const grouped: { [candidate_id: number]: any[] } = {};
     for (const interview of interviews) {
@@ -449,7 +463,7 @@ export default function MakeOffer() {
     }
 
     setVoteCounts(voteData);
-    
+
     if (!checkedStateRestored) {
       setCheckedState(checkboxData);
     }
@@ -462,26 +476,26 @@ export default function MakeOffer() {
 
     const merged = uniqueCandidateIds.map((id) => {
       const candidate = candidates.find((c) => c.resume_id === id);
-      
+
       if (!candidate) {
         console.warn(`No candidate found with resume_id ${id}`);
         return {
           candidate_id: id,
-          video_path: "https://www.youtube.com/embed/srw4r3htm4U",
-          resume_path: "uploads/resumes/sample1.pdf",
-          f_name: "Unknown",
-          l_name: "Candidate"
+          video_path: 'https://www.youtube.com/embed/srw4r3htm4U',
+          resume_path: 'uploads/resumes/sample1.pdf',
+          f_name: 'Unknown',
+          l_name: 'Candidate',
         };
       }
 
       const resume = resumes.find((r) => r.id === candidate.resume_id);
-      
+
       return {
         candidate_id: id,
-        video_path: candidate?.interview || "https://www.youtube.com/embed/srw4r3htm4U",
-        resume_path: resume?.file_path || "uploads/resumes/sample1.pdf",
-        f_name: candidate?.f_name || "First",
-        l_name: candidate?.l_name || "Last"
+        video_path: candidate?.interview || 'https://www.youtube.com/embed/srw4r3htm4U',
+        resume_path: resume?.file_path || 'uploads/resumes/sample1.pdf',
+        f_name: candidate?.f_name || 'First',
+        l_name: candidate?.l_name || 'Last',
       };
     });
 
@@ -490,31 +504,34 @@ export default function MakeOffer() {
 
   const handleConfirmOfferClick = (candidateId: number) => {
     if (!socket || !user?.id || !candidateId) return;
-    
-    if (existingOffer && (existingOffer.status === 'pending' || existingOffer.status === 'accepted')) {
-      let message = "";
+
+    if (
+      existingOffer &&
+      (existingOffer.status === 'pending' || existingOffer.status === 'accepted')
+    ) {
+      let message = '';
       if (existingOffer.status === 'pending') {
-        message = "You already have a pending offer awaiting advisor approval.";
+        message = 'You already have a pending offer awaiting advisor approval.';
       } else if (existingOffer.status === 'accepted') {
-        message = "You already have an accepted offer. You cannot make another offer.";
+        message = 'You already have an accepted offer. You cannot make another offer.';
       }
       setPopup({
-        headline: "Offer Already Exists",
-        message: message
+        headline: 'Offer Already Exists',
+        message: message,
       });
       return;
     }
-    
+
     // Don't update local state - let the socket handler do it for everyone including yourself
-    socket.emit("confirmOffer", {
+    socket.emit('confirmOffer', {
       groupId: user.group_id,
       classId: user.class,
       candidateId,
       studentId: user.id,
-      roomId: `group_${user.group_id}_class_${user.class}`
+      roomId: `group_${user.group_id}_class_${user.class}`,
     });
   };
-  
+
   useEffect(() => {
     if (!socket || !user) return;
 
@@ -523,12 +540,12 @@ export default function MakeOffer() {
     const roomId = `group_${user.group_id}_class_${user.class}`;
 
     if (socket.connected) {
-      socket.emit("joinGroup", roomId);
+      socket.emit('joinGroup', roomId);
     }
 
     const handleConnect = () => {
       setIsConnected(true);
-      socket.emit("joinGroup", roomId);
+      socket.emit('joinGroup', roomId);
     };
 
     const handleDisconnect = () => {
@@ -537,14 +554,20 @@ export default function MakeOffer() {
 
     const handleGroupMemberOffer = () => {
       setPopup({
-        headline: "Offer submitted",
-        message: "Awaiting approval from your advisor…",
+        headline: 'Offer submitted',
+        message: 'Awaiting approval from your advisor…',
       });
       setOfferPending(true);
     };
 
-    const handleConfirmOfferSocket = ({ candidateId, studentId }: { candidateId: number, studentId: string }) => {
-      setOfferConfirmations(prev => {
+    const handleConfirmOfferSocket = ({
+      candidateId,
+      studentId,
+    }: {
+      candidateId: number;
+      studentId: string;
+    }) => {
+      setOfferConfirmations((prev) => {
         const current = prev[candidateId] || [];
         if (!current.includes(studentId)) {
           return { ...prev, [candidateId]: [...current, studentId] };
@@ -572,32 +595,33 @@ export default function MakeOffer() {
 
       if (accepted) {
         setPopup({
-          headline: "Offer accepted!",
+          headline: 'Offer accepted!',
           message: "Congratulations—you've extended the offer successfully.",
         });
         setSentIn((prev) => {
           const newSentIn = [...prev];
-          newSentIn[candidateId] = true; 
+          newSentIn[candidateId] = true;
           return newSentIn;
         });
 
         setAcceptedOffer(true);
-        setExistingOffer(prev => prev ? {...prev, status: 'accepted'} : null);
+        setExistingOffer((prev) => (prev ? { ...prev, status: 'accepted' } : null));
       } else {
         setPopup({
-          headline: "Offer rejected",
-          message: "That candidate wasn't available or has chosen another offer. Please choose again.",
+          headline: 'Offer rejected',
+          message:
+            "That candidate wasn't available or has chosen another offer. Please choose again.",
         });
 
         setCheckedState({});
         setSentIn((prev) => {
           const newSentIn = [...prev];
-          newSentIn[candidateId] = false; 
+          newSentIn[candidateId] = false;
           return newSentIn;
         });
 
         setOfferPending(false);
-        setExistingOffer(prev => prev ? {...prev, status: 'rejected'} : null);
+        setExistingOffer((prev) => (prev ? { ...prev, status: 'rejected' } : null));
         setAbleToMakeOffer(true);
       }
     };
@@ -614,71 +638,76 @@ export default function MakeOffer() {
 
     const handleStudentRemoved = ({ groupId, classId }: { groupId: number; classId: number }) => {
       if (groupId === user.group_id && classId == user.class) {
-        console.log("📡 [STUDENT-REMOVED] Event received");
-        console.log("📡 [STUDENT-REMOVED] Resetting offer confirmations due to group change");
-        
+        console.log('📡 [STUDENT-REMOVED] Event received');
+        console.log('📡 [STUDENT-REMOVED] Resetting offer confirmations due to group change');
+
         // Reset confirmations for the selected candidate
         if (selectedCandidateId) {
-          setOfferConfirmations(prev => ({
+          setOfferConfirmations((prev) => ({
             ...prev,
-            [selectedCandidateId]: []
+            [selectedCandidateId]: [],
           }));
         }
-        
+
         fetchGroupSize();
       }
     };
 
     const handleStudentAdded = ({ groupId, classId }: { groupId: number; classId: number }) => {
       if (groupId === user.group_id && classId == user.class) {
-        console.log("📡 [STUDENT-ADDED] Event received");
-        console.log("📡 [STUDENT-ADDED] Resetting offer confirmations due to group change");
-        
+        console.log('📡 [STUDENT-ADDED] Event received');
+        console.log('📡 [STUDENT-ADDED] Resetting offer confirmations due to group change');
+
         // Reset confirmations for the selected candidate
         if (selectedCandidateId) {
-          setOfferConfirmations(prev => ({
+          setOfferConfirmations((prev) => ({
             ...prev,
-            [selectedCandidateId]: []
+            [selectedCandidateId]: [],
           }));
         }
-        
+
         fetchGroupSize();
       }
     };
 
-    socket.on("connect", handleConnect);
-    socket.on("studentRemovedFromGroup", handleStudentRemoved);
-    socket.on("disconnect", handleDisconnect);
-    socket.on("studentAddedToGroup", handleStudentAdded);
-    socket.on("groupMemberOffer", handleGroupMemberOffer);
-    socket.on("confirmOffer", handleConfirmOfferSocket);
-    socket.on("makeOfferResponse", handleMakeOfferResponse);
-    socket.on("checkboxUpdated", handleCheckboxUpdated);
+    socket.on('connect', handleConnect);
+    socket.on('studentRemovedFromGroup', handleStudentRemoved);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('studentAddedToGroup', handleStudentAdded);
+    socket.on('groupMemberOffer', handleGroupMemberOffer);
+    socket.on('confirmOffer', handleConfirmOfferSocket);
+    socket.on('makeOfferResponse', handleMakeOfferResponse);
+    socket.on('checkboxUpdated', handleCheckboxUpdated);
 
     return () => {
-      socket.off("studentRemovedFromGroup", handleStudentRemoved);
-      socket.off("connect", handleConnect);
-      socket.off("studentAddedToGroup", handleStudentAdded);
-      socket.off("disconnect", handleDisconnect);
-      socket.off("groupMemberOffer", handleGroupMemberOffer);
-      socket.off("confirmOffer", handleConfirmOfferSocket);
-      socket.off("makeOfferResponse", handleMakeOfferResponse);
-      socket.off("checkboxUpdated", handleCheckboxUpdated);
+      socket.off('studentRemovedFromGroup', handleStudentRemoved);
+      socket.off('connect', handleConnect);
+      socket.off('studentAddedToGroup', handleStudentAdded);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('groupMemberOffer', handleGroupMemberOffer);
+      socket.off('confirmOffer', handleConfirmOfferSocket);
+      socket.off('makeOfferResponse', handleMakeOfferResponse);
+      socket.off('checkboxUpdated', handleCheckboxUpdated);
     };
   }, [socket, user, checkExistingOffer]);
 
   useEffect(() => {
     if (groupSize > 0 && selectedCandidateId) {
       const currentConfirmations = offerConfirmations[selectedCandidateId] || [];
-      console.log("📊 [GROUP-SIZE-CHANGE] Group size changed to:", groupSize);
-      console.log("📊 [GROUP-SIZE-CHANGE] Current confirmations for candidate", selectedCandidateId, ":", currentConfirmations.length);
-      
+      console.log('📊 [GROUP-SIZE-CHANGE] Group size changed to:', groupSize);
+      console.log(
+        '📊 [GROUP-SIZE-CHANGE] Current confirmations for candidate',
+        selectedCandidateId,
+        ':',
+        currentConfirmations.length
+      );
+
       // If everyone confirmed but group size increased, reset confirmations
       if (currentConfirmations.length > 0 && currentConfirmations.length >= groupSize) {
-        console.log("📊 [GROUP-SIZE-CHANGE] Resetting confirmations - group size increased");
-        setOfferConfirmations(prev => ({
+        console.log('📊 [GROUP-SIZE-CHANGE] Resetting confirmations - group size increased');
+        setOfferConfirmations((prev) => ({
           ...prev,
-          [selectedCandidateId]: []
+          [selectedCandidateId]: [],
         }));
       }
     }
@@ -695,7 +724,7 @@ export default function MakeOffer() {
       [interviewNumber]: newCheckedState,
     }));
 
-    socket.emit("checkint", {
+    socket.emit('checkint', {
       group_id: roomId,
       interview_number: interviewNumber,
       checked: newCheckedState,
@@ -703,17 +732,20 @@ export default function MakeOffer() {
   };
 
   const handleMakeOffer = async () => {
-    if (existingOffer && (existingOffer.status === 'pending' || existingOffer.status === 'accepted')) {
-      let message = "";
+    if (
+      existingOffer &&
+      (existingOffer.status === 'pending' || existingOffer.status === 'accepted')
+    ) {
+      let message = '';
       if (existingOffer.status === 'pending') {
-        message = "You already have a pending offer awaiting advisor approval.";
+        message = 'You already have a pending offer awaiting advisor approval.';
       } else if (existingOffer.status === 'accepted') {
-        message = "You already have an accepted offer. You cannot make another offer.";
+        message = 'You already have an accepted offer. You cannot make another offer.';
       }
-      
+
       setPopup({
-        headline: "Offer Already Exists",
-        message: message
+        headline: 'Offer Already Exists',
+        message: message,
       });
       setAbleToMakeOffer(false);
       return;
@@ -722,14 +754,14 @@ export default function MakeOffer() {
     const selectedIds = Object.entries(checkedState)
       .filter(([_, checked]) => checked)
       .map(([id]) => Number(id));
-    
+
     if (selectedIds.length !== 1) return;
-    
+
     const candidateId = selectedIds[0];
     const confirmations = offerConfirmations[candidateId] || [];
     if (confirmations.length < groupSize) {
       setPopup({
-        headline: "Team Confirmation Required",
+        headline: 'Team Confirmation Required',
         message: `All ${groupSize} team members must confirm before making an offer.`,
       });
       return;
@@ -747,15 +779,15 @@ export default function MakeOffer() {
           candidate_id: candidateId,
           status: `pending`,
         }),
-        credentials: "include",
+        credentials: 'include',
       });
 
       const result = await response.json();
 
       if (!response.ok) {
         setPopup({
-          headline: "Error",
-          message: result.error || "Failed to submit offer",
+          headline: 'Error',
+          message: result.error || 'Failed to submit offer',
         });
         return;
       }
@@ -765,49 +797,49 @@ export default function MakeOffer() {
         class_id: user!.class,
         group_id: user!.group_id,
         candidate_id: candidateId,
-        status: 'pending'
+        status: 'pending',
       });
 
-      socket?.emit("makeOfferRequest", {
+      socket?.emit('makeOfferRequest', {
         classId: user!.class,
         groupId: user!.group_id,
         candidateId,
       });
 
       setPopup({
-        headline: "Offer submitted",
-        message: "Awaiting approval from your advisor…",
+        headline: 'Offer submitted',
+        message: 'Awaiting approval from your advisor…',
       });
       setOfferPending(true);
-
     } catch (error) {
-      console.error("Error submitting offer:", error);
+      console.error('Error submitting offer:', error);
       setPopup({
-        headline: "Error",
-        message: "Failed to submit offer. Please try again.",
+        headline: 'Error',
+        message: 'Failed to submit offer. Please try again.',
       });
     }
   };
 
   const completeMakeOffer = () => {
+    const hasAcceptedOffer = Object.values(sentIn).some((status) => status === true);
 
-    const hasAcceptedOffer = Object.values(sentIn).some(status => status === true);
-    
     if (!hasAcceptedOffer && !allRejected) {
       setPopup({
-        headline: "Action Required",
-        message: "You must have an accepted offer to proceed.",
+        headline: 'Action Required',
+        message: 'You must have an accepted offer to proceed.',
       });
       return;
     }
-    
-    updateProgress(user!, "employer");
-    localStorage.setItem("progress", "employer");
-    window.location.href = "/dashboard";
+
+    updateProgress(user!, 'employer');
+    localStorage.setItem('progress', 'employer');
+    window.location.href = '/dashboard';
   };
-  
+
   const selectedCount = Object.values(checkedState).filter(Boolean).length;
-  const isOfferDisabled = existingOffer !== null && (existingOffer.status === 'pending' || existingOffer.status === 'accepted');
+  const isOfferDisabled =
+    existingOffer !== null &&
+    (existingOffer.status === 'pending' || existingOffer.status === 'accepted');
 
   if (loading) {
     return (
@@ -832,7 +864,9 @@ export default function MakeOffer() {
             <div className="flex flex-col items-center justify-center py-12">
               <div className="w-20 h-20 border-t-4 border-redHeader border-solid rounded-full animate-spin mb-6"></div>
               <p className="text-lg font-semibold text-navy mb-2">Loading Candidate Offers...</p>
-              <p className="text-sm text-gray-600">Please wait while we fetch the candidate information</p>
+              <p className="text-sm text-gray-600">
+                Please wait while we fetch the candidate information
+              </p>
             </div>
           </div>
         </div>
@@ -841,12 +875,12 @@ export default function MakeOffer() {
     );
   }
 
-  if (!user || user.affiliation !== "student") return null;
+  if (!user || user.affiliation !== 'student') return null;
 
   return (
     <div className="min-h-screen bg-sand font-rubik">
       {showInstructions && (
-        <Instructions 
+        <Instructions
           instructions={offerInstructions}
           onDismiss={() => setShowInstructions(false)}
           title="Offer Instructions"
@@ -862,22 +896,27 @@ export default function MakeOffer() {
           </h1>
 
           {existingOffer && (
-            <div className={`mb-6 p-4 rounded-lg text-center ${
-              existingOffer.status === 'pending' 
-                ? 'bg-yellow-100 border border-yellow-400 text-yellow-800'
-                : existingOffer.status === 'accepted'
-                ? 'bg-green-100 border border-green-400 text-green-800'
-                : 'bg-red-100 border border-red-400 text-red-800'
-            }`}>
+            <div
+              className={`mb-6 p-4 rounded-lg text-center ${
+                existingOffer.status === 'pending'
+                  ? 'bg-yellow-100 border border-yellow-400 text-yellow-800'
+                  : existingOffer.status === 'accepted'
+                    ? 'bg-green-100 border border-green-400 text-green-800'
+                    : 'bg-red-100 border border-red-400 text-red-800'
+              }`}
+            >
               <h3 className="font-bold mb-2">
                 {existingOffer.status === 'pending' && 'Offer Pending Approval'}
                 {existingOffer.status === 'accepted' && 'Offer Accepted!'}
                 {existingOffer.status === 'rejected' && 'Offer Rejected'}
               </h3>
               <p>
-                {existingOffer.status === 'pending' && `Your offer for Candidate ${existingOffer.candidate_id} is awaiting advisor approval.`}
-                {existingOffer.status === 'accepted' && `Your offer for Candidate ${existingOffer.candidate_id} has been accepted! Congratulations!`}
-                {existingOffer.status === 'rejected' && `Your offer for Candidate ${existingOffer.candidate_id} was rejected. You may select a different candidate.`}
+                {existingOffer.status === 'pending' &&
+                  `Your offer for Candidate ${existingOffer.candidate_id} is awaiting advisor approval.`}
+                {existingOffer.status === 'accepted' &&
+                  `Your offer for Candidate ${existingOffer.candidate_id} has been accepted! Congratulations!`}
+                {existingOffer.status === 'rejected' &&
+                  `Your offer for Candidate ${existingOffer.candidate_id} was rejected. You may select a different candidate.`}
               </p>
             </div>
           )}
@@ -904,33 +943,33 @@ export default function MakeOffer() {
                 Personality: 0,
               };
 
-              const isNoShow = (
+              const isNoShow =
                 (votes.Overall || 0) + (popupVotes[interviewNumber]?.question4 || 0) <= -1000 ||
-                (votes.Profesionality || 0) + (popupVotes[interviewNumber]?.question1 || 0) <= -1000 ||
+                (votes.Profesionality || 0) + (popupVotes[interviewNumber]?.question1 || 0) <=
+                  -1000 ||
                 (votes.Quality || 0) + (popupVotes[interviewNumber]?.question2 || 0) <= -1000 ||
-                (votes.Personality || 0) + (popupVotes[interviewNumber]?.question3 || 0) <= -1000
-              );
+                (votes.Personality || 0) + (popupVotes[interviewNumber]?.question3 || 0) <= -1000;
               const isAccepted = sentIn[interviewNumber] === true;
               const isRejected = sentIn[interviewNumber] === false;
-              
+
               return (
                 <div
                   key={interviewNumber}
                   className={`p-6 rounded-lg shadow-md flex flex-col gap-4 ${
                     isAccepted
-                      ? "bg-green-100 border border-green-500"
+                      ? 'bg-green-100 border border-green-500'
                       : isRejected
-                      ? "bg-red-100 border border-red-300 pointer-events-none"
-                      : isNoShow
-                      ? "bg-gray-100 border border-gray-400 opacity-75"
-                      : "bg-wood"
+                        ? 'bg-red-100 border border-red-300 pointer-events-none'
+                        : isNoShow
+                          ? 'bg-gray-100 border border-gray-400 opacity-75'
+                          : 'bg-wood'
                   }`}
                 >
                   <h3 className="text-xl font-semibold text-navy text-center">
-                    {interview.f_name} {interview.l_name} 
-                    {isAccepted && " ✓ Offered"} 
-                    {isRejected && " ✗ Not Offered"}
-                    {isNoShow && " (No Show)"}
+                    {interview.f_name} {interview.l_name}
+                    {isAccepted && ' ✓ Offered'}
+                    {isRejected && ' ✗ Not Offered'}
+                    {isNoShow && ' (No Show)'}
                   </h3>
 
                   <div className="aspect-video w-full">
@@ -946,32 +985,46 @@ export default function MakeOffer() {
 
                   <div className="mt-2 space-y-1 text-navy text-sm">
                     <p>
-                      <span className="font-medium">Overall:</span> {
-                        groupSize > 0
-                          ? (Math.max(0, ((votes.Overall || 0) + (popupVotes[interviewNumber]?.question4 || 0)) / groupSize).toFixed(1))
-                          : "N/A"
-                      }
+                      <span className="font-medium">Overall:</span>{' '}
+                      {groupSize > 0
+                        ? Math.max(
+                            0,
+                            ((votes.Overall || 0) + (popupVotes[interviewNumber]?.question4 || 0)) /
+                              groupSize
+                          ).toFixed(1)
+                        : 'N/A'}
                     </p>
                     <p>
-                      <span className="font-medium">Professional Presence:</span> {
-                        groupSize > 0
-                          ? (Math.max(0, ((votes.Profesionality || 0) + (popupVotes[interviewNumber]?.question1 || 0)) / groupSize).toFixed(1))
-                          : "N/A"
-                      }
+                      <span className="font-medium">Professional Presence:</span>{' '}
+                      {groupSize > 0
+                        ? Math.max(
+                            0,
+                            ((votes.Profesionality || 0) +
+                              (popupVotes[interviewNumber]?.question1 || 0)) /
+                              groupSize
+                          ).toFixed(1)
+                        : 'N/A'}
                     </p>
                     <p>
-                      <span className="font-medium">Quality of Answer:</span> {
-                        groupSize > 0
-                          ? (Math.max(0, ((votes.Quality || 0) + (popupVotes[interviewNumber]?.question2 || 0)) / groupSize).toFixed(1))
-                          : "N/A"
-                      }
+                      <span className="font-medium">Quality of Answer:</span>{' '}
+                      {groupSize > 0
+                        ? Math.max(
+                            0,
+                            ((votes.Quality || 0) + (popupVotes[interviewNumber]?.question2 || 0)) /
+                              groupSize
+                          ).toFixed(1)
+                        : 'N/A'}
                     </p>
                     <p>
-                      <span className="font-medium">Personality:</span> {
-                        groupSize > 0
-                          ? (Math.max(0, ((votes.Personality || 0) + (popupVotes[interviewNumber]?.question3 || 0)) / groupSize).toFixed(1))
-                          : "N/A"
-                      }
+                      <span className="font-medium">Personality:</span>{' '}
+                      {groupSize > 0
+                        ? Math.max(
+                            0,
+                            ((votes.Personality || 0) +
+                              (popupVotes[interviewNumber]?.question3 || 0)) /
+                              groupSize
+                          ).toFixed(1)
+                        : 'N/A'}
                     </p>
                   </div>
 
@@ -979,13 +1032,15 @@ export default function MakeOffer() {
                     href={`${API_BASE_URL}/${interview.resume_path}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`text-navy hover:underline ${isRejected ? "pointer-events-none opacity-50" : ""}`}
+                    className={`text-navy hover:underline ${isRejected ? 'pointer-events-none opacity-50' : ''}`}
                   >
                     View / Download Resume
                   </a>
 
                   {!isRejected && !isNoShow && (
-                    <label className={`flex items-center mt-2 ${isOfferDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    <label
+                      className={`flex items-center mt-2 ${isOfferDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
                       <input
                         type="checkbox"
                         checked={checkedState[interviewNumber] || false}
@@ -1030,13 +1085,15 @@ export default function MakeOffer() {
                     disabled={hasConfirmed || offerPending || isOfferDisabled}
                     className={`px-6 py-3 rounded-lg shadow-md font-rubik transition duration-300 ${
                       hasConfirmed
-                        ? "bg-green-500 text-white cursor-not-allowed"
+                        ? 'bg-green-500 text-white cursor-not-allowed'
                         : isOfferDisabled
-                        ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                        : "bg-blue-600 text-white hover:bg-blue-700"
+                          ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
                     }`}
                   >
-                    {hasConfirmed ? `✓ Confirmed (${confirmationCount}/${groupSize})` : 'Confirm Selection'}
+                    {hasConfirmed
+                      ? `✓ Confirmed (${confirmationCount}/${groupSize})`
+                      : 'Confirm Selection'}
                   </button>
                 ) : (
                   <button
@@ -1044,18 +1101,23 @@ export default function MakeOffer() {
                     disabled={offerPending || isOfferDisabled}
                     className={`px-6 py-3 rounded-lg shadow-md font-rubik transition duration-300 ${
                       offerPending || isOfferDisabled
-                        ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                        : "bg-redHeader text-white hover:bg-blue-700"
+                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        : 'bg-redHeader text-white hover:bg-blue-700'
                     }`}
                   >
-                    {offerPending ? "Awaiting Advisor…" : isOfferDisabled ? "Offer Already Submitted" : "Make Team Offer"}
+                    {offerPending
+                      ? 'Awaiting Advisor…'
+                      : isOfferDisabled
+                        ? 'Offer Already Submitted'
+                        : 'Make Team Offer'}
                   </button>
                 )}
               </div>
 
               {!allConfirmed && confirmationCount > 0 && !isOfferDisabled && (
                 <p className="text-sm text-orange-600 text-center">
-                  Waiting for {groupSize - confirmationCount} more team member{groupSize - confirmationCount !== 1 ? 's' : ''} to confirm
+                  Waiting for {groupSize - confirmationCount} more team member
+                  {groupSize - confirmationCount !== 1 ? 's' : ''} to confirm
                 </p>
               )}
             </div>
@@ -1065,8 +1127,12 @@ export default function MakeOffer() {
             <div className="flex flex-col items-center my-6 gap-4">
               <div className="text-center">
                 <p className="text-gray-600 font-medium">
-                  {ableToMakeOffer && !acceptedOffer && 'Offer actions disabled - awaiting advisor approval'}
-                  {ableToMakeOffer && acceptedOffer && 'Offer actions disabled - offer already accepted'}
+                  {ableToMakeOffer &&
+                    !acceptedOffer &&
+                    'Offer actions disabled - awaiting advisor approval'}
+                  {ableToMakeOffer &&
+                    acceptedOffer &&
+                    'Offer actions disabled - offer already accepted'}
                 </p>
               </div>
             </div>
@@ -1075,7 +1141,7 @@ export default function MakeOffer() {
 
         <footer className="flex justify-between mt-6 px-4">
           <button
-            onClick={() => (window.location.href = "/jobdes")}
+            onClick={() => (window.location.href = '/jobdes')}
             className="px-4 py-2 bg-redHeader text-white rounded-lg shadow-md cursor-not-allowed opacity-50 transition duration-300 font-rubik"
             disabled={true}
           >
@@ -1084,13 +1150,11 @@ export default function MakeOffer() {
           <button
             onClick={completeMakeOffer}
             className={`px-4 py-2 bg-redHeader text-white rounded-lg shadow-md font-rubik transition duration-300 ${
-              !acceptedOffer && !allRejected
-                ? "cursor-not-allowed opacity-50"
-                : "hover:bg-blue-400"
+              !acceptedOffer && !allRejected ? 'cursor-not-allowed opacity-50' : 'hover:bg-blue-400'
             }`}
             disabled={!acceptedOffer && !allRejected}
           >
-            {allRejected ? "Next: Employer Panel →" : "Next: Employer Panel →"}
+            {allRejected ? 'Next: Employer Panel →' : 'Next: Employer Panel →'}
           </button>
         </footer>
       </div>

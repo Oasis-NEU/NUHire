@@ -1,5 +1,5 @@
 {
-  "name": "pandployer",
+  "name": "nuhire-frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -49,18 +49,18 @@
     "tailwindcss": "^3.4.17",
     "typescript": "5.7.3"
   },
-  "description": "Febuary 5th 2024:\r page.tsx edited -\r   - Added in a function to create buttons which will be used later in order to develop a feature where homepage buttons are hidden until that page is reached in the process.\r   - Embedded ATS youtube video into the page.\r   - Linked the buttons to their respective pages.",
+  "description": "NUHire frontend. Next.js App Router.",
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sagashrimproll/Panployer.git"
+    "url": "git+https://github.com/Khoury-Co-op/NUHire.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/sagashrimproll/Panployer/issues"
+    "url": "https://github.com/Khoury-Co-op/NUHire/issues"
   },
-  "homepage": "https://github.com/sagashrimproll/Panployer#readme"
+  "homepage": "https://github.com/Khoury-Co-op/NUHire#readme"
 }

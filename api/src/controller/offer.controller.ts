@@ -28,7 +28,7 @@ export class OfferController {
         res.json({
           id: result.insertId,
           message: 'Offer submitted successfully',
-          offer_id: result.insertId
+          offer_id: result.insertId,
         });
       }
     );

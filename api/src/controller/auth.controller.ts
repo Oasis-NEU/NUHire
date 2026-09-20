@@ -18,42 +18,48 @@ export class AuthController {
     (req: AuthRequest, res: Response, next: NextFunction) => {
       console.log('🔄 Starting Keycloak callback processing...');
       console.log('🔍 Query params:', req.query);
-      
+
       // If no OAuth code parameter, this is not a legitimate callback
       if (!req.query.code) {
         console.log('⚠️ No OAuth code - this is a duplicate/invalid callback');
         const FRONT_URL = process.env.REACT_APP_FRONT_URL;
-        
+
         // If authenticated, check their role and redirect appropriately
         if (req.isAuthenticated && req.isAuthenticated() && req.user) {
           const user = req.user;
-          
-          this.db.query('SELECT * FROM Users WHERE email = ?', [user.email], (err, results: any[]) => {
-            if (err || results.length === 0) {
-              res.redirect(`${FRONT_URL}/dashboard`);
-              return;
+
+          this.db.query(
+            'SELECT * FROM Users WHERE email = ?',
+            [user.email],
+            (err, results: any[]) => {
+              if (err || results.length === 0) {
+                res.redirect(`${FRONT_URL}/dashboard`);
+                return;
+              }
+
+              const dbUser = results[0];
+              const fullName = encodeURIComponent(
+                `${dbUser.f_name || ''} ${dbUser.l_name || ''}`.trim()
+              );
+
+              if (dbUser.affiliation === 'admin') {
+                res.redirect(`${FRONT_URL}/advisor-dashboard?name=${fullName}`);
+              } else {
+                res.redirect(`${FRONT_URL}/dashboard?name=${fullName}`);
+              }
             }
-            
-            const dbUser = results[0];
-            const fullName = encodeURIComponent(`${dbUser.f_name || ''} ${dbUser.l_name || ''}`.trim());
-            
-            if (dbUser.affiliation === 'admin') {
-              res.redirect(`${FRONT_URL}/advisor-dashboard?name=${fullName}`);
-            } else {
-              res.redirect(`${FRONT_URL}/dashboard?name=${fullName}`);
-            }
-          });
+          );
         } else {
           res.redirect(`${FRONT_URL}/?error=invalid_callback`);
         }
         return;
       }
-      
+
       next();
     },
     passport.authenticate('keycloak', {
       failureRedirect: `${process.env.REACT_APP_FRONT_URL}/?error=auth_failed`,
-      failureFlash: false
+      failureFlash: false,
     }),
     (req: AuthRequest, res: Response) => {
       console.log('✅ Auth succeeded!');
@@ -74,7 +80,7 @@ export class AuthController {
           if (saveErr) {
             console.error('Session save error:', saveErr);
           }
-          
+
           // Explicitly set cookie in response header for Safari
           const cookieSecure = process.env.COOKIE_SECURE !== 'false';
           res.cookie('connect.sid', req.sessionID, {
@@ -82,9 +88,9 @@ export class AuthController {
             httpOnly: true,
             secure: cookieSecure,
             sameSite: cookieSecure ? 'none' : 'lax',
-            path: '/'
+            path: '/',
           });
-          
+
           console.log('🍪 Explicitly setting cookie:', req.sessionID);
           res.redirect(redirectUrl);
         });
@@ -108,11 +114,13 @@ export class AuthController {
 
           const email = user.email;
           const prof = user.keycloakProfile;
-          const parts = prof.name.split(" ");
+          const parts = prof.name.split(' ');
           const firstName = parts[0];
           const lastName = parts[1];
 
-          console.log(`This is the profile info from Keycloak: ${email}, ${firstName}, ${lastName}`);
+          console.log(
+            `This is the profile info from Keycloak: ${email}, ${firstName}, ${lastName}`
+          );
 
           this.db.query('SELECT * FROM Users WHERE email = ?', [email], (err, results: any[]) => {
             if (err) {
@@ -123,7 +131,9 @@ export class AuthController {
 
             if (results.length > 0) {
               const dbUser = results[0];
-              const fullName = encodeURIComponent(`${dbUser.f_name || ''} ${dbUser.l_name || ''}`.trim());
+              const fullName = encodeURIComponent(
+                `${dbUser.f_name || ''} ${dbUser.l_name || ''}`.trim()
+              );
 
               if (dbUser.affiliation === 'admin') {
                 setCookieAndRedirect(`${FRONT_URL}/advisor-dashboard?name=${fullName}`);
@@ -131,38 +141,47 @@ export class AuthController {
               }
 
               if (!dbUser.f_name || !dbUser.l_name || dbUser.affiliation === 'none') {
-                setCookieAndRedirect(`${FRONT_URL}/signupform?email=${encodeURIComponent(email)}&firstName=${firstName}&lastName=${lastName}`);
+                setCookieAndRedirect(
+                  `${FRONT_URL}/signupform?email=${encodeURIComponent(email)}&firstName=${firstName}&lastName=${lastName}`
+                );
                 return;
               }
 
-              const checkGroupStartedQuery = 'SELECT started FROM `GroupsInfo` WHERE class_id = ? AND group_id = ?';
-              
-              this.db.query(checkGroupStartedQuery, [dbUser.class, dbUser.group_id], (startErr, startResults: any[]) => {
-                if (startErr) {
-                  console.error('Error checking group start status:', startErr);
-                  setCookieAndRedirect(`${FRONT_URL}/waitingGroup`);
-                  return;
-                }
+              const checkGroupStartedQuery =
+                'SELECT started FROM `GroupsInfo` WHERE class_id = ? AND group_id = ?';
 
-                console.log('seen group results:', dbUser);
-
-                if (startResults.length > 0 && startResults[0].started === 1) {
-                  if (dbUser.seen === 1) {
-                    setCookieAndRedirect(`${FRONT_URL}/dashboard?name=${fullName}`);
-                  } else {
-                    setCookieAndRedirect(`${FRONT_URL}/about`);
+              this.db.query(
+                checkGroupStartedQuery,
+                [dbUser.class, dbUser.group_id],
+                (startErr, startResults: any[]) => {
+                  if (startErr) {
+                    console.error('Error checking group start status:', startErr);
+                    setCookieAndRedirect(`${FRONT_URL}/waitingGroup`);
+                    return;
                   }
-                } else {
-                  setCookieAndRedirect(`${FRONT_URL}/waitingGroup`);
+
+                  console.log('seen group results:', dbUser);
+
+                  if (startResults.length > 0 && startResults[0].started === 1) {
+                    if (dbUser.seen === 1) {
+                      setCookieAndRedirect(`${FRONT_URL}/dashboard?name=${fullName}`);
+                    } else {
+                      setCookieAndRedirect(`${FRONT_URL}/about`);
+                    }
+                  } else {
+                    setCookieAndRedirect(`${FRONT_URL}/waitingGroup`);
+                  }
                 }
-              });
+              );
             } else {
-              setCookieAndRedirect(`${FRONT_URL}/signupform?email=${encodeURIComponent(email)}&firstName=${firstName}&lastName=${lastName}`);
+              setCookieAndRedirect(
+                `${FRONT_URL}/signupform?email=${encodeURIComponent(email)}&firstName=${firstName}&lastName=${lastName}`
+              );
             }
           });
         });
       });
-    }
+    },
   ];
 
   getAuthenticatedUser = (req: AuthRequest, res: Response): void => {
@@ -200,10 +219,11 @@ export class AuthController {
 
   moderatorLogin = (req: AuthRequest, res: Response): void => {
     const { username, password } = req.body;
-        
-    if (username === process.env.MODERATOR_USERNAME && 
-      password === process.env.MODERATOR_PASSWORD) {
 
+    if (
+      username === process.env.MODERATOR_USERNAME &&
+      password === process.env.MODERATOR_PASSWORD
+    ) {
       req.session.isModerator = true;
       console.log('req.session:', req.session);
 
@@ -214,9 +234,8 @@ export class AuthController {
   };
 
   verifyModerator = (req: AuthRequest, res: Response, next: NextFunction): void => {
-
     if (req.session.isModerator) {
-      res.status(200).json({ 
+      res.status(200).json({
         authenticated: true,
       });
     } else {
@@ -227,7 +246,7 @@ export class AuthController {
 
   handlePostSignupRedirect = (req: AuthRequest, res: Response): void => {
     const FRONT_URL = process.env.REACT_APP_FRONT_URL;
-    
+
     if (!req.isAuthenticated || !req.isAuthenticated()) {
       res.redirect(`${FRONT_URL}/?error=not_authenticated`);
       return;
@@ -251,24 +270,29 @@ export class AuthController {
       }
 
       // Check if group is started for students
-      const checkGroupStartedQuery = 'SELECT started FROM `GroupsInfo` WHERE class_id = ? AND group_id = ?';
-      
-      this.db.query(checkGroupStartedQuery, [dbUser.class, dbUser.group_id], (startErr, startResults: any[]) => {
-        if (startErr || startResults.length === 0) {
-          res.redirect(`${FRONT_URL}/waitingGroup`);
-          return;
-        }
+      const checkGroupStartedQuery =
+        'SELECT started FROM `GroupsInfo` WHERE class_id = ? AND group_id = ?';
 
-        if (startResults[0].started === 1) {
-          if (dbUser.seen === 1) {
-            res.redirect(`${FRONT_URL}/dashboard?name=${fullName}`);
-          } else {
-            res.redirect(`${FRONT_URL}/about`);
+      this.db.query(
+        checkGroupStartedQuery,
+        [dbUser.class, dbUser.group_id],
+        (startErr, startResults: any[]) => {
+          if (startErr || startResults.length === 0) {
+            res.redirect(`${FRONT_URL}/waitingGroup`);
+            return;
           }
-        } else {
-          res.redirect(`${FRONT_URL}/waitingGroup`);
+
+          if (startResults[0].started === 1) {
+            if (dbUser.seen === 1) {
+              res.redirect(`${FRONT_URL}/dashboard?name=${fullName}`);
+            } else {
+              res.redirect(`${FRONT_URL}/about`);
+            }
+          } else {
+            res.redirect(`${FRONT_URL}/waitingGroup`);
+          }
         }
-      });
+      );
     });
   };
 }

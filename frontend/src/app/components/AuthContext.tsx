@@ -28,30 +28,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUser = async () => {
     try {
-      console.log("Attempting to fetch user data from API...");
-      const response = await fetch(`${API_BASE_URL}/auth/user`, { 
-        credentials: "include" 
+      console.log('Attempting to fetch user data from API...');
+      const response = await fetch(`${API_BASE_URL}/auth/user`, {
+        credentials: 'include',
       });
-      
+
       if (response.ok) {
-        console.log("User data fetched successfully.");
+        console.log('User data fetched successfully.');
         const userData = await response.json();
         setUser(userData);
-        console.log("User data:", userData);
+        console.log('User data:', userData);
       } else {
         setUser(null);
       }
     } catch (error) {
-      console.error("Error fetching user:", error);
+      console.error('Error fetching user:', error);
       setUser(null);
     } finally {
-      console.log("loading complete.");
+      console.log('loading complete.');
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log("Fetching user data...");
+    console.log('Fetching user data...');
     fetchUser();
   }, []);
 

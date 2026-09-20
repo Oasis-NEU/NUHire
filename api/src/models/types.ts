@@ -12,14 +12,15 @@ export interface User {
   affiliation: 'student' | 'admin';
   group_id?: number;
   class?: number;
-  current_page?: 'dashboard' | 'resumepage' | 'resumepage2' | 'jobdes' | 'interviewpage' | 'makeofferpage';
+  current_page?:
+    'dashboard' | 'resumepage' | 'resumepage2' | 'jobdes' | 'interviewpage' | 'makeofferpage';
   seen?: number;
   keycloakProfile?: any;
 }
 
 export interface AuthRequest extends Request {
   user?: User;
-  session: Session & { 
+  session: Session & {
     passport?: { user?: number | string };
     isModerator?: boolean;
   };
@@ -140,7 +141,7 @@ export interface SocketEvents {
   studentOnline: { studentId: string };
   joinGroup: string;
   joinClass: { classId: number };
-  
+
   // Checkbox events
   check: {
     group_id: string;
@@ -152,13 +153,13 @@ export interface SocketEvents {
     interview_number: number;
     checked: boolean;
   };
-  
+
   // Page change events
   studentPageChanged: {
     studentId: string;
     currentPage: string;
   };
-  
+
   // Popup events
   sendPopupToGroups: {
     groups: number[];
@@ -167,7 +168,7 @@ export interface SocketEvents {
     class?: number;
     candidateId?: number;
   };
-  
+
   // Rating events
   updateRatingsWithPresetBackend: {
     classId: number;
@@ -176,7 +177,7 @@ export interface SocketEvents {
     vote: string;
     isNoShow: boolean;
   };
-  
+
   // Offer events
   makeOfferRequest: {
     classId: number;
@@ -189,14 +190,14 @@ export interface SocketEvents {
     candidateId: number;
     accepted: boolean;
   };
-  
+
   // Navigation events
   moveGroup: {
     classId: number;
     groupId: number;
     targetPage: string;
   };
-  
+
   // Interview events
   submitInterview: {
     currentVideoIndex: number;
@@ -205,7 +206,7 @@ export interface SocketEvents {
     groupId: number;
     classId: number;
   };
-  
+
   // Selection events
   offerSelected: {
     candidateId: number;
@@ -220,7 +221,7 @@ export interface SocketEvents {
     classId: number;
     roomId: string;
   };
-  
+
   // Completion events
   userCompletedResReview: { groupId: number };
   confirmOffer: {
@@ -242,7 +243,7 @@ export interface SocketEvents {
     studentId: string;
     roomId: string;
   };
-  
+
   // Preset votes
   sentPresetVotes: {
     student_id: number;
@@ -254,7 +255,7 @@ export interface SocketEvents {
     question4: number;
     candidate_id: number;
   };
-  
+
   // Group assignment
   allowGroupAssignment: {
     classId: number;

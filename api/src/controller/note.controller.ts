@@ -1,4 +1,3 @@
-
 import { Response } from 'express';
 import { AuthRequest } from '../models/types';
 import { Pool } from 'mysql2';
@@ -12,13 +11,17 @@ export class NoteController {
       res.status(400).json({ error: 'user_email query parameter is required' });
       return;
     }
-    this.db.query('SELECT * FROM Notes WHERE user_email = ? ORDER BY created_at DESC', [userEmail], (err, results) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
+    this.db.query(
+      'SELECT * FROM Notes WHERE user_email = ? ORDER BY created_at DESC',
+      [userEmail],
+      (err, results) => {
+        if (err) {
+          res.status(500).json({ error: err.message });
+          return;
+        }
+        res.json(results);
       }
-      res.json(results);
-    });
+    );
   };
 
   createNote = (req: AuthRequest, res: Response): void => {

@@ -7,12 +7,33 @@ import { AuthRequest } from '../models/types';
 import { Pool } from 'mysql2';
 
 export class InterviewController {
-  constructor(private db: Pool, private io: any) {}
+  constructor(
+    private db: Pool,
+    private io: any
+  ) {}
 
   submitVote = (req: AuthRequest, res: Response): void => {
-    const { student_id, group_id, studentClass, question1, question2, question3, question4, candidate_id } = req.body;
+    const {
+      student_id,
+      group_id,
+      studentClass,
+      question1,
+      question2,
+      question3,
+      question4,
+      candidate_id,
+    } = req.body;
 
-    if (!student_id || !group_id || !studentClass || !question1 || !question2 || !question3 || !question4 || !candidate_id) {
+    if (
+      !student_id ||
+      !group_id ||
+      !studentClass ||
+      !question1 ||
+      !question2 ||
+      !question3 ||
+      !question4 ||
+      !candidate_id
+    ) {
       res.status(400).json({ error: 'Missing required fields' });
       return;
     }
@@ -28,14 +49,27 @@ export class InterviewController {
           question4 = VALUES(question4)
       `;
 
-    this.db.query(query, [student_id, group_id, studentClass, question1, question2, question3, question4, candidate_id], (err) => {
-      if (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Database error' });
-        return;
+    this.db.query(
+      query,
+      [
+        student_id,
+        group_id,
+        studentClass,
+        question1,
+        question2,
+        question3,
+        question4,
+        candidate_id,
+      ],
+      (err) => {
+        if (err) {
+          console.error(err);
+          res.status(500).json({ error: 'Database error' });
+          return;
+        }
+        res.status(200).json({ message: 'Interview result updated successfully' });
       }
-      res.status(200).json({ message: 'Interview result updated successfully' });
-    });
+    );
   };
 
   getAllInterviews = (req: AuthRequest, res: Response): void => {
@@ -117,7 +151,9 @@ export class InterviewController {
                 const count = finishedResults[0].finishedCount;
                 const total = groupResults[0].count;
 
-                this.io.to(`group_${group_id}_class_${class_id}`).emit('interviewStatusUpdated', { count, total });
+                this.io
+                  .to(`group_${group_id}_class_${class_id}`)
+                  .emit('interviewStatusUpdated', { count, total });
 
                 res.json({ success: true });
               }
@@ -130,16 +166,16 @@ export class InterviewController {
 
   getGroupSize = (req: AuthRequest, res: Response): void => {
     const { group_id, class_id } = req.params;
-    console.log("group id and class id", group_id, class_id)
+    console.log('group id and class id', group_id, class_id);
     this.db.query(
-      "SELECT COUNT(*) AS count FROM Users WHERE group_id = ? AND class = ?",
+      'SELECT COUNT(*) AS count FROM Users WHERE group_id = ? AND class = ?',
       [group_id, class_id],
       (err, results: any[]) => {
         if (err) {
           res.status(500).json({ error: err.message });
           return;
         }
-        console.log("results from group api", results)
+        console.log('results from group api', results);
         res.json({ group_id, count: results[0].count });
       }
     );
@@ -176,7 +212,8 @@ export class InterviewController {
 
     console.log(`Fetching popup votes for candidate ${resId}, group ${groupId}, class ${classId}`);
 
-    const query = 'SELECT * FROM InterviewPopup WHERE candidate_id = ? AND group_id = ? AND class = ?';
+    const query =
+      'SELECT * FROM InterviewPopup WHERE candidate_id = ? AND group_id = ? AND class = ?';
 
     this.db.query(query, [resId, groupId, classId], (err, results: any[]) => {
       if (err) {
@@ -191,7 +228,7 @@ export class InterviewController {
         question1: 0,
         question2: 0,
         question3: 0,
-        question4: 0
+        question4: 0,
       };
 
       console.log('Returning popup votes:', result);
@@ -211,15 +248,15 @@ export class InterviewController {
 
   batchVote = async (req: AuthRequest, res: Response): Promise<void> => {
     const { votes } = req.body;
-    
+
     if (!Array.isArray(votes) || votes.length === 0) {
-      res.status(400).json({ error: "Invalid votes array" });
+      res.status(400).json({ error: 'Invalid votes array' });
       return;
     }
 
     try {
       // Insert all votes in a single transaction
-      const values = votes.map(vote => [
+      const values = votes.map((vote) => [
         vote.student_id,
         vote.group_id,
         vote.studentClass,
@@ -227,7 +264,7 @@ export class InterviewController {
         vote.question2,
         vote.question3,
         vote.question4,
-        vote.candidate_id
+        vote.candidate_id,
       ]);
 
       const query = `
@@ -242,20 +279,20 @@ export class InterviewController {
 
       this.db.query(query, [values], (err, result) => {
         if (err) {
-          console.error("Error saving batch interview votes:", err);
-          console.error("Error details:", err.message);
-          console.error("SQL:", query);
-          console.error("Values:", values);
-          res.status(500).json({ error: "Failed to save votes", details: err.message });
+          console.error('Error saving batch interview votes:', err);
+          console.error('Error details:', err.message);
+          console.error('SQL:', query);
+          console.error('Values:', values);
+          res.status(500).json({ error: 'Failed to save votes', details: err.message });
           return;
         }
-        
+
         console.log(`✅ Saved ${votes.length} interview votes successfully`);
         res.json({ success: true, votesCount: votes.length });
       });
     } catch (error) {
-      console.error("Error in batchVote:", error);
-      res.status(500).json({ error: "Internal server error" });
+      console.error('Error in batchVote:', error);
+      res.status(500).json({ error: 'Internal server error' });
     }
   };
 }

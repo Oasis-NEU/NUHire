@@ -43,10 +43,10 @@ interface JobOption {
 export function ManageGroupsTab() {
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [classes, setClasses] = useState<ClassInfo[]>([]);
-  const {user, loading: userloading} = useAuth();
+  const { user, loading: userloading } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
-  
+
   const [isStartingAll, setIsStartingAll] = useState(false);
   const [startingGroups, setStartingGroups] = useState<Set<number>>(new Set());
   const [reassignModalOpen, setReassignModalOpen] = useState(false);
@@ -68,81 +68,104 @@ export function ManageGroupsTab() {
   const [isAssigningJob, setIsAssigningJob] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: string; data: any } | null>(null);
-  const [scrollStates, setScrollStates] = useState<Record<number, { canScrollDown: boolean; canScrollUp: boolean }>>({});
+  const [scrollStates, setScrollStates] = useState<
+    Record<number, { canScrollDown: boolean; canScrollUp: boolean }>
+  >({});
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
   const [sendPopupModalOpen, setSendPopupModalOpen] = useState(false);
   const [selectedGroupForPopup, setSelectedGroupForPopup] = useState<number | null>(null);
-  const [popupHeadline, setPopupHeadline] = useState("");
-  const [popupMessage, setPopupMessage] = useState("");
-  const [selectedPreset, setSelectedPreset] = useState<string>("");
-  const [availableCandidates, setAvailableCandidates] = useState<{id: number, name: string}[]>([]);
-  const [selectedCandidateForPopup, setSelectedCandidateForPopup] = useState<string>("");
+  const [popupHeadline, setPopupHeadline] = useState('');
+  const [popupMessage, setPopupMessage] = useState('');
+  const [selectedPreset, setSelectedPreset] = useState<string>('');
+  const [availableCandidates, setAvailableCandidates] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [selectedCandidateForPopup, setSelectedCandidateForPopup] = useState<string>('');
   const [isSendingPopup, setIsSendingPopup] = useState(false);
-  const [pendingOffers, setPendingOffers] = useState<{classId: number, groupId: number, candidateId: number, candidateName?: string}[]>([]);
-  const [candidates, setCandidates] = useState<{id: number, name: string}[]>([]);
-  const [acceptedOffers, setAcceptedOffers] = useState<{groupId: number, candidateName: string}[]>([]);
+  const [pendingOffers, setPendingOffers] = useState<
+    { classId: number; groupId: number; candidateId: number; candidateName?: string }[]
+  >([]);
+  const [candidates, setCandidates] = useState<{ id: number; name: string }[]>([]);
+  const [acceptedOffers, setAcceptedOffers] = useState<
+    { groupId: number; candidateName: string }[]
+  >([]);
   const [dismissedOffers, setDismissedOffers] = useState<Set<number>>(new Set());
 
-  const presetPopups = useMemo(() => [
-    {
-      title: "Internal Referral",
-      headline: "Internal Referral",
-      message: "{candidateName} has an internal referral for this position! The averages of scores will be skewed in favor of the candidate!",
-      location: "interview",
-      vote: { overall: 10, professionalPresence: 0, qualityOfAnswer: 0, personality: 0 }
-    },
-    {
-      title: "No Show",
-      headline: "Abandoned Interview",
-      message: "{candidateName} did not show up for the interview. You can change the scores, but everything will be saved as the lowest score.",
-      location: "interview",
-      vote: { overall: -1000, professionalPresence: -1000, qualityOfAnswer: -1000, personality: -1000 }
-    },
-    {
-      title: "Resume Discrepancy",
-      headline: "Inconsistent Information",
-      message: "{candidateName}'s resume did not align with their responses during the interview and they couldn't explain their projects, raising concerns about accuracy.",
-      location: "interview",
-      vote: { overall: -5, professionalPresence: 0, qualityOfAnswer: -10, personality: 0 }
-    },
-    {
-      title: "Late Arrival",
-      headline: "Late Interview Start",
-      message: "{candidateName} arrived late to the interview. This may have impacted the flow and available time for questions.",
-      location: "interview",
-      vote: { overall: -5, professionalPresence: -10, qualityOfAnswer: 0, personality: 0 }
-    },
-  ], []);
+  const presetPopups = useMemo(
+    () => [
+      {
+        title: 'Internal Referral',
+        headline: 'Internal Referral',
+        message:
+          '{candidateName} has an internal referral for this position! The averages of scores will be skewed in favor of the candidate!',
+        location: 'interview',
+        vote: { overall: 10, professionalPresence: 0, qualityOfAnswer: 0, personality: 0 },
+      },
+      {
+        title: 'No Show',
+        headline: 'Abandoned Interview',
+        message:
+          '{candidateName} did not show up for the interview. You can change the scores, but everything will be saved as the lowest score.',
+        location: 'interview',
+        vote: {
+          overall: -1000,
+          professionalPresence: -1000,
+          qualityOfAnswer: -1000,
+          personality: -1000,
+        },
+      },
+      {
+        title: 'Resume Discrepancy',
+        headline: 'Inconsistent Information',
+        message:
+          "{candidateName}'s resume did not align with their responses during the interview and they couldn't explain their projects, raising concerns about accuracy.",
+        location: 'interview',
+        vote: { overall: -5, professionalPresence: 0, qualityOfAnswer: -10, personality: 0 },
+      },
+      {
+        title: 'Late Arrival',
+        headline: 'Late Interview Start',
+        message:
+          '{candidateName} arrived late to the interview. This may have impacted the flow and available time for questions.',
+        location: 'interview',
+        vote: { overall: -5, professionalPresence: -10, qualityOfAnswer: 0, personality: 0 },
+      },
+    ],
+    []
+  );
 
   if (user && user.affiliation !== 'admin') {
-    setPopup({ 
-      headline: 'Access Denied', 
-      message: 'You must be a teacher to access this page.' 
+    setPopup({
+      headline: 'Access Denied',
+      message: 'You must be a teacher to access this page.',
     });
     setTimeout(() => router.push('/'), 2000);
     return;
   }
 
   useEffect(() => {
-    console.log("acceptedoffers updated", acceptedOffers);
+    console.log('acceptedoffers updated', acceptedOffers);
   }, [acceptedOffers]);
 
   const fetchGroupJobAndProgress = useCallback(async (groupId: number, classId: string) => {
     try {
       const jobResponse = await fetch(`${API_BASE_URL}/jobs/assignment/${groupId}/${classId}`, {
-        credentials: 'include'
+        credentials: 'include',
       });
-      
+
       let jobAssignment = 'No job assigned';
       if (jobResponse.ok) {
         const jobData = await jobResponse.json();
         jobAssignment = jobData.job || 'No job assigned';
       }
 
-      const progressResponse = await fetch(`${API_BASE_URL}/groups/getProgress/${classId}/${groupId}`, {
-        credentials: 'include'
-      });
-      
+      const progressResponse = await fetch(
+        `${API_BASE_URL}/groups/getProgress/${classId}/${groupId}`,
+        {
+          credentials: 'include',
+        }
+      );
+
       let progress = 'none';
       if (progressResponse.ok) {
         const progressData = await progressResponse.json();
@@ -160,9 +183,9 @@ export function ManageGroupsTab() {
     const statusPromises = groupIds.map(async (groupId) => {
       try {
         const response = await fetch(`${API_BASE_URL}/groups/started/${classId}/${groupId}`, {
-          credentials: 'include'
+          credentials: 'include',
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           return { groupId, started: data.started };
@@ -182,25 +205,27 @@ export function ManageGroupsTab() {
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>, groupId: number) => {
     const element = e.currentTarget;
-    const canScrollDown = element.scrollHeight > element.clientHeight && 
-                          element.scrollTop < element.scrollHeight - element.clientHeight - 5;
+    const canScrollDown =
+      element.scrollHeight > element.clientHeight &&
+      element.scrollTop < element.scrollHeight - element.clientHeight - 5;
     const canScrollUp = element.scrollTop > 5;
-    
-    setScrollStates(prev => ({
+
+    setScrollStates((prev) => ({
       ...prev,
-      [groupId]: { canScrollDown, canScrollUp }
+      [groupId]: { canScrollDown, canScrollUp },
     }));
   };
 
   const downloadCSV = () => {
     if (!selectedClass || students.length === 0) {
-      setPopup({ headline: 'Error', message: 'Please select a class and upload student data first' });
+      setPopup({
+        headline: 'Error',
+        message: 'Please select a class and upload student data first',
+      });
       return;
     }
 
-    const csvContent = students
-      .map(student => `${student.group_id},${student.email}`)
-      .join('\n');
+    const csvContent = students.map((student) => `${student.group_id},${student.email}`).join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -213,7 +238,7 @@ export function ManageGroupsTab() {
 
   useEffect(() => {
     const initialStates: Record<number, { canScrollDown: boolean; canScrollUp: boolean }> = {};
-    groups.forEach(group => {
+    groups.forEach((group) => {
       if (group.students.length > 3) {
         initialStates[group.group_id] = { canScrollDown: true, canScrollUp: false };
       }
@@ -221,77 +246,82 @@ export function ManageGroupsTab() {
     setScrollStates(initialStates);
   }, [groups]);
 
-  const organizeStudentsIntoGroups = useCallback(async (studentList: Student[], groupIds: number[]) => {
-    setIsLoadingGroups(true);
-    
-    const groupMap = new Map<number | null, Student[]>();
-    
-    groupIds.forEach(groupId => {
-      groupMap.set(groupId, []);
-    });
-    
-    studentList.forEach(student => {
-      const groupKey = student.group_id;
-      if (groupKey !== null && groupIds.includes(groupKey)) {
-        groupMap.get(groupKey)!.push(student);
-      } else if (groupKey === null) {
-        if (!groupMap.has(null)) {
-          groupMap.set(null, []);
+  const organizeStudentsIntoGroups = useCallback(
+    async (studentList: Student[], groupIds: number[]) => {
+      setIsLoadingGroups(true);
+
+      const groupMap = new Map<number | null, Student[]>();
+
+      groupIds.forEach((groupId) => {
+        groupMap.set(groupId, []);
+      });
+
+      studentList.forEach((student) => {
+        const groupKey = student.group_id;
+        if (groupKey !== null && groupIds.includes(groupKey)) {
+          groupMap.get(groupKey)!.push(student);
+        } else if (groupKey === null) {
+          if (!groupMap.has(null)) {
+            groupMap.set(null, []);
+          }
+          groupMap.get(null)!.push(student);
         }
-        groupMap.get(null)!.push(student);
+      });
+
+      const groupsArray: Group[] = [];
+
+      const startStatuses = selectedClass
+        ? await fetchGroupStartStatuses(selectedClass, groupIds)
+        : [];
+      const jobProgressPromises = groupIds.map((groupId) =>
+        fetchGroupJobAndProgress(groupId, selectedClass)
+      );
+      const jobProgressData = await Promise.all(jobProgressPromises);
+
+      groupIds.forEach((groupId, index) => {
+        const students = groupMap.get(groupId) || [];
+        const statusInfo = startStatuses.find((s) => s.groupId === groupId);
+        const { jobAssignment, progress } = jobProgressData[index];
+
+        groupsArray.push({
+          group_id: groupId,
+          students: students.sort((a, b) => {
+            const aName = a.f_name || '';
+            const bName = b.f_name || '';
+            return aName.localeCompare(bName);
+          }),
+          isStarted: statusInfo ? statusInfo.started : false,
+          jobAssignment,
+          progress,
+        });
+      });
+
+      const ungroupedStudents = groupMap.get(null) || [];
+      if (ungroupedStudents.length > 0) {
+        groupsArray.push({
+          group_id: -1,
+          students: ungroupedStudents.sort((a, b) => {
+            const aName = a.f_name || '';
+            const bName = b.f_name || '';
+            return aName.localeCompare(bName);
+          }),
+          isStarted: false,
+          jobAssignment: 'N/A',
+          progress: 'N/A',
+        });
       }
-    });
 
-    const groupsArray: Group[] = [];
-    
-    const startStatuses = selectedClass ? await fetchGroupStartStatuses(selectedClass, groupIds) : [];
-    const jobProgressPromises = groupIds.map(groupId => 
-      fetchGroupJobAndProgress(groupId, selectedClass)
-    );
-    const jobProgressData = await Promise.all(jobProgressPromises);
-    
-    groupIds.forEach((groupId, index) => {
-      const students = groupMap.get(groupId) || [];
-      const statusInfo = startStatuses.find(s => s.groupId === groupId);
-      const { jobAssignment, progress } = jobProgressData[index];
-      
-      groupsArray.push({
-        group_id: groupId,
-        students: students.sort((a, b) => {
-          const aName = a.f_name || '';
-          const bName = b.f_name || '';
-          return aName.localeCompare(bName);
-        }),
-        isStarted: statusInfo ? statusInfo.started : false,
-        jobAssignment,
-        progress
+      groupsArray.sort((a, b) => {
+        if (a.group_id === -1) return 1;
+        if (b.group_id === -1) return -1;
+        return a.group_id - b.group_id;
       });
-    });
-    
-    const ungroupedStudents = groupMap.get(null) || [];
-    if (ungroupedStudents.length > 0) {
-      groupsArray.push({
-        group_id: -1,
-        students: ungroupedStudents.sort((a, b) => {
-          const aName = a.f_name || '';
-          const bName = b.f_name || '';
-          return aName.localeCompare(bName);
-        }),
-        isStarted: false,
-        jobAssignment: 'N/A',
-        progress: 'N/A'
-      });
-    }
-    
-    groupsArray.sort((a, b) => {
-      if (a.group_id === -1) return 1; 
-      if (b.group_id === -1) return -1;
-      return a.group_id - b.group_id;
-    });
 
-    setGroups(groupsArray);
-    setIsLoadingGroups(false);
-  }, [selectedClass, fetchGroupStartStatuses, fetchGroupJobAndProgress]);
+      setGroups(groupsArray);
+      setIsLoadingGroups(false);
+    },
+    [selectedClass, fetchGroupStartStatuses, fetchGroupJobAndProgress]
+  );
 
   const refreshGroupsAndStudents = useCallback(async () => {
     if (!selectedClass) return;
@@ -299,24 +329,24 @@ export function ManageGroupsTab() {
     try {
       const [studentResponse, groupsResponse] = await Promise.all([
         fetch(`${API_BASE_URL}/groups/students-by-class/${selectedClass}`, {
-          credentials: 'include'
+          credentials: 'include',
         }),
         fetch(`${API_BASE_URL}/groups?class=${selectedClass}`, {
-          credentials: 'include'
-        })
+          credentials: 'include',
+        }),
       ]);
 
       if (studentResponse.ok && groupsResponse.ok) {
         const studentData = await studentResponse.json();
         const groupData = await groupsResponse.json();
-        
-        const groupNumbers = Array.isArray(groupData) 
+
+        const groupNumbers = Array.isArray(groupData)
           ? groupData.map(Number).sort((a, b) => a - b)
           : [];
 
         setStudents(studentData);
         setAvailableGroups(groupNumbers);
-        
+
         if (groupNumbers.length > 0) {
           await organizeStudentsIntoGroups(studentData, groupNumbers);
         }
@@ -324,7 +354,7 @@ export function ManageGroupsTab() {
     } catch (error) {
       console.error('Error refreshing groups and students:', error);
     }
-  }, [selectedClass]); 
+  }, [selectedClass]);
 
   useEffect(() => {
     if (!socket) return;
@@ -343,36 +373,42 @@ export function ManageGroupsTab() {
 
   useEffect(() => {
     if (!socket || !selectedClass) return;
-    
-    const handleProgressUpdated = async (data: { crn: string; group_id: number; step: string; email: string }) => {
+
+    const handleProgressUpdated = async (data: {
+      crn: string;
+      group_id: number;
+      step: string;
+      email: string;
+    }) => {
       console.log('Progress updated event received:', data);
       console.log('Currently selected class:', selectedClass);
-      
+
       if (data.crn.toString() === selectedClass) {
         try {
           const progress = data.step;
-          
-          const jobResponse = await fetch(`${API_BASE_URL}/jobs/assignment/${data.group_id}/${selectedClass}`, {
-            credentials: 'include'
-          });
-          
+
+          const jobResponse = await fetch(
+            `${API_BASE_URL}/jobs/assignment/${data.group_id}/${selectedClass}`,
+            {
+              credentials: 'include',
+            }
+          );
+
           let jobAssignment = 'No job assigned';
           if (jobResponse.ok) {
             const jobData = await jobResponse.json();
             jobAssignment = jobData.job || 'No job assigned';
           }
-          
+
           console.log(`Updating progress for group ${data.group_id} to: ${progress}`);
           console.log(`Job assignment for group ${data.group_id}: ${jobAssignment}`);
-          
-          setGroups(prevGroups => 
-            prevGroups.map(group => 
-              group.group_id === data.group_id 
-                ? { ...group, progress, jobAssignment }
-                : group
+
+          setGroups((prevGroups) =>
+            prevGroups.map((group) =>
+              group.group_id === data.group_id ? { ...group, progress, jobAssignment } : group
             )
           );
-          
+
           console.log(`Successfully updated group ${data.group_id}`);
         } catch (error) {
           console.error('Error refreshing progress:', error);
@@ -390,43 +426,74 @@ export function ManageGroupsTab() {
   useEffect(() => {
     if (!socket || !user || user.affiliation !== 'admin') return;
 
-    socket.emit("adminOnline", { adminEmail: user.email });
+    socket.emit('adminOnline', { adminEmail: user.email });
 
-    const onRequest = ( {classId, groupId, candidateId, firstName, lastName }: {classId: number; groupId: number; candidateId: number; firstName: string; lastName: string;}) => {
-      
+    const onRequest = ({
+      classId,
+      groupId,
+      candidateId,
+      firstName,
+      lastName,
+    }: {
+      classId: number;
+      groupId: number;
+      candidateId: number;
+      firstName: string;
+      lastName: string;
+    }) => {
       if (selectedClass && Number(selectedClass) === classId) {
-        const candidate = candidates.find(c => c.id === candidateId);
-        const candidateName = firstName && lastName ? `${firstName} ${lastName}` : (candidate ? candidate.name : `Candidate ${candidateId}`);
-        
-        setPendingOffers(prev => {
+        const candidate = candidates.find((c) => c.id === candidateId);
+        const candidateName =
+          firstName && lastName
+            ? `${firstName} ${lastName}`
+            : candidate
+              ? candidate.name
+              : `Candidate ${candidateId}`;
+
+        setPendingOffers((prev) => {
           const exists = prev.some(
-            o => o.classId === classId && o.groupId === groupId && o.candidateId === candidateId
+            (o) => o.classId === classId && o.groupId === groupId && o.candidateId === candidateId
           );
           if (exists) return prev;
-        return [...prev, { 
-                  classId, 
-                  groupId, 
-                  candidateId, 
-                  candidateName 
-                }];        
+          return [
+            ...prev,
+            {
+              classId,
+              groupId,
+              candidateId,
+              candidateName,
+            },
+          ];
         });
       }
     };
-    
-    const onResponse = (data: { classId: number; groupId: number; candidateId: number; accepted: boolean }) => {
-      console.log("Received offer response:", data);
-      
-      setPendingOffers(prev => 
-        prev.filter(o => !(o.classId === data.classId && o.groupId === data.groupId && o.candidateId === data.candidateId))
+
+    const onResponse = (data: {
+      classId: number;
+      groupId: number;
+      candidateId: number;
+      accepted: boolean;
+    }) => {
+      console.log('Received offer response:', data);
+
+      setPendingOffers((prev) =>
+        prev.filter(
+          (o) =>
+            !(
+              o.classId === data.classId &&
+              o.groupId === data.groupId &&
+              o.candidateId === data.candidateId
+            )
+        )
       );
     };
 
-    socket.on("makeOfferRequest", onRequest);
-    socket.on("makeOfferResponse", onResponse);
+    socket.on('makeOfferRequest', onRequest);
+    socket.on('makeOfferResponse', onResponse);
 
     return () => {
-      socket.off("makeOfferRequest", onRequest);
-      socket.off("makeOfferResponse", onResponse);
+      socket.off('makeOfferRequest', onRequest);
+      socket.off('makeOfferResponse', onResponse);
     };
   }, [socket, user, selectedClass, candidates]);
 
@@ -436,9 +503,9 @@ export function ManageGroupsTab() {
 
       try {
         const response = await fetch(`${API_BASE_URL}/moderator/classes-full/${user.email}`, {
-          credentials: 'include'
+          credentials: 'include',
         });
-        
+
         if (response.ok) {
           const classData = await response.json();
           setClasses(classData);
@@ -457,19 +524,19 @@ export function ManageGroupsTab() {
         setCandidates([]);
         return;
       }
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/candidates/by-class/${selectedClass}`, {
-          credentials: 'include'
+          credentials: 'include',
         });
-        
+
         if (response.ok) {
           const candidatesData = await response.json();
           const formattedCandidates = candidatesData.map((candidate: any) => ({
             id: candidate.id || candidate.resume_id,
-            name: `${candidate.f_name} ${candidate.l_name}`
+            name: `${candidate.f_name} ${candidate.l_name}`,
           }));
-          console.log("the cnaddidate", formattedCandidates);
+          console.log('the cnaddidate', formattedCandidates);
           setCandidates(formattedCandidates);
         }
       } catch (error) {
@@ -490,13 +557,13 @@ export function ManageGroupsTab() {
 
       try {
         const response = await fetch(`${API_BASE_URL}/groups?class=${selectedClass}`, {
-          credentials: 'include'
+          credentials: 'include',
         });
-        
+
         if (response.ok) {
           const groupData = await response.json();
-          console.log("Available groups from GroupsInfo:", groupData);
-          const groupNumbers = Array.isArray(groupData) 
+          console.log('Available groups from GroupsInfo:', groupData);
+          const groupNumbers = Array.isArray(groupData)
             ? groupData.map(Number).sort((a, b) => a - b)
             : [];
           setAvailableGroups(groupNumbers);
@@ -516,10 +583,13 @@ export function ManageGroupsTab() {
 
       try {
         const offerPromises = availableGroups.map(async (groupId) => {
-          const response = await fetch(`${API_BASE_URL}/offers/group/${groupId}/class/${selectedClass}`, {
-            credentials: 'include'
-          });
-          
+          const response = await fetch(
+            `${API_BASE_URL}/offers/group/${groupId}/class/${selectedClass}`,
+            {
+              credentials: 'include',
+            }
+          );
+
           if (response.ok) {
             const offers = await response.json();
             return offers.filter((offer: any) => offer.status === 'accepted');
@@ -529,15 +599,15 @@ export function ManageGroupsTab() {
 
         const allOffers = await Promise.all(offerPromises);
         const flattenedOffers = allOffers.flat();
-        
+
         const formattedOffers = flattenedOffers.map((offer: any) => {
-          const candidate = candidates.find(c => c.id === offer.candidate_id);
+          const candidate = candidates.find((c) => c.id === offer.candidate_id);
           return {
             groupId: offer.group_id,
-            candidateName: candidate ? candidate.name : `Candidate ${offer.candidate_id}`
+            candidateName: candidate ? candidate.name : `Candidate ${offer.candidate_id}`,
           };
         });
-        console.log("offers changed",formattedOffers)
+        console.log('offers changed', formattedOffers);
         setAcceptedOffers(formattedOffers);
       } catch (error) {
         console.error('Error fetching accepted offers:', error);
@@ -553,10 +623,13 @@ export function ManageGroupsTab() {
 
       try {
         const offerPromises = availableGroups.map(async (groupId) => {
-          const response = await fetch(`${API_BASE_URL}/offers/group/${groupId}/class/${selectedClass}`, {
-            credentials: 'include'
-          });
-          
+          const response = await fetch(
+            `${API_BASE_URL}/offers/group/${groupId}/class/${selectedClass}`,
+            {
+              credentials: 'include',
+            }
+          );
+
           if (response.ok) {
             const offers = await response.json();
             return offers.filter((offer: any) => offer.status === 'pending');
@@ -566,14 +639,14 @@ export function ManageGroupsTab() {
 
         const allOffers = await Promise.all(offerPromises);
         const flattenedOffers = allOffers.flat();
-        
+
         const formattedOffers = flattenedOffers.map((offer: any) => {
-          const candidate = candidates.find(c => c.id === offer.candidate_id);
+          const candidate = candidates.find((c) => c.id === offer.candidate_id);
           return {
             classId: Number(selectedClass),
             groupId: offer.group_id,
             candidateId: offer.candidate_id,
-            candidateName: candidate ? candidate.name : `Candidate ${offer.candidate_id}`
+            candidateName: candidate ? candidate.name : `Candidate ${offer.candidate_id}`,
           };
         });
 
@@ -602,9 +675,9 @@ export function ManageGroupsTab() {
 
       try {
         const response = await fetch(`${API_BASE_URL}/groups/students-by-class/${selectedClass}`, {
-          credentials: 'include'
+          credentials: 'include',
         });
-        
+
         if (response.ok) {
           const studentData = await response.json();
           setStudents(studentData);
@@ -627,9 +700,9 @@ export function ManageGroupsTab() {
 
       try {
         const response = await fetch(`${API_BASE_URL}/jobs?class_id=${selectedClass}`, {
-          credentials: 'include'
+          credentials: 'include',
         });
-        
+
         if (response.ok) {
           const jobsData = await response.json();
           setAvailableJobs(jobsData);
@@ -654,8 +727,8 @@ export function ManageGroupsTab() {
     setIsAssigningJob(true);
 
     try {
-      const selectedJob = availableJobs.find(job => job.id === selectedJobId);
-      
+      const selectedJob = availableJobs.find((job) => job.id === selectedJobId);
+
       if (!selectedJob) {
         setPopup({ headline: 'Error', message: 'Selected job not found.' });
         setIsAssigningJob(false);
@@ -670,7 +743,7 @@ export function ManageGroupsTab() {
         credentials: 'include',
         body: JSON.stringify({
           class_id: selectedClass,
-          job_title: selectedJob.title
+          job_title: selectedJob.title,
         }),
       });
 
@@ -678,36 +751,42 @@ export function ManageGroupsTab() {
         const result = await response.json();
         await refreshGroupsAndStudents();
 
-        setPopup({ 
-          headline: 'Success', 
-          message: `Job "${selectedJob.title}" assigned to all ${result.groups_updated} groups successfully!` 
+        setPopup({
+          headline: 'Success',
+          message: `Job "${selectedJob.title}" assigned to all ${result.groups_updated} groups successfully!`,
         });
         setAssignJobModalOpen(false);
         setSelectedGroupForJob(null);
         setSelectedJobId(null);
       } else {
         const errorData = await response.json();
-        setPopup({ headline: 'Error', message: `Failed to assign job: ${errorData.error || 'Unknown error'}` });
+        setPopup({
+          headline: 'Error',
+          message: `Failed to assign job: ${errorData.error || 'Unknown error'}`,
+        });
       }
     } catch (error) {
       console.error('Error assigning job to all groups:', error);
-      setPopup({ headline: 'Error', message: 'Failed to assign job to all groups. Please try again.' });
+      setPopup({
+        headline: 'Error',
+        message: 'Failed to assign job to all groups. Please try again.',
+      });
     } finally {
       setIsAssigningJob(false);
     }
   };
 
   const handleClassChange = (classId: string) => {
-    const hasAccess = classes.some(cls => cls.crn.toString() === classId);
-    
+    const hasAccess = classes.some((cls) => cls.crn.toString() === classId);
+
     if (!hasAccess && classId !== '') {
-      setPopup({ 
-        headline: 'Access Denied', 
-        message: 'You do not have permission to manage this class.' 
+      setPopup({
+        headline: 'Access Denied',
+        message: 'You do not have permission to manage this class.',
       });
       return;
     }
-    
+
     if (classId !== '') {
       setIsLoadingGroups(true);
     }
@@ -723,8 +802,8 @@ export function ManageGroupsTab() {
     setIsAssigningJob(true);
 
     try {
-      const selectedJob = availableJobs.find(job => job.id === selectedJobId);
-      
+      const selectedJob = availableJobs.find((job) => job.id === selectedJobId);
+
       if (!selectedJob) {
         setPopup({ headline: 'Error', message: 'Selected job not found.' });
         setIsAssigningJob(false);
@@ -740,20 +819,23 @@ export function ManageGroupsTab() {
         body: JSON.stringify({
           job_group_id: selectedGroupForJob,
           class_id: selectedClass,
-          job: selectedJob.title
+          job: selectedJob.title,
         }),
       });
 
       if (response.ok) {
         await refreshGroupsAndStudents();
-        
+
         setPopup({ headline: 'Success', message: 'Job assigned successfully!' });
         setAssignJobModalOpen(false);
         setSelectedGroupForJob(null);
         setSelectedJobId(null);
       } else {
         const errorData = await response.json();
-        setPopup({ headline: 'Error', message: `Failed to assign job: ${errorData.error || 'Unknown error'}` });
+        setPopup({
+          headline: 'Error',
+          message: `Failed to assign job: ${errorData.error || 'Unknown error'}`,
+        });
       }
     } catch (error) {
       console.error('Error assigning job:', error);
@@ -780,17 +862,23 @@ export function ManageGroupsTab() {
         credentials: 'include',
         body: JSON.stringify({
           class_id: selectedClass,
-          group_id: nextGroupNumber
+          group_id: nextGroupNumber,
         }),
       });
 
       if (response.ok) {
         await refreshGroupsAndStudents();
-        
-        setPopup({ headline: 'Success', message: `Group ${nextGroupNumber} created successfully!` });
+
+        setPopup({
+          headline: 'Success',
+          message: `Group ${nextGroupNumber} created successfully!`,
+        });
       } else {
         const errorData = await response.json();
-        setPopup({ headline: 'Error', message: `Failed to create group: ${errorData.error || 'Unknown error'}` });
+        setPopup({
+          headline: 'Error',
+          message: `Failed to create group: ${errorData.error || 'Unknown error'}`,
+        });
       }
     } catch (error) {
       console.error('Error creating group:', error);
@@ -809,21 +897,24 @@ export function ManageGroupsTab() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          email: studEmail, 
+          email: studEmail,
           new_group_id: newGroup,
-          class_id: selectedClass
+          class_id: selectedClass,
         }),
       });
 
       if (response.ok) {
         await refreshGroupsAndStudents();
-        
+
         setReassignModalOpen(false);
         setSelectedStudent(null);
         setPopup({ headline: 'Success', message: 'Student reassigned successfully!' });
       } else {
         const errorData = await response.json();
-        setPopup({ headline: 'Error', message: `Failed to reassign student: ${errorData.error || 'Unknown error'}` });
+        setPopup({
+          headline: 'Error',
+          message: `Failed to reassign student: ${errorData.error || 'Unknown error'}`,
+        });
       }
     } catch (error) {
       console.error('Error reassigning student:', error);
@@ -876,17 +967,20 @@ export function ManageGroupsTab() {
         credentials: 'include',
         body: JSON.stringify({
           email,
-          class_id: selectedClass
+          class_id: selectedClass,
         }),
       });
 
       if (response.ok) {
         await refreshGroupsAndStudents();
-        
+
         setPopup({ headline: 'Success', message: 'Student removed from group successfully!' });
       } else {
         const errorData = await response.json();
-        setPopup({ headline: 'Error', message: `Failed to remove student: ${errorData.error || 'Unknown error'}` });
+        setPopup({
+          headline: 'Error',
+          message: `Failed to remove student: ${errorData.error || 'Unknown error'}`,
+        });
       }
     } catch (error) {
       console.error('Error removing student:', error);
@@ -902,16 +996,19 @@ export function ManageGroupsTab() {
         credentials: 'include',
         body: JSON.stringify({
           email,
-          class_id: selectedClass
+          class_id: selectedClass,
         }),
       });
       if (response.ok) {
         await refreshGroupsAndStudents();
-        
+
         setPopup({ headline: 'Success', message: 'Student deleted successfully!' });
       } else {
         const errorData = await response.json();
-        setPopup({ headline: 'Error', message: `Failed to delete student: ${errorData.error || 'Unknown error'}` });
+        setPopup({
+          headline: 'Error',
+          message: `Failed to delete student: ${errorData.error || 'Unknown error'}`,
+        });
       }
     } catch (error) {
       setPopup({ headline: 'Error', message: 'Failed to delete student. Please try again.' });
@@ -929,16 +1026,19 @@ export function ManageGroupsTab() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          class_id: selectedClass
+          class_id: selectedClass,
         }),
       });
 
       if (response.ok) {
-        setGroups(prev => prev.map(group => ({ ...group, isStarted: true })));
+        setGroups((prev) => prev.map((group) => ({ ...group, isStarted: true })));
         setPopup({ headline: 'Success', message: 'All groups started successfully!' });
       } else {
         const errorData = await response.json();
-        setPopup({ headline: 'Error', message: `Failed to start all groups: ${errorData.error || 'Unknown error'}` });
+        setPopup({
+          headline: 'Error',
+          message: `Failed to start all groups: ${errorData.error || 'Unknown error'}`,
+        });
       }
     } catch (error) {
       console.error('Error starting all groups:', error);
@@ -947,9 +1047,9 @@ export function ManageGroupsTab() {
       setIsStartingAll(false);
     }
   };
-  
+
   const startGroup = async (groupId: number) => {
-    setStartingGroups(prev => new Set(prev).add(groupId));
+    setStartingGroups((prev) => new Set(prev).add(groupId));
 
     try {
       const response = await fetch(`${API_BASE_URL}/groups/start-group`, {
@@ -960,26 +1060,27 @@ export function ManageGroupsTab() {
         credentials: 'include',
         body: JSON.stringify({
           group_id: groupId,
-          class_id: selectedClass
+          class_id: selectedClass,
         }),
       });
 
       if (response.ok) {
-        setGroups(prev => prev.map(group => 
-          group.group_id === groupId 
-            ? { ...group, isStarted: true }
-            : group
-        ));
+        setGroups((prev) =>
+          prev.map((group) => (group.group_id === groupId ? { ...group, isStarted: true } : group))
+        );
         setPopup({ headline: 'Success', message: `Group ${groupId} started successfully!` });
       } else {
         const errorData = await response.json();
-        setPopup({ headline: 'Error', message: `Failed to start group: ${errorData.error || 'Unknown error'}` });
+        setPopup({
+          headline: 'Error',
+          message: `Failed to start group: ${errorData.error || 'Unknown error'}`,
+        });
       }
     } catch (error) {
       console.error('Error starting group:', error);
       setPopup({ headline: 'Error', message: 'Failed to start group. Please try again.' });
     } finally {
-      setStartingGroups(prev => {
+      setStartingGroups((prev) => {
         const newSet = new Set(prev);
         newSet.delete(groupId);
         return newSet;
@@ -990,17 +1091,20 @@ export function ManageGroupsTab() {
   const openPopupModal = async (groupId: number) => {
     setSelectedGroupForPopup(groupId);
     setSendPopupModalOpen(true);
-    
+
     try {
-      const response = await fetch(`${API_BASE_URL}/candidates/by-groups/${selectedClass}/${groupId}`, {
-        credentials: 'include'
-      });
-      
+      const response = await fetch(
+        `${API_BASE_URL}/candidates/by-groups/${selectedClass}/${groupId}`,
+        {
+          credentials: 'include',
+        }
+      );
+
       if (response.ok) {
         const candidatesData = await response.json();
         const formattedCandidates = candidatesData.map((candidate: any) => ({
           id: candidate.id || candidate.resume_id,
-          name: `${candidate.f_name} ${candidate.l_name}`
+          name: `${candidate.f_name} ${candidate.l_name}`,
         }));
         setAvailableCandidates(formattedCandidates);
       }
@@ -1017,7 +1121,7 @@ export function ManageGroupsTab() {
       setPopupHeadline(preset.headline);
       setPopupMessage(preset.message);
     }
-    setSelectedCandidateForPopup("");
+    setSelectedCandidateForPopup('');
   };
 
   const handleCandidateSelectionForPopup = (candidateId: string) => {
@@ -1025,7 +1129,7 @@ export function ManageGroupsTab() {
     if (selectedPreset) {
       const preset = presetPopups.find((p) => p.title === selectedPreset);
       const candidate = availableCandidates.find((c) => c.id.toString() === candidateId);
-      
+
       if (preset && candidate) {
         const messageWithName = preset.message.replace('{candidateName}', candidate.name);
         setPopupMessage(messageWithName);
@@ -1035,18 +1139,18 @@ export function ManageGroupsTab() {
 
   const sendPopupToGroup = async () => {
     if (!popupHeadline || !popupMessage || !selectedGroupForPopup) {
-      setPopup({ headline: "Error", message: "Please fill in all fields." });
+      setPopup({ headline: 'Error', message: 'Please fill in all fields.' });
       return;
     }
 
     if (!socket) {
-      setPopup({ headline: "Error", message: "Socket not connected. Please refresh the page." });
+      setPopup({ headline: 'Error', message: 'Socket not connected. Please refresh the page.' });
       return;
     }
 
-    const selectedPresetData = presetPopups.find(p => p.title === selectedPreset);
+    const selectedPresetData = presetPopups.find((p) => p.title === selectedPreset);
     if (selectedPresetData && !selectedCandidateForPopup) {
-      setPopup({ headline: "Error", message: "Please select a candidate for this preset popup." });
+      setPopup({ headline: 'Error', message: 'Please select a candidate for this preset popup.' });
       return;
     }
 
@@ -1054,19 +1158,23 @@ export function ManageGroupsTab() {
 
     try {
       if (selectedPresetData?.vote) {
-        socket.emit("updateRatingsWithPresetBackend", {
+        socket.emit('updateRatingsWithPresetBackend', {
           classId: selectedClass,
           groupId: selectedGroupForPopup,
           vote: selectedPresetData.vote,
           candidateId: selectedCandidateForPopup,
-          isNoShow: selectedPresetData.title === "No Show"
+          isNoShow: selectedPresetData.title === 'No Show',
         });
       }
 
-      const selectedCandidateData = availableCandidates.find(c => c.id.toString() === selectedCandidateForPopup);
-      const candidateName = selectedCandidateData ? selectedCandidateData.name : `Candidate ${selectedCandidateForPopup}`;
+      const selectedCandidateData = availableCandidates.find(
+        (c) => c.id.toString() === selectedCandidateForPopup
+      );
+      const candidateName = selectedCandidateData
+        ? selectedCandidateData.name
+        : `Candidate ${selectedCandidateForPopup}`;
 
-      socket.emit("sendPopupToGroups", {
+      socket.emit('sendPopupToGroups', {
         groups: [selectedGroupForPopup.toString()],
         headline: popupHeadline,
         message: popupMessage,
@@ -1075,47 +1183,47 @@ export function ManageGroupsTab() {
         candidateName: candidateName,
       });
 
-      setPopup({ 
-        headline: "Success", 
-        message: selectedCandidateData 
+      setPopup({
+        headline: 'Success',
+        message: selectedCandidateData
           ? `Popup sent successfully to Group ${selectedGroupForPopup} about ${candidateName}!`
-          : `Popup sent successfully to Group ${selectedGroupForPopup}!`
+          : `Popup sent successfully to Group ${selectedGroupForPopup}!`,
       });
 
       setSendPopupModalOpen(false);
-      setPopupHeadline("");
-      setPopupMessage("");
-      setSelectedPreset("");
-      setSelectedCandidateForPopup("");
+      setPopupHeadline('');
+      setPopupMessage('');
+      setSelectedPreset('');
+      setSelectedCandidateForPopup('');
     } catch (error) {
-      console.error("Error sending popup:", error);
-      setPopup({ headline: "Error", message: "Failed to send popup. Please try again." });
+      console.error('Error sending popup:', error);
+      setPopup({ headline: 'Error', message: 'Failed to send popup. Please try again.' });
     } finally {
       setIsSendingPopup(false);
     }
   };
 
   const respondToOffer = async (
-    classId: number, 
-    groupId: number, 
-    candidateId: number, 
-    accepted: boolean, 
+    classId: number,
+    groupId: number,
+    candidateId: number,
+    accepted: boolean,
     candidateName?: string,
     offerId?: number
   ) => {
     try {
       console.log(`Responding to offer: ${accepted ? 'ACCEPT' : 'REJECT'}`);
-      
+
       let actualOfferId = offerId;
       if (!actualOfferId) {
         const response = await fetch(`${API_BASE_URL}/offers/group/${groupId}/class/${classId}`, {
-          credentials: 'include'
+          credentials: 'include',
         });
-        
+
         if (response.ok) {
           const offers = await response.json();
-          const pendingOffer = offers.find((offer: any) => 
-            offer.candidate_id === candidateId && offer.status === 'pending'
+          const pendingOffer = offers.find(
+            (offer: any) => offer.candidate_id === candidateId && offer.status === 'pending'
           );
           if (pendingOffer) {
             actualOfferId = pendingOffer.id;
@@ -1134,7 +1242,7 @@ export function ManageGroupsTab() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          status: accepted ? 'accepted' : 'rejected'
+          status: accepted ? 'accepted' : 'rejected',
         }),
       });
 
@@ -1146,30 +1254,31 @@ export function ManageGroupsTab() {
         throw new Error('Socket not connected');
       }
 
-      socket.emit("makeOfferResponse", { classId, groupId, candidateId, accepted });
-      
-      console.log("Socket response emitted");
+      socket.emit('makeOfferResponse', { classId, groupId, candidateId, accepted });
 
-      setPendingOffers(prev => 
-        prev.filter(o => !(o.classId === classId && o.groupId === groupId && o.candidateId === candidateId))
+      console.log('Socket response emitted');
+
+      setPendingOffers((prev) =>
+        prev.filter(
+          (o) => !(o.classId === classId && o.groupId === groupId && o.candidateId === candidateId)
+        )
       );
 
       if (accepted && candidateName) {
-        setAcceptedOffers(prev => [...prev, { groupId, candidateName }]);
-        console.log("offer accepted for", candidateName)
+        setAcceptedOffers((prev) => [...prev, { groupId, candidateName }]);
+        console.log('offer accepted for', candidateName);
       }
 
       const candidateDisplayName = candidateName || `Candidate ${candidateId}`;
       setPopup({
-        headline: "Success",
-        message: `Offer for ${candidateDisplayName} ${accepted ? 'accepted' : 'rejected'} successfully!`
+        headline: 'Success',
+        message: `Offer for ${candidateDisplayName} ${accepted ? 'accepted' : 'rejected'} successfully!`,
       });
-
     } catch (error) {
       console.error('Error responding to offer:', error);
       setPopup({
-        headline: "Error",
-        message: "Failed to respond to offer. Please try again."
+        headline: 'Error',
+        message: 'Failed to respond to offer. Please try again.',
       });
     }
   };
@@ -1210,18 +1319,51 @@ export function ManageGroupsTab() {
             <h1 className="text-3xl font-bold text-gray-900">📚 Manage Groups 📚</h1>
             {selectedClass && (
               <div className="flex flex-wrap gap-3">
-                <button onClick={createNewGroup} disabled={isCreatingGroup} className={`px-4 py-2 rounded-lg font-medium transition-colors ${isCreatingGroup ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-white hover:text-red-600 border-2 border-red-600'}`}>
-                  {isCreatingGroup ? (<div className="flex items-center"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500 mr-2"></div>Creating...</div>) : ('➕ New Group')}
+                <button
+                  onClick={createNewGroup}
+                  disabled={isCreatingGroup}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${isCreatingGroup ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-white hover:text-red-600 border-2 border-red-600'}`}
+                >
+                  {isCreatingGroup ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500 mr-2"></div>
+                      Creating...
+                    </div>
+                  ) : (
+                    '➕ New Group'
+                  )}
                 </button>
                 {groups.length > 0 && (
                   <>
-                    <button onClick={startAllGroups} disabled={isStartingAll || groups.every(g => g.isStarted)} className={`px-4 py-2 rounded-lg font-medium transition-colors ${isStartingAll || groups.every(g => g.isStarted) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-white hover:text-red-600 border-2 border-red-600'}`}>
-                      {isStartingAll ? (<div className="flex items-center"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500 mr-2"></div>Starting All...</div>) : ('🚀 Start All Groups')}
+                    <button
+                      onClick={startAllGroups}
+                      disabled={isStartingAll || groups.every((g) => g.isStarted)}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${isStartingAll || groups.every((g) => g.isStarted) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-white hover:text-red-600 border-2 border-red-600'}`}
+                    >
+                      {isStartingAll ? (
+                        <div className="flex items-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500 mr-2"></div>
+                          Starting All...
+                        </div>
+                      ) : (
+                        '🚀 Start All Groups'
+                      )}
                     </button>
-                    <button onClick={() => { setSelectedGroupForJob(null); setAssignJobModalOpen(true); }} disabled={availableGroups.filter(g => g !== -1).length === 0} className={`px-4 py-2 rounded-lg font-medium transition-colors ${availableGroups.filter(g => g !== -1).length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-white hover:text-red-600 border-2 border-red-600'}`}>
+                    <button
+                      onClick={() => {
+                        setSelectedGroupForJob(null);
+                        setAssignJobModalOpen(true);
+                      }}
+                      disabled={availableGroups.filter((g) => g !== -1).length === 0}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${availableGroups.filter((g) => g !== -1).length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-white hover:text-red-600 border-2 border-red-600'}`}
+                    >
                       💼 Assign Job to All Groups
                     </button>
-                    <button onClick={downloadCSV} disabled={!selectedClass} className="px-4 py-2 rounded-lg font-medium transition-colors bg-red-600 text-white hover:bg-white hover:text-red-600 border-2 border-red-600">
+                    <button
+                      onClick={downloadCSV}
+                      disabled={!selectedClass}
+                      className="px-4 py-2 rounded-lg font-medium transition-colors bg-red-600 text-white hover:bg-white hover:text-red-600 border-2 border-red-600"
+                    >
                       📥 Download CSV
                     </button>
                   </>
@@ -1230,133 +1372,312 @@ export function ManageGroupsTab() {
             )}
           </div>
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Class to Manage:</label>
-            <select value={selectedClass} onChange={(e) => handleClassChange(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Class to Manage:
+            </label>
+            <select
+              value={selectedClass}
+              onChange={(e) => handleClassChange(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
               <option value="">Choose a class...</option>
-              {classes.map((cls) => (<option key={cls.crn} value={cls.crn}>{cls.class_name} (CRN: {cls.crn})</option>))}
+              {classes.map((cls) => (
+                <option key={cls.crn} value={cls.crn}>
+                  {cls.class_name} (CRN: {cls.crn})
+                </option>
+              ))}
             </select>
           </div>
 
           {selectedClass && groups.length > 0 && !isLoadingGroups && (
             <div>
-              <div className="mb-4 flex justify-between items-center">  
-                <h2 className="text-xl font-semibold text-gray-900">Class Groups ({groups.length} groups, {students.length} students total)</h2>
+              <div className="mb-4 flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Class Groups ({groups.length} groups, {students.length} students total)
+                </h2>
               </div>
               <div className="flex justify-center">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full gap-4">
-                    {groups.map((group) => {
-                      const groupOffer = pendingOffers.find(o => o.groupId === group.group_id && o.classId === Number(selectedClass));
-                      const acceptedOffer = acceptedOffers.find(o => o.groupId === group.group_id);
-                      const showAcceptedOverlay = acceptedOffer && !dismissedOffers.has(group.group_id);
-                      
-                      return (
-                        <div key={group.group_id} className={`bg-white rounded-lg shadow-sm p-6 flex flex-col h-full min-w-[400px] relative ${acceptedOffer ? 'border-4 border-green-500' : groupOffer ? 'border-4 border-yellow-500' : 'border border-gray-200'}`}>
-                          {showAcceptedOverlay && (
-                            <div className="absolute inset-0 bg-green-50 bg-opacity-95 rounded-lg z-20 flex items-center justify-center p-6 border-2 border-green-400">
-                              <button onClick={() => setDismissedOffers(prev => new Set(prev).add(group.group_id))} className="absolute top-4 right-4 text-gray-600 hover:text-gray-800 text-2xl font-bold" title="Dismiss">×</button>
-                              <div className="text-center w-full">
-                                <h4 className="text-2xl font-bold text-green-800 mb-3">✓ Offer Accepted!</h4>
-                                <p className="text-lg font-semibold text-gray-800 mb-2">Group {group.group_id} has hired:</p>
-                                <p className="text-2xl font-bold text-green-600">{acceptedOffer.candidateName}</p>
-                                <p className="text-sm text-gray-600 mt-4">🎉 Congratulations! 🎉</p>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {groupOffer && (
-                            <div className="absolute inset-0 bg-yellow-50 bg-opacity-95 rounded-lg z-20 flex items-center justify-center p-6 border-2 border-yellow-400">
-                              <div className="text-center w-full">
-                                <h4 className="text-xl font-bold text-yellow-800 mb-3">🎯 Pending Offer</h4>
-                                <p className="text-lg font-semibold text-gray-800 mb-2">Group {group.group_id} wants to offer:</p>
-                                <p className="text-xl font-bold text-red-600 mb-4">{groupOffer.candidateName}</p>
-                                <p className="text-sm text-gray-600 mb-6">Do you approve this offer?</p>
-                                <div className="flex space-x-3 justify-center">
-                                  <button onClick={() => respondToOffer(groupOffer.classId, groupOffer.groupId, groupOffer.candidateId, true, groupOffer.candidateName)} className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors">✓ Accept</button>
-                                  <button onClick={() => respondToOffer(groupOffer.classId, groupOffer.groupId, groupOffer.candidateId, false, groupOffer.candidateName)} className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors">× Reject</button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                          
-                          <div className="flex justify-between items-center mb-4">
-                            <div className="flex items-center">
-                              <h3 className="text-xl font-semibold text-gray-900">{group.group_id !== -1 ? `Group ${group.group_id}` : 'No Group'}</h3>
-                            </div>
-                            <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{group.students.length} student{group.students.length !== 1 ? 's' : ''}</span>
-                          </div>
-                          
-                          {group.group_id !== -1 && (
-                            <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                              <div className="mb-2">
-                                <p className="text-xs font-semibold text-gray-600 uppercase">Job Assignment</p>
-                                <p className="text-sm text-gray-800">{group.jobAssignment}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold text-gray-600 uppercase">Progress</p>
-                                <p className="text-sm text-gray-800 capitalize">{group.progress?.replace('_', ' ')}</p>
-                              </div>
-                            </div>
-                          )}
-                          <div className="flex-1 flex flex-col justify-center mb-4 relative">
-                            {group.students.length === 0 ? (
-                              <div className="flex-1 flex items-center justify-center min-h-[120px]">
-                                <p className="text-gray-400 text-base italic text-center">No students in this group</p>
-                              </div>
-                            ) : (
-                              <div className="relative">
-                                {scrollStates[group.group_id]?.canScrollUp && (
-                                  <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white to-transparent z-10 pointer-events-none flex items-start justify-center">
-                                    <div className="text-blue-600 text-xs font-semibold animate-bounce">▲ Scroll up</div>
-                                  </div>
-                                )}
-                                
-                                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2" onScroll={(e) => handleScroll(e, group.group_id)}>
-                                  {group.students.map((student) => (
-                                    <div key={student.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                      <div className="mb-3">
-                                        <p className="font-medium text-gray-900 text-base">{student.f_name && student.l_name ? `${student.f_name} ${student.l_name}` : student.f_name || student.l_name || 'No Name'}</p>
-                                        <p className="text-sm text-gray-600 truncate" title={student.email}>{student.email}</p>
-                                      </div>
-                                      <div className="flex space-x-2">
-                                        <button onClick={() => { setSelectedStudent(student); setNewGroupId(availableGroups.length > 0 ? availableGroups[0] : 1); setReassignModalOpen(true); }} className="flex-1 bg-blue-100 text-blue-700 hover:bg-blue-200 py-2 px-3 rounded-md text-sm font-medium transition-colors" title="Reassign student">↻ Reassign</button>
-                                        {group.group_id === -1 ? (
-                                          <button onClick={() => deleteStudent(student.email)} className="flex-1 bg-red-100 text-red-700 hover:bg-red-200 py-2 px-3 rounded-md text-sm font-medium transition-colors" title="Delete student">× Delete</button>
-                                        ) : (
-                                          <button onClick={() => removeStudentFromGroup(student.email)} className="flex-1 bg-red-100 text-red-700 hover:bg-red-200 py-2 px-3 rounded-md text-sm font-medium transition-colors" title="Remove from group">× Remove</button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                                
-                                {scrollStates[group.group_id]?.canScrollDown && (
-                                  <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent z-10 pointer-events-none flex items-end justify-center">
-                                    <div className="text-blue-600 text-xs font-semibold animate-bounce">▼ Scroll down</div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            <button onClick={() => { setAddStudentGroupId(group.group_id); setAddStudentEmail(''); setAddStudentModalOpen(true); }} className="w-full mt-2 bg-green-100 text-green-700 hover:bg-green-200 py-2 px-3 rounded-md text-sm font-medium transition-colors">➕ Add Student to Group</button>
-                          </div>
-                          <div className="mt-auto pt-4 border-t border-gray-100 space-y-2">
-                            {group.group_id !== -1 && (
-                              <>
-                                <button onClick={() => { setSelectedGroupForJob(group.group_id); setAssignJobModalOpen(true); }} className="w-full py-2 px-4 rounded-lg text-sm font-medium transition-colors bg-red-600 text-white hover:bg-red-700">💼 Assign Job</button>
-                                <button onClick={() => openPopupModal(group.group_id)} disabled={group.progress !== 'interview'} className={`w-full py-2 px-4 rounded-lg text-sm font-medium transition-colors ${group.progress === 'interview' ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`} title={group.progress !== 'interview' ? 'Only available during interview stage' : 'Send popup to this group'}>📢 Send Popup</button>
-                              </>
-                            )}
-                            {acceptedOffer && (
-                              <button onClick={() => setDismissedOffers(prev => { const newSet = new Set(prev); if (newSet.has(group.group_id)) { newSet.delete(group.group_id); } else { newSet.add(group.group_id); } return newSet; })} className="w-full py-2 px-4 rounded-lg text-sm font-medium transition-colors bg-green-600 text-white hover:bg-green-700">{dismissedOffers.has(group.group_id) ? '👁️ Show Hired Info' : '🎉 View Hired Candidate'}</button>
-                            )}
-                            <button onClick={() => startGroup(group.group_id)} disabled={group.isStarted || startingGroups.has(group.group_id)} className={`w-full py-3 px-4 rounded-lg text-sm font-medium transition-colors ${group.isStarted || startingGroups.has(group.group_id) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
-                              {startingGroups.has(group.group_id) ? (<div className="flex items-center justify-center"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>Starting...</div>) : group.isStarted ? ('✅ Started') : ('🚀 Start Group')}
+                  {groups.map((group) => {
+                    const groupOffer = pendingOffers.find(
+                      (o) => o.groupId === group.group_id && o.classId === Number(selectedClass)
+                    );
+                    const acceptedOffer = acceptedOffers.find((o) => o.groupId === group.group_id);
+                    const showAcceptedOverlay =
+                      acceptedOffer && !dismissedOffers.has(group.group_id);
+
+                    return (
+                      <div
+                        key={group.group_id}
+                        className={`bg-white rounded-lg shadow-sm p-6 flex flex-col h-full min-w-[400px] relative ${acceptedOffer ? 'border-4 border-green-500' : groupOffer ? 'border-4 border-yellow-500' : 'border border-gray-200'}`}
+                      >
+                        {showAcceptedOverlay && (
+                          <div className="absolute inset-0 bg-green-50 bg-opacity-95 rounded-lg z-20 flex items-center justify-center p-6 border-2 border-green-400">
+                            <button
+                              onClick={() =>
+                                setDismissedOffers((prev) => new Set(prev).add(group.group_id))
+                              }
+                              className="absolute top-4 right-4 text-gray-600 hover:text-gray-800 text-2xl font-bold"
+                              title="Dismiss"
+                            >
+                              ×
                             </button>
+                            <div className="text-center w-full">
+                              <h4 className="text-2xl font-bold text-green-800 mb-3">
+                                ✓ Offer Accepted!
+                              </h4>
+                              <p className="text-lg font-semibold text-gray-800 mb-2">
+                                Group {group.group_id} has hired:
+                              </p>
+                              <p className="text-2xl font-bold text-green-600">
+                                {acceptedOffer.candidateName}
+                              </p>
+                              <p className="text-sm text-gray-600 mt-4">🎉 Congratulations! 🎉</p>
+                            </div>
                           </div>
+                        )}
+
+                        {groupOffer && (
+                          <div className="absolute inset-0 bg-yellow-50 bg-opacity-95 rounded-lg z-20 flex items-center justify-center p-6 border-2 border-yellow-400">
+                            <div className="text-center w-full">
+                              <h4 className="text-xl font-bold text-yellow-800 mb-3">
+                                🎯 Pending Offer
+                              </h4>
+                              <p className="text-lg font-semibold text-gray-800 mb-2">
+                                Group {group.group_id} wants to offer:
+                              </p>
+                              <p className="text-xl font-bold text-red-600 mb-4">
+                                {groupOffer.candidateName}
+                              </p>
+                              <p className="text-sm text-gray-600 mb-6">
+                                Do you approve this offer?
+                              </p>
+                              <div className="flex space-x-3 justify-center">
+                                <button
+                                  onClick={() =>
+                                    respondToOffer(
+                                      groupOffer.classId,
+                                      groupOffer.groupId,
+                                      groupOffer.candidateId,
+                                      true,
+                                      groupOffer.candidateName
+                                    )
+                                  }
+                                  className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors"
+                                >
+                                  ✓ Accept
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    respondToOffer(
+                                      groupOffer.classId,
+                                      groupOffer.groupId,
+                                      groupOffer.candidateId,
+                                      false,
+                                      groupOffer.candidateName
+                                    )
+                                  }
+                                  className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                                >
+                                  × Reject
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex justify-between items-center mb-4">
+                          <div className="flex items-center">
+                            <h3 className="text-xl font-semibold text-gray-900">
+                              {group.group_id !== -1 ? `Group ${group.group_id}` : 'No Group'}
+                            </h3>
+                          </div>
+                          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                            {group.students.length} student{group.students.length !== 1 ? 's' : ''}
+                          </span>
                         </div>
-                      );
-                    })}
-                  </div>
+
+                        {group.group_id !== -1 && (
+                          <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <div className="mb-2">
+                              <p className="text-xs font-semibold text-gray-600 uppercase">
+                                Job Assignment
+                              </p>
+                              <p className="text-sm text-gray-800">{group.jobAssignment}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-gray-600 uppercase">
+                                Progress
+                              </p>
+                              <p className="text-sm text-gray-800 capitalize">
+                                {group.progress?.replace('_', ' ')}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex-1 flex flex-col justify-center mb-4 relative">
+                          {group.students.length === 0 ? (
+                            <div className="flex-1 flex items-center justify-center min-h-[120px]">
+                              <p className="text-gray-400 text-base italic text-center">
+                                No students in this group
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="relative">
+                              {scrollStates[group.group_id]?.canScrollUp && (
+                                <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white to-transparent z-10 pointer-events-none flex items-start justify-center">
+                                  <div className="text-blue-600 text-xs font-semibold animate-bounce">
+                                    ▲ Scroll up
+                                  </div>
+                                </div>
+                              )}
+
+                              <div
+                                className="space-y-3 max-h-[400px] overflow-y-auto pr-2"
+                                onScroll={(e) => handleScroll(e, group.group_id)}
+                              >
+                                {group.students.map((student) => (
+                                  <div
+                                    key={student.id}
+                                    className="bg-gray-50 p-4 rounded-lg border border-gray-200"
+                                  >
+                                    <div className="mb-3">
+                                      <p className="font-medium text-gray-900 text-base">
+                                        {student.f_name && student.l_name
+                                          ? `${student.f_name} ${student.l_name}`
+                                          : student.f_name || student.l_name || 'No Name'}
+                                      </p>
+                                      <p
+                                        className="text-sm text-gray-600 truncate"
+                                        title={student.email}
+                                      >
+                                        {student.email}
+                                      </p>
+                                    </div>
+                                    <div className="flex space-x-2">
+                                      <button
+                                        onClick={() => {
+                                          setSelectedStudent(student);
+                                          setNewGroupId(
+                                            availableGroups.length > 0 ? availableGroups[0] : 1
+                                          );
+                                          setReassignModalOpen(true);
+                                        }}
+                                        className="flex-1 bg-blue-100 text-blue-700 hover:bg-blue-200 py-2 px-3 rounded-md text-sm font-medium transition-colors"
+                                        title="Reassign student"
+                                      >
+                                        ↻ Reassign
+                                      </button>
+                                      {group.group_id === -1 ? (
+                                        <button
+                                          onClick={() => deleteStudent(student.email)}
+                                          className="flex-1 bg-red-100 text-red-700 hover:bg-red-200 py-2 px-3 rounded-md text-sm font-medium transition-colors"
+                                          title="Delete student"
+                                        >
+                                          × Delete
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={() => removeStudentFromGroup(student.email)}
+                                          className="flex-1 bg-red-100 text-red-700 hover:bg-red-200 py-2 px-3 rounded-md text-sm font-medium transition-colors"
+                                          title="Remove from group"
+                                        >
+                                          × Remove
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {scrollStates[group.group_id]?.canScrollDown && (
+                                <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent z-10 pointer-events-none flex items-end justify-center">
+                                  <div className="text-blue-600 text-xs font-semibold animate-bounce">
+                                    ▼ Scroll down
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <button
+                            onClick={() => {
+                              setAddStudentGroupId(group.group_id);
+                              setAddStudentEmail('');
+                              setAddStudentModalOpen(true);
+                            }}
+                            className="w-full mt-2 bg-green-100 text-green-700 hover:bg-green-200 py-2 px-3 rounded-md text-sm font-medium transition-colors"
+                          >
+                            ➕ Add Student to Group
+                          </button>
+                        </div>
+                        <div className="mt-auto pt-4 border-t border-gray-100 space-y-2">
+                          {group.group_id !== -1 && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setSelectedGroupForJob(group.group_id);
+                                  setAssignJobModalOpen(true);
+                                }}
+                                className="w-full py-2 px-4 rounded-lg text-sm font-medium transition-colors bg-red-600 text-white hover:bg-red-700"
+                              >
+                                💼 Assign Job
+                              </button>
+                              <button
+                                onClick={() => openPopupModal(group.group_id)}
+                                disabled={group.progress !== 'interview'}
+                                className={`w-full py-2 px-4 rounded-lg text-sm font-medium transition-colors ${group.progress === 'interview' ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                                title={
+                                  group.progress !== 'interview'
+                                    ? 'Only available during interview stage'
+                                    : 'Send popup to this group'
+                                }
+                              >
+                                📢 Send Popup
+                              </button>
+                            </>
+                          )}
+                          {acceptedOffer && (
+                            <button
+                              onClick={() =>
+                                setDismissedOffers((prev) => {
+                                  const newSet = new Set(prev);
+                                  if (newSet.has(group.group_id)) {
+                                    newSet.delete(group.group_id);
+                                  } else {
+                                    newSet.add(group.group_id);
+                                  }
+                                  return newSet;
+                                })
+                              }
+                              className="w-full py-2 px-4 rounded-lg text-sm font-medium transition-colors bg-green-600 text-white hover:bg-green-700"
+                            >
+                              {dismissedOffers.has(group.group_id)
+                                ? '👁️ Show Hired Info'
+                                : '🎉 View Hired Candidate'}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => startGroup(group.group_id)}
+                            disabled={group.isStarted || startingGroups.has(group.group_id)}
+                            className={`w-full py-3 px-4 rounded-lg text-sm font-medium transition-colors ${group.isStarted || startingGroups.has(group.group_id) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                          >
+                            {startingGroups.has(group.group_id) ? (
+                              <div className="flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Starting...
+                              </div>
+                            ) : group.isStarted ? (
+                              '✅ Started'
+                            ) : (
+                              '🚀 Start Group'
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
+              </div>
             </div>
           )}
 
@@ -1372,7 +1693,9 @@ export function ManageGroupsTab() {
           {selectedClass && groups.length === 0 && !isLoadingGroups && (
             <div className="text-center py-8">
               <p className="text-gray-500 text-lg">No groups found for this class.</p>
-              <p className="text-gray-400 text-sm mt-2">Students need to be imported via CSV first.</p>
+              <p className="text-gray-400 text-sm mt-2">
+                Students need to be imported via CSV first.
+              </p>
             </div>
           )}
 
@@ -1387,9 +1710,17 @@ export function ManageGroupsTab() {
       {assignJobModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">{selectedGroupForJob ? `Assign Job to Group ${selectedGroupForJob}` : 'Assign Job to All Groups'}</h3>
+            <h3 className="text-lg font-semibold mb-4">
+              {selectedGroupForJob
+                ? `Assign Job to Group ${selectedGroupForJob}`
+                : 'Assign Job to All Groups'}
+            </h3>
             <label className="block text-sm font-medium text-gray-700 mb-2">Select Job:</label>
-            <select value={selectedJobId || ''} onChange={e => setSelectedJobId(parseInt(e.target.value))} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-4">
+            <select
+              value={selectedJobId || ''}
+              onChange={(e) => setSelectedJobId(parseInt(e.target.value))}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-4"
+            >
               <option value="">-- Select a Job --</option>
               {availableJobs.map((job) => (
                 <option key={job.id} value={job.id}>
@@ -1399,7 +1730,8 @@ export function ManageGroupsTab() {
             </select>
             {!selectedGroupForJob && (
               <p className="text-sm text-gray-600 mb-4">
-                This will assign the selected job to all {availableGroups.filter(g => g !== -1).length} groups in this class.
+                This will assign the selected job to all{' '}
+                {availableGroups.filter((g) => g !== -1).length} groups in this class.
               </p>
             )}
             <div className="flex space-x-3">
@@ -1428,8 +1760,10 @@ export function ManageGroupsTab() {
       {sendPopupModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-[500px] max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">Send Popup to Group {selectedGroupForPopup}</h3>
-            
+            <h3 className="text-lg font-semibold mb-4">
+              Send Popup to Group {selectedGroupForPopup}
+            </h3>
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Choose a Preset (Optional):
@@ -1466,8 +1800,6 @@ export function ManageGroupsTab() {
                         {candidate.name} (ID: {candidate.id})
                       </option>
                     ))}
-
-                  
                 </select>
                 {availableCandidates.length === 0 && (
                   <p className="text-sm text-gray-600 mt-1">
@@ -1478,9 +1810,7 @@ export function ManageGroupsTab() {
             )}
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Headline:
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Headline:</label>
               <input
                 type="text"
                 placeholder="Enter popup headline"
@@ -1491,9 +1821,7 @@ export function ManageGroupsTab() {
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Message:
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Message:</label>
               <textarea
                 placeholder="Enter your message here"
                 value={popupMessage}
@@ -1509,7 +1837,9 @@ export function ManageGroupsTab() {
                 disabled={isSendingPopup || !popupHeadline || !popupMessage}
                 className={`flex-1 bg-northeasternRed text-white py-2 px-4 rounded-lg hover:bg-red-700 ${
                   isSendingPopup || !popupHeadline || !popupMessage
-                    ? 'opacity-50 cursor-not-allowed' : ''}
+                    ? 'opacity-50 cursor-not-allowed'
+                    : ''
+                }
                 }`}
               >
                 {isSendingPopup ? 'Sending...' : 'Send Popup'}
@@ -1517,10 +1847,10 @@ export function ManageGroupsTab() {
               <button
                 onClick={() => {
                   setSendPopupModalOpen(false);
-                  setPopupHeadline("");
-                  setPopupMessage("");
-                  setSelectedPreset("");
-                  setSelectedCandidateForPopup("");
+                  setPopupHeadline('');
+                  setPopupMessage('');
+                  setSelectedPreset('');
+                  setSelectedCandidateForPopup('');
                 }}
                 className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400"
               >
@@ -1536,13 +1866,11 @@ export function ManageGroupsTab() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96">
             <h3 className="text-lg font-semibold mb-4">Add Student to Group {addStudentGroupId}</h3>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Student Email:
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Student Email:</label>
             <input
               type="email"
               value={addStudentEmail}
-              onChange={e => setAddStudentEmail(e.target.value)}
+              onChange={(e) => setAddStudentEmail(e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-4"
               placeholder="Enter student email"
               autoFocus
@@ -1569,10 +1897,16 @@ export function ManageGroupsTab() {
                       setAddStudentModalOpen(false);
                     } else {
                       const errorData = await response.json();
-                      setPopup({ headline: 'Error', message: `Failed to add student: ${errorData.error || 'Unknown error'}` });
+                      setPopup({
+                        headline: 'Error',
+                        message: `Failed to add student: ${errorData.error || 'Unknown error'}`,
+                      });
                     }
                   } catch (error) {
-                    setPopup({ headline: 'Error', message: 'Failed to add student. Please try again.' });
+                    setPopup({
+                      headline: 'Error',
+                      message: 'Failed to add student. Please try again.',
+                    });
                   } finally {
                     setIsAddingStudent(false);
                   }
@@ -1599,9 +1933,12 @@ export function ManageGroupsTab() {
           <div className="bg-white rounded-lg p-6 w-96">
             <h3 className="text-lg font-semibold mb-4">Confirm Action</h3>
             <p className="text-gray-600 mb-6">
-              {confirmAction?.type === 'removeStudent' && 'Are you sure you want to remove this student from their group?'}
-              {confirmAction?.type === 'deleteStudent' && 'Are you sure you want to permanently delete this student?'}
-              {confirmAction?.type === 'startAllGroups' && 'Are you sure you want to start all groups? This action cannot be undone.'}
+              {confirmAction?.type === 'removeStudent' &&
+                'Are you sure you want to remove this student from their group?'}
+              {confirmAction?.type === 'deleteStudent' &&
+                'Are you sure you want to permanently delete this student?'}
+              {confirmAction?.type === 'startAllGroups' &&
+                'Are you sure you want to start all groups? This action cannot be undone.'}
             </p>
             <div className="flex space-x-3">
               <button
@@ -1629,15 +1966,15 @@ export function ManageGroupsTab() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96">
             <h3 className="text-lg font-semibold mb-4">
-              Reassign {selectedStudent.f_name && selectedStudent.l_name 
+              Reassign{' '}
+              {selectedStudent.f_name && selectedStudent.l_name
                 ? `${selectedStudent.f_name} ${selectedStudent.l_name}`
-                : selectedStudent.email
-              }
+                : selectedStudent.email}
             </h3>
             <p className="text-gray-600 mb-4">
               Current group: Group {selectedStudent.group_id}
               {(() => {
-                const currentGroup = groups.find(g => g.group_id === selectedStudent.group_id);
+                const currentGroup = groups.find((g) => g.group_id === selectedStudent.group_id);
                 return currentGroup?.isStarted ? (
                   <span className="ml-2 text-green-600 text-sm">✅ Started</span>
                 ) : (
@@ -1664,7 +2001,7 @@ export function ManageGroupsTab() {
                 <div>
                   <p className="font-medium">Moving to Group {newGroupId}:</p>
                   {(() => {
-                    const targetGroup = groups.find(g => g.group_id === newGroupId);
+                    const targetGroup = groups.find((g) => g.group_id === newGroupId);
                     if (!targetGroup || targetGroup.students.length === 0) {
                       return <p className="text-gray-500 italic">Empty group</p>;
                     }
@@ -1672,10 +2009,10 @@ export function ManageGroupsTab() {
                       <div className="mt-1">
                         {targetGroup.students.map((student) => (
                           <p key={student.id} className="text-gray-600">
-                            • {student.f_name && student.l_name 
+                            •{' '}
+                            {student.f_name && student.l_name
                               ? `${student.f_name} ${student.l_name}`
-                              : student.f_name || student.l_name || 'No Name'
-                            }
+                              : student.f_name || student.l_name || 'No Name'}
                           </p>
                         ))}
                       </div>
@@ -1702,16 +2039,12 @@ export function ManageGroupsTab() {
               </button>
             </div>
           </div>
-        </div> 
+        </div>
       )}
 
       {/* Popup */}
       {popup && (
-        <Popup
-          headline={popup.headline}
-          message={popup.message}
-          onDismiss={() => setPopup(null)}
-        />
+        <Popup headline={popup.headline} message={popup.message} onDismiss={() => setPopup(null)} />
       )}
     </div>
   );

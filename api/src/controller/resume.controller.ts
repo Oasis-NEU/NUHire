@@ -1,4 +1,3 @@
-
 // ============================================
 // src/controllers/resume.controller.ts
 // ============================================
@@ -10,7 +9,10 @@ import fs from 'fs';
 import path from 'path';
 
 export class ResumeController {
-  constructor(private db: Pool, private io: any) {}
+  constructor(
+    private db: Pool,
+    private io: any
+  ) {}
 
   getAllResumes = (req: AuthRequest, res: Response): void => {
     this.db.query('SELECT * FROM Resume', (err, results) => {
@@ -24,8 +26,13 @@ export class ResumeController {
 
   getFinishedCount = (req: AuthRequest, res: Response): void => {
     const { group_id, class_id } = req.params;
-    
-    console.log('📊 [GET-FINISHED-COUNT] Request received for group:', group_id, 'class:', class_id);
+
+    console.log(
+      '📊 [GET-FINISHED-COUNT] Request received for group:',
+      group_id,
+      'class:',
+      class_id
+    );
 
     if (!group_id || !class_id) {
       res.status(400).json({ error: 'group_id and class_id are required' });
@@ -50,7 +57,7 @@ export class ResumeController {
 
       // Count the number of students who have finished
       const finishedCount = results.length;
-      
+
       console.log('✅ [GET-FINISHED-COUNT] Finished count:', finishedCount);
       res.json({ finishedCount });
     });
@@ -65,13 +72,28 @@ export class ResumeController {
       class: classId,
       timespent,
       resume_number,
-      vote
+      vote,
     });
 
-    if (!student_id || !group_id || !classId || !resume_number || timespent === undefined || timespent === null || !vote) {
-      console.log('❌ [BACKEND-VOTE] Validation failed. Received data:', { student_id, group_id, classId, timespent, resume_number, vote });
+    if (
+      !student_id ||
+      !group_id ||
+      !classId ||
+      !resume_number ||
+      timespent === undefined ||
+      timespent === null ||
+      !vote
+    ) {
+      console.log('❌ [BACKEND-VOTE] Validation failed. Received data:', {
+        student_id,
+        group_id,
+        classId,
+        timespent,
+        resume_number,
+        vote,
+      });
       res.status(400).json({
-        error: 'student_id, group_id, class, resume_number, timespent, and vote are required'
+        error: 'student_id, group_id, class, resume_number, timespent, and vote are required',
       });
       return;
     }
@@ -87,33 +109,48 @@ export class ResumeController {
           VALUES (?, ?, ?, ?, ?, ?)
           ON DUPLICATE KEY UPDATE timespent = VALUES(timespent), vote = VALUES(vote);`;
 
-        console.log('🗳️ [BACKEND-VOTE] Executing query with params:', [student_id, group_id, classId, timespent, resume_number, vote]);
+        console.log('🗳️ [BACKEND-VOTE] Executing query with params:', [
+          student_id,
+          group_id,
+          classId,
+          timespent,
+          resume_number,
+          vote,
+        ]);
 
-        this.db.query(query, [student_id, group_id, classId, timespent, resume_number, vote], (err, result) => {
-          if (err) {
-            console.error('❌ [BACKEND-VOTE] Error saving vote:', err);
-            res.status(500).json({ error: 'Database error' });
-            return;
+        this.db.query(
+          query,
+          [student_id, group_id, classId, timespent, resume_number, vote],
+          (err, result) => {
+            if (err) {
+              console.error('❌ [BACKEND-VOTE] Error saving vote:', err);
+              res.status(500).json({ error: 'Database error' });
+              return;
+            }
+
+            console.log(
+              `✅ [BACKEND-VOTE] Vote recorded for resume ${resume_number} by student ${student_id} in group ${group_id}, class ${classId}`
+            );
+
+            // EMIT socket event to all group members
+            const roomId = `group_${group_id}_class_${classId}`;
+            this.io.to(roomId).emit('voteUpdated', {
+              resume_number,
+              oldVote,
+              newVote: vote,
+              student_id,
+            });
+            console.log(
+              `📡 [SOCKET] Emitted voteUpdated to room ${roomId}: Resume ${resume_number}, ${oldVote} -> ${vote}`
+            );
+
+            res.status(200).json({ message: 'Resume review updated successfully' });
           }
-
-          console.log(`✅ [BACKEND-VOTE] Vote recorded for resume ${resume_number} by student ${student_id} in group ${group_id}, class ${classId}`);
-          
-          // EMIT socket event to all group members
-          const roomId = `group_${group_id}_class_${classId}`;
-          this.io.to(roomId).emit('voteUpdated', {
-            resume_number,
-            oldVote,
-            newVote: vote,
-            student_id
-          });
-          console.log(`📡 [SOCKET] Emitted voteUpdated to room ${roomId}: Resume ${resume_number}, ${oldVote} -> ${vote}`);
-
-          res.status(200).json({ message: 'Resume review updated successfully' });
-        });
+        );
       }
     );
   };
-  
+
   getResumesByStudent = (req: AuthRequest, res: Response): void => {
     const { student_id } = req.params;
     this.db.query('SELECT * FROM Resume WHERE student_id = ?', [student_id], (err, results) => {
@@ -140,7 +177,12 @@ export class ResumeController {
     const { group_id } = req.params;
     const { class: studentClass } = req.query;
 
-    console.log('📊 [BACKEND-GET-VOTES] Fetching votes for group:', group_id, 'class:', studentClass);
+    console.log(
+      '📊 [BACKEND-GET-VOTES] Fetching votes for group:',
+      group_id,
+      'class:',
+      studentClass
+    );
 
     if (!studentClass) {
       res.status(400).json({ error: 'class query parameter is required' });
@@ -172,18 +214,22 @@ export class ResumeController {
 
   getCheckedResumes = (req: AuthRequest, res: Response): void => {
     const { group_id } = req.params;
-    this.db.query('SELECT vote, resume_number FROM Resume WHERE group_id = ? AND checked = "True"', [group_id], (err, results) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
+    this.db.query(
+      'SELECT vote, resume_number FROM Resume WHERE group_id = ? AND checked = "True"',
+      [group_id],
+      (err, results) => {
+        if (err) {
+          res.status(500).json({ error: err.message });
+          return;
+        }
+        res.json(results);
       }
-      res.json(results);
-    });
+    );
   };
 
   getAllResumePdfs = (req: AuthRequest, res: Response): void => {
     const { class_id } = req.query; // Get class_id from query params
-    
+
     if (!class_id) {
       res.status(400).json({ error: 'class_id is required' });
       return;
@@ -217,7 +263,11 @@ export class ResumeController {
     const { resTitle, filePath, f_name, l_name, vid, class_id } = req.body;
 
     if (!resTitle || !filePath || !f_name || !l_name || !vid || !class_id) {
-      res.status(400).json({ error: 'Missing fields (resTitle, filePath, f_name, l_name, vid, class_id required)' });
+      res
+        .status(400)
+        .json({
+          error: 'Missing fields (resTitle, filePath, f_name, l_name, vid, class_id required)',
+        });
       return;
     }
 
@@ -228,7 +278,8 @@ export class ResumeController {
 
         if (err.code === 'ER_DUP_ENTRY') {
           res.status(409).json({
-            error: 'A resume with this title already exists in this class. Please choose a different title.'
+            error:
+              'A resume with this title already exists in this class. Please choose a different title.',
           });
           return;
         }
@@ -239,7 +290,8 @@ export class ResumeController {
 
       const resumeId = resumeResult.insertId;
 
-      const candidateSql = 'INSERT INTO Candidates (resume_id, interview, f_name, l_name) VALUES (?, ?, ?, ?)';
+      const candidateSql =
+        'INSERT INTO Candidates (resume_id, interview, f_name, l_name) VALUES (?, ?, ?, ?)';
       this.db.query(candidateSql, [resumeId, vid, f_name, l_name], (err2) => {
         if (err2) {
           console.error('Error inserting candidate:', err2);
@@ -249,7 +301,7 @@ export class ResumeController {
 
         res.json({
           message: 'Resume and candidate added successfully!',
-          resumeId: resumeId
+          resumeId: resumeId,
         });
       });
     });
@@ -258,7 +310,7 @@ export class ResumeController {
   deleteResumeFile = (req: AuthRequest, res: Response): void => {
     const fileName = req.params.fileName;
     const classId = req.query.class_id;
-    
+
     if (!classId) {
       res.status(400).json({ error: 'class_id is required' });
       return;
@@ -267,8 +319,8 @@ export class ResumeController {
     const filePath = path.join(__dirname, '../../uploads/resumes', fileName);
 
     this.db.query(
-      'SELECT id FROM Resume_pdfs WHERE file_path = ? AND class_id = ?', 
-      [`uploads/resumes/${fileName}`, classId], 
+      'SELECT id FROM Resume_pdfs WHERE file_path = ? AND class_id = ?',
+      [`uploads/resumes/${fileName}`, classId],
       (err, resumeResults: any[]) => {
         if (err) {
           console.error('Database lookup error:', err);
@@ -284,65 +336,73 @@ export class ResumeController {
         const resumeId = resumeResults[0].id;
 
         // Delete candidates associated with this resume (CASCADE should handle this, but being explicit)
-        this.db.query('DELETE FROM Candidates WHERE resume_id = ?', [resumeId], (err, candidateResult: any) => {
-          if (err) {
-            console.error('Candidate deletion error:', err);
-            res.status(500).json({ error: 'Candidate deletion failed' });
-            return;
-          }
-
-          console.log(`Deleted ${candidateResult.affectedRows} candidate(s) for resume ID ${resumeId}`);
-
-          // Delete the resume entry for this specific class
-          this.db.query(
-            'DELETE FROM Resume_pdfs WHERE id = ? AND class_id = ?', 
-            [resumeId, classId], 
-            (err, resumeResult: any) => {
-              if (err) {
-                console.error('Resume deletion error:', err);
-                res.status(500).json({ error: 'Resume deletion failed' });
-                return;
-              }
-
-              console.log(`Deleted resume: ${fileName}, Resume ID: ${resumeId} for class ${classId}`);
-
-              // Check if this file is still used by other classes
-              this.db.query(
-                'SELECT COUNT(*) as count FROM Resume_pdfs WHERE file_path = ?',
-                [`uploads/resumes/${fileName}`],
-                (err, results: any[]) => {
-                  if (err) {
-                    console.error('Error checking file usage:', err);
-                    res.json({
-                      message: `Resume and candidate deleted for class ${classId}. Physical file not removed.`,
-                      deletedResume: resumeResult.affectedRows > 0,
-                      deletedCandidate: candidateResult.affectedRows > 0
-                    });
-                    return;
-                  }
-
-                  // Only delete the physical file if no other classes are using it
-                  if (results[0].count === 0 && fs.existsSync(filePath)) {
-                    fs.unlinkSync(filePath);
-                    res.json({
-                      message: `File "${fileName}", resume, and associated candidate deleted successfully.`,
-                      deletedResume: resumeResult.affectedRows > 0,
-                      deletedCandidate: candidateResult.affectedRows > 0,
-                      deletedPhysicalFile: true
-                    });
-                  } else {
-                    res.json({
-                      message: `Resume and candidate deleted for class ${classId}. File still in use by other classes.`,
-                      deletedResume: resumeResult.affectedRows > 0,
-                      deletedCandidate: candidateResult.affectedRows > 0,
-                      deletedPhysicalFile: false
-                    });
-                  }
-                }
-              );
+        this.db.query(
+          'DELETE FROM Candidates WHERE resume_id = ?',
+          [resumeId],
+          (err, candidateResult: any) => {
+            if (err) {
+              console.error('Candidate deletion error:', err);
+              res.status(500).json({ error: 'Candidate deletion failed' });
+              return;
             }
-          );
-        });
+
+            console.log(
+              `Deleted ${candidateResult.affectedRows} candidate(s) for resume ID ${resumeId}`
+            );
+
+            // Delete the resume entry for this specific class
+            this.db.query(
+              'DELETE FROM Resume_pdfs WHERE id = ? AND class_id = ?',
+              [resumeId, classId],
+              (err, resumeResult: any) => {
+                if (err) {
+                  console.error('Resume deletion error:', err);
+                  res.status(500).json({ error: 'Resume deletion failed' });
+                  return;
+                }
+
+                console.log(
+                  `Deleted resume: ${fileName}, Resume ID: ${resumeId} for class ${classId}`
+                );
+
+                // Check if this file is still used by other classes
+                this.db.query(
+                  'SELECT COUNT(*) as count FROM Resume_pdfs WHERE file_path = ?',
+                  [`uploads/resumes/${fileName}`],
+                  (err, results: any[]) => {
+                    if (err) {
+                      console.error('Error checking file usage:', err);
+                      res.json({
+                        message: `Resume and candidate deleted for class ${classId}. Physical file not removed.`,
+                        deletedResume: resumeResult.affectedRows > 0,
+                        deletedCandidate: candidateResult.affectedRows > 0,
+                      });
+                      return;
+                    }
+
+                    // Only delete the physical file if no other classes are using it
+                    if (results[0].count === 0 && fs.existsSync(filePath)) {
+                      fs.unlinkSync(filePath);
+                      res.json({
+                        message: `File "${fileName}", resume, and associated candidate deleted successfully.`,
+                        deletedResume: resumeResult.affectedRows > 0,
+                        deletedCandidate: candidateResult.affectedRows > 0,
+                        deletedPhysicalFile: true,
+                      });
+                    } else {
+                      res.json({
+                        message: `Resume and candidate deleted for class ${classId}. File still in use by other classes.`,
+                        deletedResume: resumeResult.affectedRows > 0,
+                        deletedCandidate: candidateResult.affectedRows > 0,
+                        deletedPhysicalFile: false,
+                      });
+                    }
+                  }
+                );
+              }
+            );
+          }
+        );
       }
     );
   };
@@ -370,24 +430,23 @@ export class ResumeController {
     });
   };
 
-
   batchVote = async (req: AuthRequest, res: Response): Promise<void> => {
     const { votes } = req.body;
-    
+
     if (!Array.isArray(votes) || votes.length === 0) {
-      res.status(400).json({ error: "Invalid votes array" });
+      res.status(400).json({ error: 'Invalid votes array' });
       return;
     }
 
     try {
       // Insert all votes in a single transaction
-      const values = votes.map(vote => [
+      const values = votes.map((vote) => [
         vote.student_id,
         vote.group_id,
         vote.class,
         vote.timespent,
         vote.resume_number,
-        vote.vote
+        vote.vote,
       ]);
 
       const query = `
@@ -397,17 +456,17 @@ export class ResumeController {
 
       this.db.query(query, [values], (err, result) => {
         if (err) {
-          console.error("Error saving batch votes:", err);
-          res.status(500).json({ error: "Failed to save votes" });
+          console.error('Error saving batch votes:', err);
+          res.status(500).json({ error: 'Failed to save votes' });
           return;
         }
-        
+
         console.log(`✅ Saved ${votes.length} votes successfully`);
         res.json({ success: true, votesCount: votes.length });
       });
     } catch (error) {
-      console.error("Error in batchVote:", error);
-      res.status(500).json({ error: "Internal server error" });
+      console.error('Error in batchVote:', error);
+      res.status(500).json({ error: 'Internal server error' });
     }
   };
 }

@@ -44,9 +44,9 @@ export class App {
     this.server = require('http').createServer(this.app);
     this.io = new SocketIOServer(this.server, {
       cors: {
-        origin: process.env.REACT_APP_FRONT_URL, 
-        credentials: true
-      }
+        origin: process.env.REACT_APP_FRONT_URL,
+        credentials: true,
+      },
     });
 
     this.initializeMiddleware();
@@ -54,14 +54,16 @@ export class App {
   }
 
   private initializeMiddleware(): void {
-    this.app.set("trust proxy", 1);
+    this.app.set('trust proxy', 1);
 
-    this.app.use(cors({
-      origin: process.env.REACT_APP_FRONT_URL,
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization']
-    }));
+    this.app.use(
+      cors({
+        origin: process.env.REACT_APP_FRONT_URL,
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+      })
+    );
 
     // CREATE SESSION STORE FIRST
     const url = new URL(process.env.DATABASE_URL!);
@@ -71,7 +73,7 @@ export class App {
       port: parseInt(url.port) || 3306,
       user: url.username,
       password: url.password,
-      database: url.pathname.slice(1)
+      database: url.pathname.slice(1),
     });
 
     // Cross-site cookies need Secure, which browsers only honour over https.
@@ -79,18 +81,20 @@ export class App {
     const cookieSecure = process.env.COOKIE_SECURE !== 'false';
 
     // THEN CONFIGURE SESSION WITH THE STORE
-    this.app.use(session({
-      secret: process.env.SESSION_SECRET!,
-      resave: false,
-      saveUninitialized: true,  // Change to true
-      store: this.sessionStore,  // Now this.sessionStore exists!
-      cookie: {
-        secure: cookieSecure,
-        httpOnly: true,
-        sameSite: cookieSecure ? "none" : "lax",
-        maxAge: 24 * 60 * 60 * 1000,
-      }
-    }));
+    this.app.use(
+      session({
+        secret: process.env.SESSION_SECRET!,
+        resave: false,
+        saveUninitialized: true, // Change to true
+        store: this.sessionStore, // Now this.sessionStore exists!
+        cookie: {
+          secure: cookieSecure,
+          httpOnly: true,
+          sameSite: cookieSecure ? 'none' : 'lax',
+          maxAge: 24 * 60 * 60 * 1000,
+        },
+      })
+    );
 
     // Body parser
     this.app.use(bodyParser.json());
@@ -110,7 +114,7 @@ export class App {
     // Logging middleware
     this.app.use((req, res, next) => {
       const route = `${req.method} ${req.path}`;
-      
+
       // Increment call count
       if (!routeCallCount[route]) {
         routeCallCount[route] = 0;
@@ -118,19 +122,21 @@ export class App {
       }
       routeCallCount[route]++;
       routeCallTimestamps[route].push(Date.now());
-      
+
       // Log every request with count
       console.log(`📊 [${new Date().toISOString()}] ${route} - Call #${routeCallCount[route]}`);
-      
+
       // Warn if same route called many times in short period
       const recentCalls = routeCallTimestamps[route].filter(
-        timestamp => Date.now() - timestamp < 60000 // Last minute
+        (timestamp) => Date.now() - timestamp < 60000 // Last minute
       );
-      
+
       if (recentCalls.length > 50) {
-        console.warn(`⚠️  WARNING: ${route} called ${recentCalls.length} times in the last minute!`);
+        console.warn(
+          `⚠️  WARNING: ${route} called ${recentCalls.length} times in the last minute!`
+        );
       }
-      
+
       next();
     });
   }
@@ -150,23 +156,23 @@ export class App {
       const stats = Object.entries(routeCallCount)
         .map(([route, count]) => {
           const timestamps = routeCallTimestamps[route];
-          const lastMinute = timestamps.filter(t => Date.now() - t < 60000).length;
-          const lastHour = timestamps.filter(t => Date.now() - t < 3600000).length;
-          
+          const lastMinute = timestamps.filter((t) => Date.now() - t < 60000).length;
+          const lastHour = timestamps.filter((t) => Date.now() - t < 3600000).length;
+
           return {
             route,
             totalCalls: count,
             callsLastMinute: lastMinute,
             callsLastHour: lastHour,
-            lastCall: new Date(timestamps[timestamps.length - 1]).toISOString()
+            lastCall: new Date(timestamps[timestamps.length - 1]).toISOString(),
           };
         })
         .sort((a, b) => b.totalCalls - a.totalCalls);
-      
+
       res.json({
         stats,
         topRoutes: stats.slice(0, 10),
-        warnings: stats.filter(s => s.callsLastMinute > 50)
+        warnings: stats.filter((s) => s.callsLastMinute > 50),
       });
     });
 

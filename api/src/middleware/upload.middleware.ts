@@ -19,7 +19,7 @@ const storage: StorageEngine = multer.diskStorage({
   filename: (req: Request, file: Express.Multer.File, cb) => {
     const fileName = file.originalname;
     cb(null, fileName);
-  }
+  },
 });
 
 export const upload = multer({ storage });

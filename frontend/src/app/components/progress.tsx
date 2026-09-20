@@ -14,18 +14,16 @@ interface ProgressOperations {
 }
 
 export const useProgressManager = (): ProgressOperations => {
-
   const fetchProgress = async (user: User): Promise<string> => {
     if (!user?.email) {
       return 'none';
     }
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/progress/user/${user.email}`,
-        { credentials: 'include' }
-      );
-      
+      const response = await fetch(`${API_BASE_URL}/progress/user/${user.email}`, {
+        credentials: 'include',
+      });
+
       if (response.ok) {
         const data = await response.json();
         return data?.step || 'none';
@@ -50,12 +48,12 @@ export const useProgressManager = (): ProgressOperations => {
           crn: user.class,
           group_id: user.group_id,
           step: step,
-          email: user.email
-        })
+          email: user.email,
+        }),
       });
-      
+
       if (response.ok) {
-        console.log("===================Progress updated successfully to, ", step);
+        console.log('===================Progress updated successfully to, ', step);
       } else {
         const errorText = await response.text();
         throw new Error(`Failed to update progress: ${errorText}`);
@@ -65,8 +63,8 @@ export const useProgressManager = (): ProgressOperations => {
     }
   };
 
-  return { 
-    fetchProgress, 
+  return {
+    fetchProgress,
     updateProgress,
   };
 };

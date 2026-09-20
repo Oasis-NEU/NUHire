@@ -1,14 +1,14 @@
 'use client';
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import Slideshow from "../components/slideshow";
-import Popup from "../components/popup";
-import {useSocket} from "../components/socketContext";
-import Facts from "../components/facts";
-import { useAuth } from "../components/AuthContext";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import Slideshow from '../components/slideshow';
+import Popup from '../components/popup';
+import { useSocket } from '../components/socketContext';
+import Facts from '../components/facts';
+import { useAuth } from '../components/AuthContext';
 
 export default function WaitingGroupPage() {
   interface User {
@@ -19,70 +19,68 @@ export default function WaitingGroupPage() {
     group_id?: number;
   }
 
-  
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
   const [start, setStart] = useState(false);
-  const socket = useSocket(); 
+  const socket = useSocket();
   const router = useRouter();
   const { user, loading: userloading } = useAuth();
 
   const groupStatusResponse = async () => {
     if (!user?.class || !user?.group_id) {
-      console.log("Missing class or group_id:", { class: user?.class, group_id: user?.group_id });
+      console.log('Missing class or group_id:', { class: user?.class, group_id: user?.group_id });
       return;
     }
-    
-    console.log("Checking group status...");
+
+    console.log('Checking group status...');
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/groups/status/${user.class}/${user.group_id}`,
-        { method: "GET", credentials: "include" }
-      );
-      
-      console.log("Group status response:", response.status);
-      
+      const response = await fetch(`${API_BASE_URL}/groups/status/${user.class}/${user.group_id}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      console.log('Group status response:', response.status);
+
       if (!response.ok) {
-        console.error("Group status request failed:", response.status, response.statusText);
+        console.error('Group status request failed:', response.status, response.statusText);
         return;
       }
-      
+
       const statusData = await response.json();
-      console.log("Group status data:", statusData);
-        
+      console.log('Group status data:', statusData);
+
       if (statusData.started) {
-        console.log("Group is started, checking seen status...");
-        
+        console.log('Group is started, checking seen status...');
+
         const seenResponse = await fetch(
           `${API_BASE_URL}/groups/seen?email=${encodeURIComponent(user.email)}`,
-          { method: "GET", credentials: "include" }
+          { method: 'GET', credentials: 'include' }
         );
-        
-        console.log("Seen response:", seenResponse.status);
-        
+
+        console.log('Seen response:', seenResponse.status);
+
         if (seenResponse.ok) {
           const seenData = await seenResponse.json();
-          console.log("Seen data:", seenData);
-          
+          console.log('Seen data:', seenData);
+
           if (seenData.seen === 1) {
-            console.log("User has seen intro, going to dashboard");
-            router.push("/dashboard");
+            console.log('User has seen intro, going to dashboard');
+            router.push('/dashboard');
           } else {
-            console.log("User has not seen intro, going to about");
-            router.push("/about");
+            console.log('User has not seen intro, going to about');
+            router.push('/about');
           }
         } else {
-          console.log("Seen request failed, defaulting to about page");
-          router.push("/about");
+          console.log('Seen request failed, defaulting to about page');
+          router.push('/about');
         }
       } else {
-        console.log("Group not started yet");
+        console.log('Group not started yet');
       }
-
     } catch (error) {
-      console.error("Error fetching group status:", error);
+      console.error('Error fetching group status:', error);
     }
   };
-    
+
   useEffect(() => {
     if (!socket || !user?.class) {
       return;
@@ -90,17 +88,15 @@ export default function WaitingGroupPage() {
 
     // Handle connection
     const handleConnect = () => {
-      
-      socket.emit('joinClass', { 
+      socket.emit('joinClass', {
         classId: user.class,
       });
 
       const roomId = `group_${user.group_id}_class_${user.class}`;
-      socket.emit("joinGroup", roomId);
+      socket.emit('joinGroup', roomId);
     };
 
-    const handleDisconnect = () => {
-    };
+    const handleDisconnect = () => {};
 
     const handleConnectError = (error: Error) => {
       console.error('Socket connection error:', error);
@@ -167,10 +163,10 @@ export default function WaitingGroupPage() {
       <div className="fixed inset-0 z-0">
         <Slideshow />
       </div>
-      
+
       {/* Overlay */}
       <div className="fixed inset-0 bg-sand/80 z-5" />
-      
+
       {/* Main Content */}
       <div className="z-10 flex flex-col items-center justify-center relative flex-grow p-8">
         <div className="max-w-2xl w-full text-center">
@@ -183,11 +179,7 @@ export default function WaitingGroupPage() {
                 <p className="text-xl text-northeasternBlack mb-4">
                   Hello, {user.f_name} {user.l_name}!
                 </p>
-                {user.class && (
-                  <p className="text-lg text-navy mb-6">
-                    Class CRN: {user.class}
-                  </p>
-                )}
+                {user.class && <p className="text-lg text-navy mb-6">Class CRN: {user.class}</p>}
               </div>
 
               <div className="bg-white rounded-lg shadow-lg border-4 border-northeasternBlack p-8 mb-8">
@@ -212,16 +204,22 @@ export default function WaitingGroupPage() {
             <div className="bg-white rounded-lg shadow-lg border-4 border-green-500 p-8">
               <div className="text-center">
                 <div className="w-16 h-16 bg-green-500 rounded-full mx-auto mb-4 flex items-center justify-center">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-8 h-8 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                 </div>
-                <p className="text-lg text-gray-700 mb-4">
-                  Your teacher has enabled the activity!
-                </p>
-                <p className="text-md text-gray-600 mb-6">
-                  Redirecting you to the dashboard...
-                </p>
+                <p className="text-lg text-gray-700 mb-4">Your teacher has enabled the activity!</p>
+                <p className="text-md text-gray-600 mb-6">Redirecting you to the dashboard...</p>
                 <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
               </div>
             </div>
@@ -244,11 +242,7 @@ export default function WaitingGroupPage() {
 
       {/* Popup */}
       {popup && (
-        <Popup
-          headline={popup.headline}
-          message={popup.message}
-          onDismiss={() => setPopup(null)}
-        />
+        <Popup headline={popup.headline} message={popup.message} onDismiss={() => setPopup(null)} />
       )}
     </div>
   );

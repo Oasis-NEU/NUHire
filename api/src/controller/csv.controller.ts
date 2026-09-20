@@ -1,4 +1,3 @@
-
 // ============================================
 // src/controllers/csv.controller.ts
 // ============================================
@@ -8,7 +7,10 @@ import { AuthRequest } from '../models/types';
 import { Pool } from 'mysql2';
 
 export class CSVController {
-  constructor(private db: Pool, private io: any) {}
+  constructor(
+    private db: Pool,
+    private io: any
+  ) {}
 
   importCSV = (req: AuthRequest, res: Response): void => {
     console.log('=== POST /importCSV endpoint hit ===');
@@ -19,7 +21,7 @@ export class CSVController {
     if (!class_id || !assignments || !Array.isArray(assignments)) {
       console.log('❌ Validation failed: Missing class_id or assignments array');
       res.status(400).json({
-        error: 'class_id and assignments array are required'
+        error: 'class_id and assignments array are required',
       });
       return;
     }
@@ -27,12 +29,14 @@ export class CSVController {
     if (assignments.length === 0) {
       console.log('❌ Validation failed: Empty assignments array');
       res.status(400).json({
-        error: 'assignments array cannot be empty'
+        error: 'assignments array cannot be empty',
       });
       return;
     }
 
-    console.log(`✅ Validation passed. Processing ${assignments.length} assignments for class ${class_id}`);
+    console.log(
+      `✅ Validation passed. Processing ${assignments.length} assignments for class ${class_id}`
+    );
 
     const updatePromises = assignments.map((assignment: any) => {
       const { email, group_id } = assignment;
@@ -61,19 +65,19 @@ export class CSVController {
               email,
               group_id,
               action: result.insertId ? 'inserted' : 'updated',
-              affectedRows: result.affectedRows
+              affectedRows: result.affectedRows,
             });
           }
         });
       });
     });
 
-    Promise.allSettled(updatePromises).then(results => {
+    Promise.allSettled(updatePromises).then((results) => {
       const successful: any[] = [];
       const failed: any[] = [];
       const skipped: any[] = [];
 
-      results.forEach(result => {
+      results.forEach((result) => {
         if (result.status === 'fulfilled') {
           if ((result.value as any).skipped) {
             skipped.push(result.value);
@@ -85,14 +89,16 @@ export class CSVController {
         }
       });
 
-      console.log(`📊 Import Results: ${successful.length} successful, ${failed.length} failed, ${skipped.length} skipped`);
+      console.log(
+        `📊 Import Results: ${successful.length} successful, ${failed.length} failed, ${skipped.length} skipped`
+      );
 
       if (successful.length > 0) {
         this.io.to(`class_${class_id}`).emit('csvGroupsImported', {
           class_id,
           successful_count: successful.length,
           total_processed: assignments.length,
-          message: `${successful.length} group assignments imported successfully`
+          message: `${successful.length} group assignments imported successfully`,
         });
       }
 
@@ -106,8 +112,8 @@ export class CSVController {
         results: {
           successful,
           failed,
-          skipped
-        }
+          skipped,
+        },
       });
     });
   };

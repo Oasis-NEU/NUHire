@@ -17,12 +17,16 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     socket.on('studentOnline', ({ studentId }: { studentId: string }) => {
       onlineStudents[studentId] = socket.id;
 
-      db.query('SELECT group_id, current_page FROM Users WHERE email = ?', [studentId], (err, result: any[]) => {
-        if (!err && result.length > 0) {
-          const { group_id, current_page } = result[0];
-          io.emit('updateOnlineStudents', { studentId, group_id, current_page });
+      db.query(
+        'SELECT group_id, current_page FROM Users WHERE email = ?',
+        [studentId],
+        (err, result: any[]) => {
+          if (!err && result.length > 0) {
+            const { group_id, current_page } = result[0];
+            io.emit('updateOnlineStudents', { studentId, group_id, current_page });
+          }
         }
-      });
+      );
     });
 
     socket.on('joinGroup', (group_id: string) => {
@@ -35,7 +39,9 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     });
 
     socket.on('check', ({ group_id, resume_number, checked }: SocketEvents['check']) => {
-      console.log(`Checkbox update received: Room ${group_id}, Resume ${resume_number}, Checked: ${checked}`);
+      console.log(
+        `Checkbox update received: Room ${group_id}, Resume ${resume_number}, Checked: ${checked}`
+      );
 
       let actualGroupId = group_id;
       let classId = null;
@@ -62,7 +68,9 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
 
         console.log(`Database updated successfully for resume ${resume_number}`);
         io.to(group_id).emit('checkboxUpdated', { resume_number, checked });
-        console.log(`Emitted checkboxUpdated to room ${group_id}: Resume ${resume_number}, Checked: ${checked}`);
+        console.log(
+          `Emitted checkboxUpdated to room ${group_id}: Resume ${resume_number}, Checked: ${checked}`
+        );
       });
     });
 
@@ -70,108 +78,151 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       socket.to(group_id).emit('checkboxUpdated', { interview_number, checked });
     });
 
-    socket.on('studentPageChanged', ({ studentId, currentPage }: SocketEvents['studentPageChanged']) => {
-      if (onlineStudents[studentId]) {
-        io.emit('studentPageChange', { studentId, currentPage });
-      }
-    });
-
-    socket.on('sendPopupToGroups', ({ groups, headline, message, class: classId, candidateId }: SocketEvents['sendPopupToGroups']) => {
-      if (!groups || groups.length === 0) return;
-
-      let query = "SELECT email FROM Users WHERE group_id IN (?) AND affiliation = 'student'";
-      let params: any[] = [groups];
-
-      if (classId) {
-        query += ' AND class = ?';
-        params.push(classId);
-      }
-
-      db.query(query, params, (err, results: any[]) => {
-        if (!err && results.length > 0) {
-          results.forEach(({ email }) => {
-            const studentSocketId = onlineStudents[email];
-            if (studentSocketId) {
-              io.to(studentSocketId).emit('receivePopup', { headline, message, candidateId });
-            }
-          });
-
-          console.log(`Popup sent to Groups: ${groups.join(', ')} in Class ${classId || 'All'}`);
-        } else {
-          console.log('No online students in the selected groups.');
+    socket.on(
+      'studentPageChanged',
+      ({ studentId, currentPage }: SocketEvents['studentPageChanged']) => {
+        if (onlineStudents[studentId]) {
+          io.emit('studentPageChange', { studentId, currentPage });
         }
-      });
-    });
+      }
+    );
 
-    socket.on('updateRatingsWithPresetBackend', ({ classId, groupId, candidateId, vote, isNoShow }: SocketEvents['updateRatingsWithPresetBackend']) => {
-      const roomId = `group_${groupId}_class_${classId}`;
+    socket.on(
+      'sendPopupToGroups',
+      ({
+        groups,
+        headline,
+        message,
+        class: classId,
+        candidateId,
+      }: SocketEvents['sendPopupToGroups']) => {
+        if (!groups || groups.length === 0) return;
 
-      io.to(roomId).emit('updateRatingsWithPresetFrontend', {
+        let query = "SELECT email FROM Users WHERE group_id IN (?) AND affiliation = 'student'";
+        let params: any[] = [groups];
+
+        if (classId) {
+          query += ' AND class = ?';
+          params.push(classId);
+        }
+
+        db.query(query, params, (err, results: any[]) => {
+          if (!err && results.length > 0) {
+            results.forEach(({ email }) => {
+              const studentSocketId = onlineStudents[email];
+              if (studentSocketId) {
+                io.to(studentSocketId).emit('receivePopup', { headline, message, candidateId });
+              }
+            });
+
+            console.log(`Popup sent to Groups: ${groups.join(', ')} in Class ${classId || 'All'}`);
+          } else {
+            console.log('No online students in the selected groups.');
+          }
+        });
+      }
+    );
+
+    socket.on(
+      'updateRatingsWithPresetBackend',
+      ({
         classId,
         groupId,
         candidateId,
         vote,
-        isNoShow
-      });
-    });
+        isNoShow,
+      }: SocketEvents['updateRatingsWithPresetBackend']) => {
+        const roomId = `group_${groupId}_class_${classId}`;
 
-    socket.on('makeOfferRequest', ({ classId, groupId, candidateId }: SocketEvents['makeOfferRequest']) => {
-      console.log(`Student in class ${classId}, group ${groupId} wants to offer candidate ${candidateId}`);
+        io.to(roomId).emit('updateRatingsWithPresetFrontend', {
+          classId,
+          groupId,
+          candidateId,
+          vote,
+          isNoShow,
+        });
+      }
+    );
 
-      // First, fetch the candidate information using resume_id
-      db.query(
-        'SELECT f_name, l_name FROM Candidates WHERE resume_id = ?', 
-        [candidateId], 
-        (err, candidates: any[]) => {
-          if (err) {
-            console.error('Error fetching candidate info:', err);
-            return;
-          }
+    socket.on(
+      'makeOfferRequest',
+      ({ classId, groupId, candidateId }: SocketEvents['makeOfferRequest']) => {
+        console.log(
+          `Student in class ${classId}, group ${groupId} wants to offer candidate ${candidateId}`
+        );
 
-          const candidateName = candidates.length > 0 
-            ? `${candidates[0].f_name} ${candidates[0].l_name}`
-            : `Candidate #${candidateId}`;
-          
-          const firstName = candidates.length > 0 ? candidates[0].f_name : '';
-          const lastName = candidates.length > 0 ? candidates[0].l_name : '';
-
-          console.log(`Candidate name: ${candidateName}`);
-
-          // Then fetch moderators and emit with candidate info
-          db.query('SELECT admin_email FROM Moderator WHERE crn = ?', [classId], (err, moderators: any[]) => {
-            console.log('Moderator query result:', moderators);
-            if (!err && moderators.length > 0) {
-              moderators.forEach(({ admin_email }) => {
-                io.to(admin_email).emit('makeOfferRequest', {
-                  classId,
-                  groupId,
-                  candidateId,
-                  candidateName,
-                  firstName,
-                  lastName
-                });
-                console.log(`Notified ${admin_email} about offer request for ${candidateName} from group ${groupId}`);
-              });
-            } else {
-              console.log('No assigned admin found for class', classId, 'or database error:', err);
+        // First, fetch the candidate information using resume_id
+        db.query(
+          'SELECT f_name, l_name FROM Candidates WHERE resume_id = ?',
+          [candidateId],
+          (err, candidates: any[]) => {
+            if (err) {
+              console.error('Error fetching candidate info:', err);
+              return;
             }
-          });
 
-          const roomId = `group_${groupId}_class_${classId}`;
-          io.to(roomId).emit('groupMemberOffer', {
-            candidateId,
-            candidateName,
-            firstName,
-            lastName
-          });
-        }
-      );
-    });
+            const candidateName =
+              candidates.length > 0
+                ? `${candidates[0].f_name} ${candidates[0].l_name}`
+                : `Candidate #${candidateId}`;
 
-    socket.on('makeOfferResponse', ({ classId, groupId, candidateId, accepted }: SocketEvents['makeOfferResponse']) => {
-      console.log(`Advisor responded to class ${classId}, group ${groupId} for candidate ${candidateId}: accepted=${accepted}`);
-      io.emit('makeOfferResponse', { classId, groupId, candidateId, accepted });
-    });
+            const firstName = candidates.length > 0 ? candidates[0].f_name : '';
+            const lastName = candidates.length > 0 ? candidates[0].l_name : '';
+
+            console.log(`Candidate name: ${candidateName}`);
+
+            // Then fetch moderators and emit with candidate info
+            db.query(
+              'SELECT admin_email FROM Moderator WHERE crn = ?',
+              [classId],
+              (err, moderators: any[]) => {
+                console.log('Moderator query result:', moderators);
+                if (!err && moderators.length > 0) {
+                  moderators.forEach(({ admin_email }) => {
+                    io.to(admin_email).emit('makeOfferRequest', {
+                      classId,
+                      groupId,
+                      candidateId,
+                      candidateName,
+                      firstName,
+                      lastName,
+                    });
+                    console.log(
+                      `Notified ${admin_email} about offer request for ${candidateName} from group ${groupId}`
+                    );
+                  });
+                } else {
+                  console.log(
+                    'No assigned admin found for class',
+                    classId,
+                    'or database error:',
+                    err
+                  );
+                }
+              }
+            );
+
+            const roomId = `group_${groupId}_class_${classId}`;
+            io.to(roomId).emit('groupMemberOffer', {
+              candidateId,
+              candidateName,
+              firstName,
+              lastName,
+            });
+          }
+        );
+      }
+    );
+
+    socket.on(
+      'makeOfferResponse',
+      ({ classId, groupId, candidateId, accepted }: SocketEvents['makeOfferResponse']) => {
+        console.log(
+          `Advisor responded to class ${classId}, group ${groupId} for candidate ${candidateId}: accepted=${accepted}`
+        );
+        io.emit('makeOfferResponse', { classId, groupId, candidateId, accepted });
+      }
+    );
 
     socket.on('moveGroup', ({ classId, groupId, targetPage }: SocketEvents['moveGroup']) => {
       console.log(`Moving group ${groupId} in class ${classId} to ${targetPage}`);
@@ -180,21 +231,48 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       io.to(roomId).emit('moveGroup', { classId, groupId, targetPage });
     });
 
-    socket.on('submitInterview', ({ currentVideoIndex, nextVideoIndex, isLastInterview, groupId, classId }: SocketEvents['submitInterview']) => {
-      console.log(`Interview ${currentVideoIndex + 1} submitted by group ${groupId}, class ${classId}, moving to video ${nextVideoIndex + 1}, isLast: ${isLastInterview}`);
-      const roomId = `group_${groupId}_class_${classId}`;
-      io.to(roomId).emit('interviewSubmitted', { currentVideoIndex, nextVideoIndex, isLastInterview, groupId, classId });
-    });
+    socket.on(
+      'submitInterview',
+      ({
+        currentVideoIndex,
+        nextVideoIndex,
+        isLastInterview,
+        groupId,
+        classId,
+      }: SocketEvents['submitInterview']) => {
+        console.log(
+          `Interview ${currentVideoIndex + 1} submitted by group ${groupId}, class ${classId}, moving to video ${nextVideoIndex + 1}, isLast: ${isLastInterview}`
+        );
+        const roomId = `group_${groupId}_class_${classId}`;
+        io.to(roomId).emit('interviewSubmitted', {
+          currentVideoIndex,
+          nextVideoIndex,
+          isLastInterview,
+          groupId,
+          classId,
+        });
+      }
+    );
 
-    socket.on('offerSelected', ({ candidateId, groupId, classId, roomId, checked }: SocketEvents['offerSelected']) => {
-      console.log(`Candidate ${candidateId} ${checked ? 'selected' : 'deselected'} for offer by group ${groupId}, class ${classId}`);
-      socket.to(roomId).emit('offerSelected', { candidateId, groupId, classId, checked });
-    });
+    socket.on(
+      'offerSelected',
+      ({ candidateId, groupId, classId, roomId, checked }: SocketEvents['offerSelected']) => {
+        console.log(
+          `Candidate ${candidateId} ${checked ? 'selected' : 'deselected'} for offer by group ${groupId}, class ${classId}`
+        );
+        socket.to(roomId).emit('offerSelected', { candidateId, groupId, classId, checked });
+      }
+    );
 
-    socket.on('offerSubmitted', ({ candidateId, groupId, classId, roomId }: SocketEvents['offerSubmitted']) => {
-      console.log(`Offer submitted for candidate ${candidateId} by group ${groupId}, class ${classId}`);
-      socket.to(roomId).emit('offerSubmitted', { candidateId, groupId, classId });
-    });
+    socket.on(
+      'offerSubmitted',
+      ({ candidateId, groupId, classId, roomId }: SocketEvents['offerSubmitted']) => {
+        console.log(
+          `Offer submitted for candidate ${candidateId} by group ${groupId}, class ${classId}`
+        );
+        socket.to(roomId).emit('offerSubmitted', { candidateId, groupId, classId });
+      }
+    );
 
     socket.on('userCompletedResReview', ({ groupId }: SocketEvents['userCompletedResReview']) => {
       if (!groupId) {
@@ -202,7 +280,9 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
         return;
       }
 
-      const studentEmail = Object.keys(onlineStudents).find(email => onlineStudents[email] === socket.id);
+      const studentEmail = Object.keys(onlineStudents).find(
+        (email) => onlineStudents[email] === socket.id
+      );
       if (!studentEmail) {
         console.log('Could not identify student for userCompletedResReview');
         return;
@@ -210,90 +290,129 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
 
       console.log(`Student ${studentEmail} completed res-review in group ${groupId}`);
 
-      db.query("SELECT class FROM Users WHERE email = ?", [studentEmail], (err, studentData: any[]) => {
-        if (err || !studentData.length) {
-          console.error('Error fetching student class:', err);
-          return;
-        }
-
-        const studentClass = studentData[0].class;
-        console.log(`Student ${studentEmail} is in class ${studentClass}`);
-
-        db.query(
-          "SELECT f_name, l_name, email, current_page FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'", 
-          [groupId, studentClass], 
-          (err, groupMembers: any[]) => {
-            if (err) {
-              console.error('Error fetching group members:', err);
-              return;
-            }
-
-            console.log(`Group ${groupId} in class ${studentClass} has ${groupMembers.length} members`);
-
-            if (!(global as any).completedResReview) {
-              (global as any).completedResReview = {};
-            }
-            
-            const groupKey = `${groupId}_${studentClass}`;
-            if (!(global as any).completedResReview[groupKey]) {
-              (global as any).completedResReview[groupKey] = new Set();
-            }
-
-            const wasAlreadyCompleted = (global as any).completedResReview[groupKey].has(studentEmail);
-            (global as any).completedResReview[groupKey].add(studentEmail);
-
-            if (wasAlreadyCompleted) {
-              console.log(`Student ${studentEmail} already marked as completed, ignoring duplicate`);
-              return;
-            }
-
-            const completedCount = (global as any).completedResReview[groupKey].size;
-            const totalCount = groupMembers.length;
-            const allCompleted = completedCount >= totalCount;
-
-            console.log(`Group ${groupId} in class ${studentClass} completion: ${completedCount}/${totalCount} completed by: ${Array.from((global as any).completedResReview[groupKey]).join(', ')}`);
-
-            if (allCompleted) {
-              console.log(`🎉 All members in group ${groupId}, class ${studentClass} have completed res-review! Notifying group members.`);
-
-              groupMembers.forEach(member => {
-                const memberSocketId = onlineStudents[member.email];
-                if (memberSocketId) {
-                  console.log(`Sending groupCompletedResReview to ${member.email}`);
-                  io.to(memberSocketId).emit('groupCompletedResReview', {
-                    groupId,
-                    classId: studentClass,
-                    completedCount,
-                    totalCount,
-                    message: 'All group members have completed their individual resume reviews!'
-                  });
-                } else {
-                  console.log(`Student ${member.email} is not online`);
-                }
-              });
-
-              delete (global as any).completedResReview[groupKey];
-            } else {
-              console.log(`Group ${groupId} in class ${studentClass} still waiting for ${totalCount - completedCount} more members to complete`);
-            }
+      db.query(
+        'SELECT class FROM Users WHERE email = ?',
+        [studentEmail],
+        (err, studentData: any[]) => {
+          if (err || !studentData.length) {
+            console.error('Error fetching student class:', err);
+            return;
           }
-        );
-      });
+
+          const studentClass = studentData[0].class;
+          console.log(`Student ${studentEmail} is in class ${studentClass}`);
+
+          db.query(
+            "SELECT f_name, l_name, email, current_page FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
+            [groupId, studentClass],
+            (err, groupMembers: any[]) => {
+              if (err) {
+                console.error('Error fetching group members:', err);
+                return;
+              }
+
+              console.log(
+                `Group ${groupId} in class ${studentClass} has ${groupMembers.length} members`
+              );
+
+              if (!(global as any).completedResReview) {
+                (global as any).completedResReview = {};
+              }
+
+              const groupKey = `${groupId}_${studentClass}`;
+              if (!(global as any).completedResReview[groupKey]) {
+                (global as any).completedResReview[groupKey] = new Set();
+              }
+
+              const wasAlreadyCompleted = (global as any).completedResReview[groupKey].has(
+                studentEmail
+              );
+              (global as any).completedResReview[groupKey].add(studentEmail);
+
+              if (wasAlreadyCompleted) {
+                console.log(
+                  `Student ${studentEmail} already marked as completed, ignoring duplicate`
+                );
+                return;
+              }
+
+              const completedCount = (global as any).completedResReview[groupKey].size;
+              const totalCount = groupMembers.length;
+              const allCompleted = completedCount >= totalCount;
+
+              console.log(
+                `Group ${groupId} in class ${studentClass} completion: ${completedCount}/${totalCount} completed by: ${Array.from((global as any).completedResReview[groupKey]).join(', ')}`
+              );
+
+              if (allCompleted) {
+                console.log(
+                  `🎉 All members in group ${groupId}, class ${studentClass} have completed res-review! Notifying group members.`
+                );
+
+                groupMembers.forEach((member) => {
+                  const memberSocketId = onlineStudents[member.email];
+                  if (memberSocketId) {
+                    console.log(`Sending groupCompletedResReview to ${member.email}`);
+                    io.to(memberSocketId).emit('groupCompletedResReview', {
+                      groupId,
+                      classId: studentClass,
+                      completedCount,
+                      totalCount,
+                      message: 'All group members have completed their individual resume reviews!',
+                    });
+                  } else {
+                    console.log(`Student ${member.email} is not online`);
+                  }
+                });
+
+                delete (global as any).completedResReview[groupKey];
+              } else {
+                console.log(
+                  `Group ${groupId} in class ${studentClass} still waiting for ${totalCount - completedCount} more members to complete`
+                );
+              }
+            }
+          );
+        }
+      );
     });
 
-    socket.on('confirmOffer', ({ groupId, classId, candidateId, studentId, roomId }: SocketEvents['confirmOffer']) => {
-      io.to(roomId).emit('confirmOffer', {
-        candidateId,
-        studentId,
-        groupId,
-        classId
-      });
-    });
+    socket.on(
+      'confirmOffer',
+      ({ groupId, classId, candidateId, studentId, roomId }: SocketEvents['confirmOffer']) => {
+        io.to(roomId).emit('confirmOffer', {
+          candidateId,
+          studentId,
+          groupId,
+          classId,
+        });
+      }
+    );
 
-    socket.on('sentPresetVotes', async ({ student_id, group_id, class: classId, question1, question2, question3, question4, candidate_id }: SocketEvents['sentPresetVotes']) => {
-      console.log('inside sentPresetVotes, with data:', { student_id, group_id, classId, question1, question2, question3, question4, candidate_id });
-      try {
-        const query = `
+    socket.on(
+      'sentPresetVotes',
+      async ({
+        student_id,
+        group_id,
+        class: classId,
+        question1,
+        question2,
+        question3,
+        question4,
+        candidate_id,
+      }: SocketEvents['sentPresetVotes']) => {
+        console.log('inside sentPresetVotes, with data:', {
+          student_id,
+          group_id,
+          classId,
+          question1,
+          question2,
+          question3,
+          question4,
+          candidate_id,
+        });
+        try {
+          const query = `
           INSERT INTO InterviewPopup 
             (candidate_id, group_id, class, question1, question2, question3, question4)
           VALUES 
@@ -304,54 +423,73 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
             question3 = question3 + VALUES(question3),
             question4 = question4 + VALUES(question4)`;
 
-        db.query(query, [candidate_id, group_id, classId, question1, question2, question3, question4], (err) => {
-          if (err) {
-            console.error('Error updating interview popup votes:', err);
-          } else {
-            console.log(`Updated interview popup votes for candidate ${candidate_id} in group ${group_id} class ${classId}`);
-          }
-        });
-      } catch (error) {
-        console.error('Error in sentPresetVotes:', error);
+          db.query(
+            query,
+            [candidate_id, group_id, classId, question1, question2, question3, question4],
+            (err) => {
+              if (err) {
+                console.error('Error updating interview popup votes:', err);
+              } else {
+                console.log(
+                  `Updated interview popup votes for candidate ${candidate_id} in group ${group_id} class ${classId}`
+                );
+              }
+            }
+          );
+        } catch (error) {
+          console.error('Error in sentPresetVotes:', error);
+        }
       }
-    });
+    );
 
-    socket.on('teamConfirmSelection', ({ groupId, classId, studentId, roomId }: SocketEvents['teamConfirmSelection']) => {
-      io.to(roomId).emit('teamConfirmSelection', {
-        groupId,
-        classId,
-        studentId,
-        roomId
-      });
-    });
+    socket.on(
+      'teamConfirmSelection',
+      ({ groupId, classId, studentId, roomId }: SocketEvents['teamConfirmSelection']) => {
+        io.to(roomId).emit('teamConfirmSelection', {
+          groupId,
+          classId,
+          studentId,
+          roomId,
+        });
+      }
+    );
 
-      socket.on('teamUnconfirmSelection', ({ groupId, classId, studentId, roomId }: SocketEvents['teamUnconfirmSelection']) => {
-      io.to(roomId).emit('teamUnconfirmSelection', {
-        groupId,
-        classId,
-        studentId,
-        roomId
-      });
-    });
+    socket.on(
+      'teamUnconfirmSelection',
+      ({ groupId, classId, studentId, roomId }: SocketEvents['teamUnconfirmSelection']) => {
+        io.to(roomId).emit('teamUnconfirmSelection', {
+          groupId,
+          classId,
+          studentId,
+          roomId,
+        });
+      }
+    );
 
-    socket.on('allowGroupAssignment', ({ classId, message }: SocketEvents['allowGroupAssignment']) => {
-      console.log('Teacher allowing group assignment for class:', classId);
-      io.to(`class_${classId}`).emit('allowGroupAssignmentStudent', {
-        classId: classId,
-        message: message
-      });
-    });
+    socket.on(
+      'allowGroupAssignment',
+      ({ classId, message }: SocketEvents['allowGroupAssignment']) => {
+        console.log('Teacher allowing group assignment for class:', classId);
+        io.to(`class_${classId}`).emit('allowGroupAssignmentStudent', {
+          classId: classId,
+          message: message,
+        });
+      }
+    );
 
-    socket.on('groupAssignmentClosed', ({ classId, message }: SocketEvents['groupAssignmentClosed']) => {
-      console.log('Teacher closing group assignment for class:', classId);
-      io.to(`class_${classId}`).emit('groupAssignmentClosedStudent', {
-        classId: classId,
-        message: message
-      });
-    });
+    socket.on(
+      'groupAssignmentClosed',
+      ({ classId, message }: SocketEvents['groupAssignmentClosed']) => {
+        console.log('Teacher closing group assignment for class:', classId);
+        io.to(`class_${classId}`).emit('groupAssignmentClosedStudent', {
+          classId: classId,
+          message: message,
+        });
+      }
+    );
 
     socket.on('disconnect', () => {
-      Object.keys(onlineStudents).forEach(studentId => {
+      Object.keys(onlineStudents).forEach((studentId) => {
         if (onlineStudents[studentId] === socket.id) {
           console.log(`Student ${studentId} disconnected`);
           delete onlineStudents[studentId];

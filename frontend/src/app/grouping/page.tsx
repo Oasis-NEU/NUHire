@@ -1,13 +1,13 @@
 'use client';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import NavbarAdmin from "../components/navbar-admin";
-import Tabs from "../components/tabs";
-import Popup from "../components/popup";
-import { StudentCSVTab } from "../components/StudentCSVTab";
-import { ManageGroupsTab } from "../components/ManageGroupsTab";
-import { useAuth } from "../components/AuthContext"; 
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import NavbarAdmin from '../components/navbar-admin';
+import Tabs from '../components/tabs';
+import Popup from '../components/popup';
+import { StudentCSVTab } from '../components/StudentCSVTab';
+import { ManageGroupsTab } from '../components/ManageGroupsTab';
+import { useAuth } from '../components/AuthContext';
 
 const Grouping = () => {
   interface Student {
@@ -38,8 +38,8 @@ const Grouping = () => {
     );
   }
 
-  if (!user || user.affiliation !== "admin") {
-    console.log("Unauthorized access attempt to /grouping by user:", user);
+  if (!user || user.affiliation !== 'admin') {
+    console.log('Unauthorized access attempt to /grouping by user:', user);
     return <div>This account is not authorized for this page</div>;
   }
 
@@ -59,17 +59,11 @@ const Grouping = () => {
               <StudentCSVTab />
             </div>
           </div>
-
         </Tabs>
       </div>
-      
-      
+
       {popup && (
-        <Popup
-          headline={popup.headline}
-          message={popup.message}
-          onDismiss={() => setPopup(null)}
-        />
+        <Popup headline={popup.headline} message={popup.message} onDismiss={() => setPopup(null)} />
       )}
     </div>
   );

@@ -1,3 +1,10 @@
+> **ARCHIVED, DO NOT FOLLOW.**
+> Written ~Sept 2025. Describes a Render + Railway deployment and Google OAuth,
+> neither of which the code uses. Kept for history only.
+> Current setup: [ONBOARDING.md](../../ONBOARDING.md).
+
+---
+
 ## Build and locally running the application
 
 ### Prerequisites

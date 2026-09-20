@@ -43,7 +43,9 @@ export class CandidateController {
         return;
       }
 
-      console.log(`Found ${(results as any[]).length} candidates being interviewed by groups ${groupIds} in class ${classId}`);
+      console.log(
+        `Found ${(results as any[]).length} candidates being interviewed by groups ${groupIds} in class ${classId}`
+      );
       res.json(results);
     });
   };
@@ -103,20 +105,24 @@ export class CandidateController {
 
   getCandidateByResumeNumber = (req: AuthRequest, res: Response): void => {
     const { resume_number } = req.params;
-    this.db.query('SELECT * FROM Candidates WHERE resume_id = ?', [resume_number], (err, results: any[]) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
+    this.db.query(
+      'SELECT * FROM Candidates WHERE resume_id = ?',
+      [resume_number],
+      (err, results: any[]) => {
+        if (err) {
+          res.status(500).json({ error: err.message });
+          return;
+        }
+        console.log(`Fetched candidate with resume number ${resume_number}:`, results[0]);
+        res.json(results[0]);
       }
-      console.log(`Fetched candidate with resume number ${resume_number}:`, results[0]);
-      res.json(results[0]);
-    });
+    );
   };
 
   getCandidateByResumeNumberWithFile = (req: AuthRequest, res: Response): void => {
-  const { resume_number } = req.params;
-  
-  const query = `
+    const { resume_number } = req.params;
+
+    const query = `
     SELECT 
       c.*,
       r.file_path,
@@ -125,14 +131,14 @@ export class CandidateController {
     LEFT JOIN Resume_pdfs r ON c.resume_id = r.id
     WHERE c.resume_id = ?
   `;
-  
-  this.db.query(query, [resume_number], (err, results: any[]) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    console.log(`Fetched candidate with resume number ${resume_number}:`, results[0]);
-    res.json(results[0]);
-  });
-};
+
+    this.db.query(query, [resume_number], (err, results: any[]) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      console.log(`Fetched candidate with resume number ${resume_number}:`, results[0]);
+      res.json(results[0]);
+    });
+  };
 }

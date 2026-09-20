@@ -3,7 +3,10 @@ import { AuthRequest, User } from '../models/types';
 import { Pool, RowDataPacket } from 'mysql2';
 
 export class UserController {
-  constructor(private db: Pool, private io: any) {}
+  constructor(
+    private db: Pool,
+    private io: any
+  ) {}
 
   getAllUsers = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -33,7 +36,7 @@ export class UserController {
         }
 
         const users = results as RowDataPacket[] as User[];
-        
+
         if (users.length === 0) {
           res.status(404).json({ message: 'User not found' });
           return;
@@ -47,110 +50,113 @@ export class UserController {
     }
   };
 
-createUser = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { First_name, Last_name, Email, Affiliation } = req.body;
+  createUser = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const { First_name, Last_name, Email, Affiliation } = req.body;
 
-    console.log('=== POST /users endpoint hit ===');
-    console.log('Request body:', { First_name, Last_name, Email, Affiliation });
+      console.log('=== POST /users endpoint hit ===');
+      console.log('Request body:', { First_name, Last_name, Email, Affiliation });
 
-    if (!First_name || !Last_name || !Email || !Affiliation) {
-      console.log('❌ Validation failed: Missing required fields');
-      res.status(400).json({ message: 'First name, last name, email, and affiliation are required' });
-      return;
-    }
-
-    console.log('✅ Validation passed, checking if user exists in database');
-
-    this.db.query('SELECT * FROM Users WHERE email = ?', [Email], (err, results) => {
-      if (err) {
-        console.error('❌ Database error during user lookup:', err);
-        res.status(500).json({ error: err.message });
+      if (!First_name || !Last_name || !Email || !Affiliation) {
+        console.log('❌ Validation failed: Missing required fields');
+        res
+          .status(400)
+          .json({ message: 'First name, last name, email, and affiliation are required' });
         return;
       }
 
-      const users = results as RowDataPacket[] as User[];
-      console.log(`Database query result: Found ${users.length} users with email ${Email}`);
+      console.log('✅ Validation passed, checking if user exists in database');
 
-      if (users.length > 0) {
-        console.log('User already exists, updating information:', users[0]);
-        
-        // Update existing user with new information
-        this.db.query(
-          'UPDATE Users SET f_name = ?, l_name = ?, affiliation = ? WHERE email = ?',
-          [First_name, Last_name, Affiliation, Email],
-          (updateErr, updateResult) => {
-            if (updateErr) {
-              console.error('❌ Failed to update user record:', updateErr);
-              res.status(500).json({ error: updateErr.message });
-              return;
-            }
-            
-            console.log('✅ User record updated successfully');
-            this.io.emit('userAdded');
-            console.log('Emitted userUpdated event via WebSocket');
-            res.status(200).json({
-              message: 'User information updated successfully',
-              action: 'updated',
-              f_name: First_name,
-              l_name: Last_name,
-              email: Email,
-              affiliation: Affiliation
-            });
-          }
-        );
-        return;
-      } else {
-        console.log('User does not exist, creating new user');
-
-        let sql: string;
-        let params: any[];
-
-        if (Affiliation === 'admin') {
-          console.log('Creating new admin user');
-          sql = 'INSERT INTO Users (f_name, l_name, email, affiliation) VALUES (?, ?, ?, ?)';
-          params = [First_name, Last_name, Email, Affiliation];
-        } else if (Affiliation === 'student') {
-          console.log('❌ Student not found in database - they should be imported via CSV first');
-          res.status(404).json({
-            message: 'Student not found. Please contact your instructor to be added to the class.',
-            action: 'student_not_found'
-          });
-          return;
-        } else {
-          console.log('❌ Invalid affiliation:', Affiliation);
-          res.status(400).json({ message: 'Invalid affiliation' });
+      this.db.query('SELECT * FROM Users WHERE email = ?', [Email], (err, results) => {
+        if (err) {
+          console.error('❌ Database error during user lookup:', err);
+          res.status(500).json({ error: err.message });
           return;
         }
 
-        console.log('Executing user creation query...');
-        this.db.query(sql, params, (err, result) => {
-          if (err) {
-            console.error('❌ Failed to create user:', err);
-            res.status(500).json({ error: err.message });
+        const users = results as RowDataPacket[] as User[];
+        console.log(`Database query result: Found ${users.length} users with email ${Email}`);
+
+        if (users.length > 0) {
+          console.log('User already exists, updating information:', users[0]);
+
+          // Update existing user with new information
+          this.db.query(
+            'UPDATE Users SET f_name = ?, l_name = ?, affiliation = ? WHERE email = ?',
+            [First_name, Last_name, Affiliation, Email],
+            (updateErr, updateResult) => {
+              if (updateErr) {
+                console.error('❌ Failed to update user record:', updateErr);
+                res.status(500).json({ error: updateErr.message });
+                return;
+              }
+
+              console.log('✅ User record updated successfully');
+              this.io.emit('userAdded');
+              console.log('Emitted userUpdated event via WebSocket');
+              res.status(200).json({
+                message: 'User information updated successfully',
+                action: 'updated',
+                f_name: First_name,
+                l_name: Last_name,
+                email: Email,
+                affiliation: Affiliation,
+              });
+            }
+          );
+          return;
+        } else {
+          console.log('User does not exist, creating new user');
+
+          let sql: string;
+          let params: any[];
+
+          if (Affiliation === 'admin') {
+            console.log('Creating new admin user');
+            sql = 'INSERT INTO Users (f_name, l_name, email, affiliation) VALUES (?, ?, ?, ?)';
+            params = [First_name, Last_name, Email, Affiliation];
+          } else if (Affiliation === 'student') {
+            console.log('❌ Student not found in database - they should be imported via CSV first');
+            res.status(404).json({
+              message:
+                'Student not found. Please contact your instructor to be added to the class.',
+              action: 'student_not_found',
+            });
+            return;
+          } else {
+            console.log('❌ Invalid affiliation:', Affiliation);
+            res.status(400).json({ message: 'Invalid affiliation' });
             return;
           }
 
-          const insertResult = result as RowDataPacket;
-          console.log('✅ User created successfully');
-          res.status(201).json({
-            id: insertResult.insertId,
-            First_name,
-            Last_name,
-            Email,
-            Affiliation,
-            action: 'created'
+          console.log('Executing user creation query...');
+          this.db.query(sql, params, (err, result) => {
+            if (err) {
+              console.error('❌ Failed to create user:', err);
+              res.status(500).json({ error: err.message });
+              return;
+            }
+
+            const insertResult = result as RowDataPacket;
+            console.log('✅ User created successfully');
+            res.status(201).json({
+              id: insertResult.insertId,
+              First_name,
+              Last_name,
+              Email,
+              Affiliation,
+              action: 'created',
+            });
+            this.io.emit('userAdded');
+            console.log('Emitted userAdded event via WebSocket');
           });
-          this.io.emit('userAdded');
-          console.log('Emitted userAdded event via WebSocket');
-        });
-      }
-    });
-  } catch (error) {
-    console.error('Unexpected error in createUser:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
+        }
+      });
+    } catch (error) {
+      console.error('Unexpected error in createUser:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  };
 
   getStudents = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -225,21 +231,25 @@ createUser = async (req: AuthRequest, res: Response): Promise<void> => {
         return;
       }
 
-      this.db.query('UPDATE Users SET `class` = ? WHERE email = ?', [classId, email], (err, result) => {
-        if (err) {
-          console.error('Database error:', err);
-          res.status(500).json({ error: 'Failed to update class.' });
-          return;
-        }
+      this.db.query(
+        'UPDATE Users SET `class` = ? WHERE email = ?',
+        [classId, email],
+        (err, result) => {
+          if (err) {
+            console.error('Database error:', err);
+            res.status(500).json({ error: 'Failed to update class.' });
+            return;
+          }
 
-        const updateResult = result as RowDataPacket;
-        if (updateResult.affectedRows === 0) {
-          res.status(404).json({ error: 'User not found.' });
-          return;
-        }
+          const updateResult = result as RowDataPacket;
+          if (updateResult.affectedRows === 0) {
+            res.status(404).json({ error: 'User not found.' });
+            return;
+          }
 
-        res.json({ message: 'Class updated successfully!' });
-      });
+          res.json({ message: 'Class updated successfully!' });
+        }
+      );
     } catch (error) {
       console.error('Unexpected error in updateUserClass:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -247,7 +257,7 @@ createUser = async (req: AuthRequest, res: Response): Promise<void> => {
   };
 
   updateUserSeen = async (req: AuthRequest, res: Response): Promise<void> => {
-    console.log("=== POST /user/update-seen endpoint hit ===");
+    console.log('=== POST /user/update-seen endpoint hit ===');
     try {
       if (!req.isAuthenticated || !req.isAuthenticated()) {
         res.status(401).json({ message: 'Unauthorized' });
@@ -255,7 +265,7 @@ createUser = async (req: AuthRequest, res: Response): Promise<void> => {
       }
 
       const { email } = req.body;
-      console.log("Request body:", { email });
+      console.log('Request body:', { email });
 
       if (!email) {
         res.status(400).json({ error: 'Email is required.' });
@@ -277,45 +287,49 @@ createUser = async (req: AuthRequest, res: Response): Promise<void> => {
   };
 
   check = async (req: AuthRequest, res: Response): Promise<void> => {
-  console.log('=== CHECK ENDPOINT DEBUG ===');
-  console.log('Session ID:', req.sessionID);
-  console.log('Session:', req.session);
-  console.log('Is Authenticated:', req.isAuthenticated ? req.isAuthenticated() : 'N/A');
-  console.log('Cookies:', req.headers.cookie);
-  console.log('User:', req.user);
-  console.log('===========================');
-  
+    console.log('=== CHECK ENDPOINT DEBUG ===');
+    console.log('Session ID:', req.sessionID);
+    console.log('Session:', req.session);
+    console.log('Is Authenticated:', req.isAuthenticated ? req.isAuthenticated() : 'N/A');
+    console.log('Cookies:', req.headers.cookie);
+    console.log('User:', req.user);
+    console.log('===========================');
+
     try {
       const { email } = req.params;
-      console.log("Check endpoint hit with email:", email);
+      console.log('Check endpoint hit with email:', email);
 
       if (!email) {
         res.status(400).json({ error: 'Email is required.' });
         return;
       }
 
-      this.db.query('SELECT group_id, class AS class_id FROM Users WHERE email = ?', [email], (err, result: any[]) => {
-        if (err) {
-          console.error('Database error:', err);
-          res.status(500).json({ error: 'Failed to check if email is within users.' });
-          return;
+      this.db.query(
+        'SELECT group_id, class AS class_id FROM Users WHERE email = ?',
+        [email],
+        (err, result: any[]) => {
+          if (err) {
+            console.error('Database error:', err);
+            res.status(500).json({ error: 'Failed to check if email is within users.' });
+            return;
+          }
+
+          console.log('Check query result:', result);
+
+          // Check if user exists
+          if (!result || result.length === 0) {
+            res.json({ exists: false });
+            return;
+          }
+
+          // User exists, return their data with exists flag
+          res.json({
+            exists: true,
+            group_id: result[0].group_id,
+            class_id: result[0].class_id,
+          });
         }
-        
-        console.log("Check query result:", result);
-        
-        // Check if user exists
-        if (!result || result.length === 0) {
-          res.json({ exists: false });
-          return;
-        }
-        
-        // User exists, return their data with exists flag
-        res.json({ 
-          exists: true,
-          group_id: result[0].group_id,
-          class_id: result[0].class_id
-        });
-      });
+      );
     } catch (error) {
       console.error('Unexpected error in check:', error);
       res.status(500).json({ error: 'Internal server error' });
