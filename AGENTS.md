@@ -199,14 +199,26 @@ grep -rn "routeName" frontend/src      # frontend links
 grep -rn "FRONT_URL" api/src           # server-side redirects
 ```
 
-### 10. Write to a `.env`, never a hardcoded value
+### 10. Check SELF-WORK.md before you touch a file
+
+[SELF-WORK.md](SELF-WORK.md) is where people declare work that is not on the
+board yet, including which files they expect to touch. Eight contributors and
+their assistants share this repo, and the usual failure is two of them quietly
+editing the same file for days.
+
+Before starting, read the **In progress** section. If your change overlaps
+someone's declared files, say so rather than editing around them silently. If
+you are starting something that is not already a ticket, add your own entry
+first.
+
+### 11. Write to a `.env`, never a hardcoded value
 
 Read `api/.env.example` and `frontend/.env.example` for the full list. If you add
 a new variable, add it to the example file in the same commit. A missing env var
 should fail loudly at boot, not produce a page that navigates to
 `undefined/instructions`, which is a bug that actually shipped.
 
-### 11. Schema changes need a migration, not just an edit to the dump
+### 12. Schema changes need a migration, not just an edit to the dump
 
 `database-files/Pandployer.sql` is a full dump that only ever runs against an
 empty database. Editing it fixes new environments and does nothing for the one

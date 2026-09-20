@@ -1,557 +1,671 @@
-# Onboarding
+# NUHire onboarding
 
-You know React and Node. You have never seen this repo. This gets you from
-nothing to a running app and a first ticket in about an hour.
+Everything you need on day one. Verified against the tree at `main` / `8117f8a1`.
 
-**Trust the code over any document, including this one.** This project was
-built by co-ops in 2025 who have all left. The docs they wrote contradict each
-other. Every claim below was checked against the source, and where I could not
-verify something I say so instead of guessing.
-
-Read in order:
-
-1. [What this is](#1-what-this-is) — the product, ten minutes
-2. [The codebase](#2-the-codebase) — structure, stack, how a request flows
-3. [Running it](#3-running-it-locally) — setup, teacher access, the click-through
-4. [Your first ticket](#4-your-first-ticket)
+Anything I could not verify is marked **[UNVERIFIED]**. If a step here is wrong,
+that is a bug in this file. Fix it in the same PR as whatever you were doing.
 
 ---
 
-# 1. What this is
+## 1. What this is
 
-NUHire is a hiring simulation used as a **live, instructor-led activity** in
-CS 1210, Northeastern's intro co-op class. Students play the employer.
+NUHire is a web app that runs a live, in-class hiring simulation for Khoury
+CS1210 (Intro to Co-op). **Students play the employer, not the applicant.**
 
-The activity, start to finish:
+It replaces a paper activity called "employer for a day": students got a printed
+job description and a stack of resumes and had to pick who to interview. It
+worked, because spending an hour rejecting resumes teaches you why yours gets
+rejected. It just didn't scale and the instructor couldn't see anything.
 
-1. Read a job description
-2. Skim 10 resumes, ~30 seconds each, accept / reject / no response
-3. As a group, shortlist 4
-4. Watch recorded interviews for those 4 and rate each candidate
-5. As a group, extend one offer
-6. The professor accepts or rejects it
+### The activity
 
-All candidates are fake. The professor runs it in real time and can fire
-curveballs mid-activity: a candidate no-showed, showed up late, came through an
-internal referral.
+Students work in groups of 3 to 5. Six steps, and the group moves through them
+together:
 
-### Three roles
+1. **Job description** — the group is assigned a real co-op posting
+2. **Resume review** — each student reviews 10 resumes alone, on a timer
+3. **Group resume review** — the group argues down to 4 candidates
+4. **Interview stage** — watch recorded interviews, rate the answers
+5. **Make an offer** — pick one, send it to the professor
+6. **Employer panel** — the debrief. **Not built.** It is a heading and a button
 
-| Role        | Who           | How the app knows                                     |
-| ----------- | ------------- | ----------------------------------------------------- |
-| **admin**   | adds teachers | `Users.affiliation = 'admin'`, plus a `Moderator` row |
-| **teacher** | runs a class  | same as admin — see the honest note below             |
-| **student** | does it       | `Users.affiliation = 'student'`                       |
+The professor runs it live: imports a roster, assigns groups, assigns each group
+a job, starts them, throws curveballs during the interview stage, and accepts or
+rejects each offer. Accepting is roleplay — the professor is playing the
+*candidate* deciding whether to take the job.
 
-**Be aware:** the code does not actually distinguish admin from teacher.
-`Users.affiliation` is `enum('student','admin','none')` and the only role guard
-is `requireAdmin`, which checks `affiliation === 'admin'`. What separates a
-"teacher" from an "admin" in practice is whether they own a row in the
-`Moderator` table, which maps `admin_email` to a CRN (a course section number).
-If you hear someone say the app has three roles, it has two, plus a table that
-says which classes you own.
+### Where it stands
 
-### The one constraint that explains everything
+Built by Khoury co-ops through 2025. **Everyone who wrote it has left.** It was
+deployed to Khoury infrastructure in spring 2026 and has sat since.
 
-**It runs live, in a classroom, with a professor in front of 30 students.** A
-bug here does not page an on-call engineer. It derails a class, in front of
-people, with no way to recover except the professor apologising.
+The core simulation genuinely works. Login, group management, all five real
+steps, live sync between group members, the professor's control panel. That is
+not a prototype.
 
-That is why you will see rules in [AGENTS.md](AGENTS.md) that look
-over-cautious. They exist because each of them has already gone wrong.
+What is missing is everything around it: **it has never been run with more than
+two people at once.** The pilot is one real class of about 30 students.
 
-### Current state, honestly
+**Not currently hosted.** The Khoury deployment resolves to a private `10.x`
+address, so it is NEU-network-only. **[UNVERIFIED]** whether the service is
+actually up behind that. Local is the only environment you can rely on.
 
-- Never tested above two users. Nobody has run it with 30.
-- Not currently hosted. Local Docker only.
-- No automated tests at all. The api test script is literally `exit 1`.
-- A large fix pass just landed (auth, the group barrier, file uploads, schema).
-  See the "Recently closed" table in [TICKETS.md](TICKETS.md).
+### What we are actually solving
+
+Not "build a hiring simulation." That exists.
+
+**Make it survive a real classroom.** Thirty students, one professor, fifty
+minutes, no second chances. A bug here doesn't page an on-call engineer, it
+derails a class and the professor falls back to paper.
+
+That reframes what matters. The scariest thing in this codebase was never slow
+queries. It was that a group could get permanently stuck waiting on a teammate,
+with no way out.
 
 ---
 
-# 2. The codebase
+## 2. Stack and repo structure
 
-## Stack
+| Piece       | What                                                             |
+| ----------- | ---------------------------------------------------------------- |
+| `frontend/` | Next.js 15 App Router, React 19, Tailwind, Socket.IO client      |
+| `api/`      | Express + TypeScript, Socket.IO server, Passport + Keycloak OIDC |
+| MySQL       | schema in `database-files/Pandployer.sql`                        |
+| Keycloak    | login. Moving to Khoury IT SSO eventually                        |
 
-Versions from `package.json`, not from memory.
+Four processes. Locally, MySQL and Keycloak run in Docker; the API and frontend
+run on your machine.
 
-| Piece       | What                                      | Version                                                   |
-| ----------- | ----------------------------------------- | --------------------------------------------------------- |
-| Node        | `.nvmrc`                                  | 22                                                        |
-| `frontend/` | Next.js App Router                        | `next ^15.3.0`                                            |
-|             | React                                     | `^19.0.0`                                                 |
-|             | Tailwind                                  | `^3.4.17`                                                 |
-|             | Socket.IO client                          | `^4.8.1`                                                  |
-|             | `react-pdf` (resumes, job descriptions)   | `^9.2.1`                                                  |
-|             | TypeScript                                | `5.7.3`                                                   |
-| `api/`      | Express                                   | `^4.21.2`                                                 |
-|             | Socket.IO server                          | `^4.8.1`                                                  |
-|             | `mysql2`                                  | `^3.12.0`                                                 |
-|             | Passport + Keycloak OIDC                  | `passport ^0.7.0`, `passport-keycloak-oauth2-oidc ^1.0.5` |
-|             | `express-session`                         | `^1.18.2`                                                 |
-|             | TypeScript                                | `^5.0.0`                                                  |
-| MySQL       | schema in `database-files/Pandployer.sql` | 8.4 locally                                               |
-| Keycloak    | login                                     | 26.3 locally                                              |
+```
+            Browser (student or professor)
+                 │                    │
+         HTTP (ask/answer)     WebSocket (push)
+                 │                    │
+                 ▼                    ▼
+      Next.js :3000            Express API :5001
+              │                        │
+              └───────── HTTP ─────────┤
+                                       ▼
+                                  MySQL :3307 (host)
+      Keycloak :8080 ── login, redirects back to the API
+```
 
-Both packages are `strict: true`. There are ~100 `: any` annotations already;
-do not add more.
+**Why two servers.** The frontend draws screens. The API owns the data and the
+rules. Only the API touches the database, so a student can't edit their own
+votes from devtools.
 
-## Repo structure
+**Why both HTTP and WebSocket.** HTTP is ask-and-answer; the server can never
+start the conversation. When the professor sends a curveball, HTTP has no way to
+push it. So: HTTP for "give me this," WebSocket for "tell me when something
+happens."
 
 ```
 api/src/
-  server.ts            entrypoint: env checks, boot, process handlers
-  app.ts               express setup, session, middleware, route mounting
+  server.ts          boot: connect db, configure passport, start
+  app.ts             middleware, session, route mounting
   config/
-    database.ts        mysql pool, boot-time seeding, pool stats
-    passport.ts        keycloak OIDC strategy, serialize/deserialize
-    socket.ts          ALL realtime behaviour, plus the group barrier
-  routes/              path -> controller, and the auth guard per route
-  controller/          request handling and raw SQL. No service layer.
-  middleware/          requireAuth, requireAdmin, requireStudent, requireModerator
-  models/types.ts      shared types including socket event payloads
+    database.ts      mysql pool, boot-time seeding
+    passport.ts      keycloak strategy
+    socket.ts        ALL realtime behaviour, and the group barrier
+  routes/            path -> controller, plus the auth middleware per route
+  controller/        request handling and raw SQL
+  middleware/        requireAuth, requireAdmin, requireModerator, requireStudent
+  models/types.ts    shared types, including socket payloads
 
-frontend/src/
-  app/
-    page.tsx           landing
-    dashboard/         student hub, defines the step list
-    jobdes/            step 1, read the job description
-    res-review/        step 2, the 10 resumes at 30s each
-    res-review-group/  step 3, group shortlist
-    interview-stage/   step 4, watch interviews and rate
-    makeOffer/         step 5, extend an offer
-    employerPanel/     step 6 — a STUB, see gotchas
-    advisor-dashboard/ the teacher's screen
-    components/        shared UI and React contexts
-  types/index.ts       canonical shared types (partially migrated)
-  lib/                 small helpers
+frontend/src/app/
+  page.tsx                    landing
+  about/ instructions/        first-time intro
+  dashboard/                  student hub, defines the step list
+  jobdes/ res-review/ res-review-group/ interview-stage/ makeOffer/
+  employerPanel/              stub
+  waitingGroup/               "waiting for your teacher"
+  advisor-dashboard/          professor hub
+  grouping/                   renders ManageGroupsTab + StudentCSVTab
+  new-pdf/ adminFacts/
+  components/                 shared UI and React contexts
 
 database-files/
-  Pandployer.sql       full schema dump, ~21 tables
-  migrations/          numbered, applied by hand. Read its README.
-
-.local/                the local dev stack. Start here.
+  Pandployer.sql              base schema
+  migrations/                 001..005, applied in order
+.local/                       the local dev stack (compose, realm, seed)
 ```
 
-Notable: the database is named `pandployer`, an old project name. Renaming it
-is a ticket nobody has done.
+**Request flow is `routes/ → controller/ → raw SQL`.** No service layer, no ORM.
+SQL lives inside controllers. To read an endpoint, start in `routes/`: it tells
+you the path, the middleware, and the controller method.
 
-## How a request flows
+### The one idea that explains the schema: `(group_id, class)`
 
-There is no service or repository layer. It is deliberately flat:
+`class` is the CRN, the course section number. `group_id` is the team within it.
+Together they identify one group of students. Nearly every table and query is
+keyed on that pair, and Socket.IO rooms are named `group_<group_id>_class_<class>`.
 
-```
-frontend fetch()
-  -> api/src/app.ts                 session + passport populate req.user
-  -> api/src/routes/X.routes.ts     picks the auth guard
-  -> api/src/middleware/auth.*      requireAuth / requireAdmin / requireStudent
-  -> api/src/controller/X.controller.ts   raw SQL via mysql2
-  -> MySQL
-```
+**If you scope by `group_id` alone you hit group 3 in every section at once.**
+This is the most common mistake in this codebase. Always carry both.
 
-Worked example, a student voting on a resume:
+### Mounted API prefixes
 
-1. `frontend/src/app/res-review/page.tsx` POSTs to `/resume/vote` with
-   `credentials: 'include'`
-2. `api/src/routes/resume.routes.ts` has
-   `router.post('/vote', requireAuth, resumeController.submitVote)`
-3. `submitVote` in `api/src/controller/resume.controller.ts` runs an
-   `INSERT ... ON DUPLICATE KEY UPDATE` against `Resume`
-4. It emits `voteUpdated` to the group's socket room
-
-**Do not introduce a service layer for one endpoint.** If you are doing a
-planned refactor across a whole area, that is a different conversation.
-
-## How auth works
-
-Login is Keycloak OIDC through Passport.
-
-```
-student clicks Login
-  -> GET /auth/keycloak                     (api/src/routes/auth.routes.ts)
-  -> redirect to Keycloak, with a state param
-  -> student authenticates at Keycloak
-  -> GET /auth/keycloak/callback
-  -> api/src/config/passport.ts strategy callback:
-       looks up Users by email
-       if no row, INSERTs one with affiliation 'none'
-       returns the full Users row as `user`
-  -> api/src/controller/auth.controller.ts decides where to send them
-```
-
-`passport.serializeUser` stores `user.id`. `deserializeUser` re-reads the whole
-`Users` row on every request, so **`req.user` is the live database row**,
-including `affiliation`, `group_id` and `class`.
-
-### How it decides teacher vs student
-
-In `auth.controller.ts`, after login, in this order:
-
-1. `affiliation === 'admin'` → `/advisor-dashboard`
-2. missing `f_name` / `l_name`, or `affiliation === 'none'` → `/signupform`
-3. otherwise a student: if their group has `started = 1` they go to
-   `/dashboard` (or `/about` if `seen` is 0), else `/waitingGroup`
-
-Guards, in `api/src/middleware/auth.middleware.ts`:
-
-| Guard              | Passes when                                        |
-| ------------------ | -------------------------------------------------- |
-| `requireAuth`      | any logged-in session                              |
-| `requireAdmin`     | `req.user.affiliation === 'admin'`                 |
-| `requireStudent`   | `req.user.affiliation === 'student'`               |
-| `requireModerator` | admin **or** the legacy `session.isModerator` flag |
-
-**There is a second, legacy auth system.** `/mod-signin` posts a plaintext
-username and password checked against `MODERATOR_USERNAME` /
-`MODERATOR_PASSWORD` env vars, and sets `session.isModerator`. It gates
-`/mod-dashboard`, the page that grants teacher access. It exists because of a
-bootstrap problem: that page creates the first admin, so it cannot itself
-require an admin. Retiring it is an open ticket (`SEC-4b`). Do not build
-anything new on it.
-
-## The one concept to internalise: `(group_id, class)`
-
-Almost every table and query is keyed on the **pair** `(group_id, class)`, where
-`class` is the CRN. That pair identifies one team of students. Group 2 exists in
-every section.
-
-Socket rooms are named `group_<group_id>_class_<class>`.
-
-**If you write a group-scoped query or emit and leave out `class`, it leaks
-across course sections.** This has already happened more than once. Scope by
-both, always.
-
-## How the realtime layer keeps a group in sync
-
-All of it is in `api/src/config/socket.ts`.
-
-**Identity.** The Express session runs over the Socket.IO handshake
-(`api/src/app.ts` calls `io.engine.use(sessionMiddleware)`), so
-`socket.data.user` is the logged-in user. Room joins are checked against it: a
-student can only join their own group's room.
-
-**Rooms.**
-
-| Room                             | Who is in it             |
-| -------------------------------- | ------------------------ |
-| `group_<group_id>_class_<class>` | one team of students     |
-| `class_<class>`                  | everyone in a section    |
-| the advisor's email address      | that teacher's dashboard |
-
-The advisor dashboard is **not** in the group room. To notify a class's
-teachers use `emitToClassModerators(io, db, classId, event, payload)` from
-`config/socket.ts`. Never use bare `io.emit`; it reaches every client in every
-class. There are currently zero bare `io.emit` calls and it should stay that way.
-
-**A socket that reconnects gets a new id and is in no rooms.** Anything that
-joins a room must re-join on `'connect'`, not once on mount. `res-review` and
-`makeOffer` show the correct pattern.
-
-**The group barrier.** Several steps block a student until every member of their
-group finishes. That state lives in the `Step_Completion` table and is answered
-by a query, re-evaluated on completion and on room join. It used to live in a
-plain JavaScript object in the API process, which meant an API restart stranded
-every group permanently. Do not put it back in memory.
-
-Two recovery paths exist:
-
-- `GET /groups/barrier-status/:classId/:groupId` — a poll, so a client that
-  missed the socket event can ask
-- `POST /groups/force-advance` — the teacher's override, admin only
-
-Both work; **neither has any UI yet.** That is ticket `CU-7`.
+From `api/src/app.ts:199-218`: `/auth` `/users` `/resume` `/resume_pdf`
+`/interview` `/jobs` `/groups` `/moderator` `/notes` `/offers` `/progress`
+`/candidates` `/upload` `/uploads` `/csv` `/facts` `/delete`
 
 ---
 
-# 3. Running it locally
+## 3. How a request flows: one worked example
 
-MySQL and Keycloak run in Docker. The API and frontend run on your host,
-because Keycloak must be reachable at the _same_ URL from both your browser and
-the API process, and `localhost` inside a container is not the `localhost` your
-browser sees.
+**A student votes yes on resume 3.**
 
-## Prerequisites
+**1. The click.** `frontend/src/app/res-review/page.tsx` posts to
+`${NEXT_PUBLIC_API_BASE_URL}/resume/vote` with `credentials: 'include'` so the
+session cookie rides along.
 
-- Docker Desktop running
-- Node 22 (`nvm use` picks it up from `.nvmrc`)
+**2. The route.** `api/src/routes/resume.routes.ts:12`
 
-## Steps
+```ts
+router.post('/vote', requireAuth, resumeController.submitVote);
+```
+
+`requireAuth` (`api/src/middleware/auth.middleware.ts:6`) checks
+`req.isAuthenticated()` and 401s otherwise. It proves you are logged in. It does
+**not** check your role or that the group you named is yours.
+
+**3. The controller.** `api/src/controller/resume.controller.ts`, `submitVote`:
+
+- Validates that `student_id`, `group_id`, `class`, `resume_number`, `timespent` and `vote` are present
+- `SELECT`s the existing vote so it can report the old value
+- Upserts:
+
+```sql
+INSERT INTO Resume (student_id, group_id, class, timespent, resume_number, vote)
+VALUES (?, ?, ?, ?, ?, ?)
+ON DUPLICATE KEY UPDATE timespent = VALUES(timespent), vote = VALUES(vote);
+```
+
+That `ON DUPLICATE KEY` only works because migration
+`database-files/migrations/001-resume-unique-vote.sql` added the unique key.
+Before it, the clause could never fire and every vote change appended a row.
+
+**4. The broadcast.** Still in `submitVote`:
+
+```ts
+const roomId = `group_${group_id}_class_${classId}`;
+this.io.to(roomId).emit('voteUpdated', { resume_number, oldVote, newVote: vote, student_id });
+```
+
+Scoped to the room, so only that group's browsers hear it. Their tallies update
+with no refresh.
+
+**5. The response.** `200 { message: 'Resume review updated successfully' }`.
+
+**Notice the gap.** `student_id` and `group_id` come from the **request body**,
+not the session. Nothing checks they belong to the caller. That is a real open
+issue, not a pattern to copy — see the scoping ticket in `TICKETS.md`. In new
+code, derive identity from `req.user`.
+
+---
+
+## 4. Auth: how teacher vs student is decided
+
+### The login flow
+
+1. Student clicks the landing button → `GET /auth/keycloak` on the **API**
+2. API redirects to Keycloak; they log in there
+3. Keycloak redirects back to `/auth/keycloak/callback`
+4. `api/src/controller/auth.controller.ts` looks them up in `Users` and decides
+   where to send them
+
+### The decision, in order (`auth.controller.ts:113-160`)
+
+```
+look up Users by email
+├─ affiliation === 'admin'            → /advisor-dashboard        (TEACHER)
+├─ missing f_name/l_name, or
+│  affiliation === 'none'             → /signupform
+└─ otherwise (student):
+   └─ is GroupsInfo.started = 1 for (class, group_id)?
+      ├─ no                           → /waitingGroup
+      └─ yes:
+         ├─ Users.seen = 1            → /dashboard
+         └─ Users.seen = 0            → /about  (one-time intro)
+```
+
+**`Users.affiliation` is the switch.** One column, values `student | admin | none`.
+
+**`Moderator` is the root of trust.** It maps an advisor email to a CRN. Being
+in that table is the *only* thing that qualifies you to become a teacher. When a
+user picks "Faculty" on the signup form, `createUser`
+(`api/src/controller/user.controller.ts`) checks server-side:
+
+```sql
+SELECT crn FROM Moderator WHERE admin_email = ? LIMIT 1
+```
+
+No row, no admin. 403. The browser-side check on the signup form is cosmetic;
+this is the one that counts.
+
+### The middleware (`api/src/middleware/auth.middleware.ts`)
+
+| Guard              | Checks                                                     |
+| ------------------ | ---------------------------------------------------------- |
+| `requireAuth`      | logged in. Nothing else                                    |
+| `requireAdmin`     | logged in **and** `affiliation === 'admin'`                |
+| `requireStudent`   | logged in **and** `affiliation === 'student'`              |
+| `requireModerator` | the legacy moderator session **or** `requireAdmin`         |
+
+### The second login
+
+There is a **separate** auth system: the "Admin" button on the landing page goes
+to `/mod-signin`, which posts a plaintext username and password compared against
+`MODERATOR_USERNAME` / `MODERATOR_PASSWORD` env vars. It gates `/mod-dashboard`,
+the only UI that writes the `Moderator` table.
+
+It is load-bearing (that is how teachers get created) and scheduled for removal.
+`requireModerator` exists purely to bridge the two until it goes.
+
+**Important for navigation:** the API redirects to frontend routes
+(`/waitingGroup`, `/about`, `/signupform`). Those pages have **no inbound links
+from the frontend**, so they look dead to a grep and are not. Check both sides
+before deleting a page:
+
+```bash
+grep -rn "routeName" frontend/src   # frontend links
+grep -rn "FRONT_URL" api/src        # server-side redirects
+```
+
+---
+
+## 5. Realtime and the group barrier
+
+`api/src/config/socket.ts`. The most interesting file in the repo.
+
+Clients join room `group_<group_id>_class_<class>`. Through it flow shared
+checkboxes, professor popups, step transitions, and offer approvals.
+
+### Socket auth
+
+`io.use(...)` at `socket.ts:139` reads the login session off the handshake and
+populates the authenticated user. It refuses to join a student to another
+group's room.
+
+The last step — **dropping** unauthenticated sockets rather than letting them
+connect unpoliced — is behind `SOCKET_AUTH_REQUIRED`, which is **off by
+default**. Per the comment in `api/.env.example`, it is off because flipping it
+is the one change that can disconnect every client at once and **nobody has run
+two real browser sessions against it yet.** That is a real task, not a
+formality.
+
+### The barrier
+
+This is the core group mechanic and the thing most likely to break a live class.
+
+**Every member of a group must finish their own resume review before
+`res-review-group` opens.** The step constant is
+`RES_REVIEW_BARRIER_STEP = 'res_1'` (`socket.ts:43`).
+
+It used to live in a plain JavaScript object in process memory. An API restart
+wiped it: students who had already finished never re-announced, so the group
+restarted at 0 and could never reach its total again. **It is now DB-backed.**
+
+`evaluateGroupBarrier(db, classId, groupId, step)` (`socket.ts:60`) answers the
+question **by query, every time**:
+
+```sql
+SELECT id FROM Users
+ WHERE group_id = ? AND class = ? AND affiliation = 'student';
+
+SELECT student_id FROM Step_Completion
+ WHERE group_id = ? AND class = ? AND step = ?;
+```
+
+Then:
+
+- Only completions belonging to a **current** member count. A student moved to
+  another group mid-class leaves a row behind, and counting it would release a
+  group that still has someone unfinished.
+- `released = members.length > 0 && completedCount >= members.length`. An empty
+  roster is **unknown, not finished** — releasing on `0 >= 0` would walk a
+  student through a barrier before their group had anyone in it.
+
+`broadcastGroupBarrier(...)` re-evaluates and, if open, emits
+`groupCompletedResReview` **to the room**, not to cached socket ids. Nothing is
+deleted afterwards, so it is safe to ask again. It re-runs on completion, on
+room join, and on roster change.
+
+Two escape hatches now exist:
+
+- **`GET /groups/barrier-status`** — the same answer over HTTP, for a client
+  whose socket never came back
+- **`POST /groups/force-advance`** (`api/src/routes/group.routes.ts:28`,
+  `requireAdmin`) — the professor can push a deadlocked group forward without a
+  DBA
+
+> **`docs/ARCHITECTURE.md` is stale on this.** It still describes the in-memory
+> barrier, no teacher override, and `requireAdmin` applied to nothing. All three
+> are fixed. Trust this file and the code over that one. Fixing it is a ticket.
+
+### Single replica only
+
+`onlineStudents` is still process memory. With two replicas a group splits
+across them and never reaches its completion count. `INSTANCE_COUNT` must stay
+`1`; the API logs a loud error at boot above that but **cannot enforce it**, so
+the Coolify service has to stay at 1 too.
+
+---
+
+## 6. Local setup
+
+### Prerequisites
+
+- **Node 22** (`.nvmrc` pins it — `nvm use`)
+- **Docker Desktop**, running
+- **git**
+
+### Steps
 
 ```bash
 git clone git@github.com:Khoury-Co-op/NUHire.git
 cd NUHire
-nvm use
 npm run install:all
-```
 
-Create the two env files:
-
-```bash
 cp api/.env.example api/.env
 cp frontend/.env.example frontend/.env.local
+
+npm run dev:services      # MySQL + Keycloak in Docker
+npm run dev:api           # builds, then runs the API
+npm run dev:frontend      # in a second terminal
 ```
 
-The defaults in both example files work with the local stack as-is. You do not
-need to edit anything to get started.
+Open http://localhost:3000.
 
-Start the services, then the two apps in separate terminals:
+First run pulls images and imports the Keycloak realm, so give it a minute.
+Check both containers:
 
 ```bash
-npm run dev:services     # MySQL + Keycloak in Docker
-npm run dev:api          # builds, then runs the compiled API on :5001
-npm run dev:frontend     # Next dev server on :3000
+docker compose -f .local/compose.yaml ps
+curl http://localhost:5001/health
 ```
 
-Wait for MySQL to report healthy before starting the API:
+### Every env var
+
+**`api/.env`** — copy from `api/.env.example`, the defaults work as-is.
+
+| Var | Local value | What it does |
+| --- | --- | --- |
+| `DATABASE_URL` | `mysql://root:nuhire@127.0.0.1:3307/nuhire` | **Port 3307 on the host**, 3306 inside Docker |
+| `BACKEND_PORT` | `5001` | API port |
+| `SESSION_SECRET` | any 32+ char string | **API refuses to boot if unset or under 32 chars.** Unset signed every cookie with `undefined`, making them forgeable |
+| `REACT_APP_FRONT_URL` | `http://localhost:3000` | CORS origin and post-login redirect target |
+| `KEYCLOAK_URL` | `http://localhost:8080` | Must resolve to the same URL from **both** the browser and the API process |
+| `KEYCLOAK_REALM` | `NUHire-Realm` | |
+| `KEYCLOAK_CLIENT_ID` | `NUHire-Client` | |
+| `KEYCLOAK_CLIENT_SECRET` | in the example file | Local dev value |
+| `KEYCLOAK_CALLBACK_URL` | `http://localhost:5001/auth/keycloak/callback` | Must be in the realm's redirect URIs |
+| `MODERATOR_USERNAME` | `admin` | Legacy second login |
+| `MODERATOR_PASSWORD` | `admin` | Legacy second login |
+| `COOKIE_SECURE` | `false` | **Must be false locally.** Browsers drop `Secure` cookies over plain http, so the session never persists. Leave UNSET in deploys |
+| `DB_POOL_SIZE` | `25` | Per process, so also the ceiling on concurrent queries |
+| `DB_POOL_QUEUE_LIMIT` | `30` | **Must stay finite.** At 0, mysql2 queues forever: a saturated pool produced requests that never resolved and never errored, so 30 laptops span while logs looked healthy. Past this, 503 |
+| `DB_CONNECT_TIMEOUT_MS` | `10000` | |
+| `DB_QUERY_TIMEOUT_MS` | `15000` | MySQL `max_execution_time`; caps read-only SELECTs only |
+| `INSTANCE_COUNT` | `1` | Leave at 1. See the barrier section |
+| `SOCKET_AUTH_REQUIRED` | `false` | Drop unauthenticated sockets. Off until someone tests it with two real sessions |
+
+**`frontend/.env.local`**
+
+| Var | Local value | What it does |
+| --- | --- | --- |
+| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:5001` | Every frontend fetch uses this |
+| `NEXT_PUBLIC_FRONT_URL` | `http://localhost:3000` | **Stale.** `grep -rn NEXT_PUBLIC_FRONT_URL frontend/src` returns nothing — those pages use `router.push` now. Harmless; the comment in the example file should be deleted |
+
+### Useful commands
 
 ```bash
-docker ps   # nuhire-mysql should say (healthy)
+npm run build        # both packages
+npm run typecheck    # tsc --noEmit in both
+npm run format       # prettier
+
+docker compose -f .local/compose.yaml down -v   # nuke DB + reseed on next up
 ```
-
-| Service  | URL                   | Credentials                |
-| -------- | --------------------- | -------------------------- |
-| app      | http://localhost:3000 |                            |
-| api      | http://localhost:5001 |                            |
-| Keycloak | http://localhost:8080 | admin / admin              |
-| MySQL    | 127.0.0.1:3307        | root / nuhire, db `nuhire` |
-
-## Env vars
-
-Every variable the code actually reads, found by grepping
-`process.env` across both packages.
-
-### `api/.env` — required
-
-| Var                                         | What                                                                                                                                                       | Local value                                    |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `DATABASE_URL`                              | MySQL connection. Note port **3307** on the host                                                                                                           | `mysql://root:nuhire@127.0.0.1:3307/nuhire`    |
-| `BACKEND_PORT`                              | API port                                                                                                                                                   | `5001`                                         |
-| `SESSION_SECRET`                            | Signs session cookies. **The API refuses to boot if this is unset or under 32 characters.**                                                                | any 32+ char string                            |
-| `REACT_APP_FRONT_URL`                       | Where the frontend lives. Used for CORS and every post-login redirect. Badly named; it is not a React var                                                  | `http://localhost:3000`                        |
-| `KEYCLOAK_URL`                              | Must be reachable at this URL from **both** the browser and the API process                                                                                | `http://localhost:8080`                        |
-| `KEYCLOAK_REALM`                            |                                                                                                                                                            | `NUHire-Realm`                                 |
-| `KEYCLOAK_CLIENT_ID`                        |                                                                                                                                                            | `NUHire-Client`                                |
-| `KEYCLOAK_CLIENT_SECRET`                    | In the committed realm export, so treat it as public                                                                                                       | see `.env.example`                             |
-| `KEYCLOAK_CALLBACK_URL`                     |                                                                                                                                                            | `http://localhost:5001/auth/keycloak/callback` |
-| `COOKIE_SECURE`                             | **Must be `false` locally.** Browsers drop `Secure` cookies over plain http, so without this every request comes back unauthenticated with a fresh session | `false`                                        |
-| `MODERATOR_USERNAME` / `MODERATOR_PASSWORD` | The legacy `/mod-dashboard` login                                                                                                                          | `admin` / `admin`                              |
-
-### `api/.env` — optional, sane defaults
-
-`INSTANCE_COUNT` (leave at 1 — the socket layer keeps per-process state, so two
-replicas split a group and it never finishes), `SOCKET_AUTH_REQUIRED`
-(ships `false`, see gotchas), `LOG_LEVEL`, `LOG_PRETTY`, `NODE_ENV`, and the
-`DB_POOL_*` tuning vars documented inline in `.env.example`.
-
-### `frontend/.env.local`
-
-| Var                        | What             | Local value             |
-| -------------------------- | ---------------- | ----------------------- |
-| `NEXT_PUBLIC_API_BASE_URL` | Where the API is | `http://localhost:5001` |
-| `NEXT_PUBLIC_LOG_LEVEL`    | optional         |                         |
-
-**If you add an env var, add it to the matching `.env.example` in the same
-commit.** A missing var should fail loudly at boot, not produce a page that
-navigates to `undefined/instructions`. That bug actually shipped.
-
-## Test accounts
-
-Seeded into both Keycloak and MySQL by `.local/seed.sql`. Password for all of
-them is `nuhire`.
-
-| Email                       | Role    | Group | Lands on             |
-| --------------------------- | ------- | ----- | -------------------- |
-| `advisor@northeastern.edu`  | admin   | —     | `/advisor-dashboard` |
-| `student1@northeastern.edu` | student | 1     | `/waitingGroup`      |
-| `student2@northeastern.edu` | student | 1     | `/waitingGroup`      |
-| `student3@northeastern.edu` | student | 2     | `/waitingGroup`      |
-
-All in class (CRN) 1. `advisor@northeastern.edu` already owns CRN 1 in the
-`Moderator` table, which is what makes them a teacher.
-
-## Giving yourself teacher access
-
-The student side does nothing until a teacher starts a group, so you need this
-before anything is clickable.
-
-**Easiest:** log in as `advisor@northeastern.edu` / `nuhire`. Already set up.
-
-**To make your own account a teacher**, you need two things: `affiliation` set
-to `admin`, and a `Moderator` row owning a CRN.
-
-```bash
-docker exec -it nuhire-mysql mysql -uroot -pnuhire nuhire
-
-UPDATE Users SET affiliation = 'admin' WHERE email = 'you@northeastern.edu';
-INSERT INTO Moderator (admin_email, crn) VALUES ('you@northeastern.edu', 2);
-```
-
-`Moderator.crn` is `UNIQUE`, so **one email per CRN and one CRN per email**. You
-cannot share CRN 1 with the seeded advisor; pick a different number. A professor
-and a TA cannot both own a class today, which is open ticket `API-19`.
-
-Log out and back in — `affiliation` is read at login, so the redirect will not
-change until you do.
-
-## Reset the database
-
-```bash
-docker compose -f .local/compose.yaml down -v
-docker compose -f .local/compose.yaml up -d
-```
-
-`-v` drops the volume, so the schema and seed re-run. Without `-v` your data
-survives and the seed does not re-run.
-
-## Walking the full activity
-
-Do this once before you touch code. You need **two browsers**, or one normal
-window and one private window, because you will be two users at once.
-
-### As the teacher
-
-1. Log in as `advisor@northeastern.edu` at http://localhost:3000
-2. You land on `/advisor-dashboard`. Open **Manage Groups**
-3. Select class 1. You should see groups 1 and 2 with the seeded students
-4. Assign a job description to the groups
-   **Careful:** assigning a job **deletes all of that group's work** — resume
-   votes, interview ratings, notes. That is a known design problem
-   (tickets `TCH-1`, `TCH-2`), not something you broke
-5. Click **Start** on group 1
-
-### As a student, in the other browser
-
-6. Log in as `student1@northeastern.edu`
-7. Before the teacher started the group you sit on `/waitingGroup`. After, you
-   land on `/about`, then `/dashboard`
-8. Work the steps in order:
-   `/jobdes` → `/res-review` → `/res-review-group` → `/interview-stage` →
-   `/makeOffer`
-9. At `/res-review` you get 10 resumes at 30 seconds each
-10. `/res-review-group` will **block you until every member of group 1 has
-    finished** `/res-review`. That is the barrier. To get past it, log in as
-    `student2@northeastern.edu` in a third session and finish their resumes too.
-    This is why two sessions is the minimum for testing anything group-shaped
-11. Extend an offer at `/makeOffer`
-
-### Back as the teacher
-
-12. The pending offer appears on the advisor dashboard. Accept or reject it
-13. The student sees the decision
-
-**`/employerPanel`, the final step, is a stub.** It is a heading, one sentence
-and a button. A group cannot actually finish the simulation. Build-or-cut is an
-open product decision (`STU-27`).
 
 ---
 
-## Known gotchas
+## 7. Gotchas
 
-Things that will cost you an hour if nobody tells you.
+**Do not use `npm run dev` inside `api/`.** The `ts-node` script throws TS2769
+on `auth.routes.ts` — the lockfile pins `@types/express@5` against `express@4`.
+`tsc` itself passes, so `npm run dev:api` (build then start) works. Consequence:
+**no hot reload on the API**, you rebuild. The frontend hot-reloads normally.
 
-**Do not run `npm run dev` inside `api/`.** The `ts-node` script throws TS2769
-on `auth.routes.ts` because the lockfile pins `@types/express@5` against
-`express@4`. `tsc` itself passes. Use `npm run dev:api` from the root, which
-builds and runs the compiled output — the same path production uses. The
-tradeoff is no hot reload on the API: rebuild and restart after edits. Fixing
-the dev script is an open ticket.
+**One browser can only hold one login.** Keycloak SSO is shared across tabs, so
+a second tab silently keeps your first identity. Use a **private/incognito
+window** for the second role.
 
-**`COOKIE_SECURE=false` is mandatory locally.** Forget it and every request
-comes back unauthenticated with a brand-new session, and nothing in the UI tells
-you why.
+**Students see nothing until an advisor starts their group AND assigns a job.**
+If you log in as a student first, you land on `/waitingGroup` and conclude the
+app is broken. It isn't. Do the teacher steps first.
 
-**Two sessions minimum for anything group-shaped.** Barriers, group
-confirmations and socket rooms cannot be tested with one browser. If you tested
-with one, you did not test it.
+**Port 3307, not 3306.** The host mapping avoids clashing with a local MySQL.
 
-**Nothing socket-shaped has ever been tested with two real browsers.** Not the
-barrier, not room scoping, not group confirmations. All of it is verified by
-typecheck, request-level tests and headless socket clients only. Treat it as
-unverified no matter how confident a commit message sounds.
+**MySQL only seeds on a fresh volume.** `Pandployer.sql` and `seed.sql` run from
+`docker-entrypoint-initdb.d`, which only fires when the data directory is empty.
+Changed the schema? `down -v` and back up.
 
-**`SOCKET_AUTH_REQUIRED` ships as `false`.** The socket layer reads identity
-from the session and refuses cross-group room joins, but it does not yet _drop_
-a session-less socket. Turning it on is the single change most able to
-disconnect every client at once, so it waits for a real two-browser test.
+**Migrations are files, not automatic.** `database-files/migrations/001..005`
+exist but there is no runner. **[UNVERIFIED]** whether they are applied to your
+local DB by anything; read `database-files/migrations/README.md` before assuming.
 
-**Migrations are applied by hand.** `database-files/Pandployer.sql` only ever
-runs against an empty database. Any schema change needs a numbered file in
-`database-files/migrations/` **and** an edit to the dump. Read that directory's
-README first.
+**`candidate_id` is not `Candidates.id`.** Throughout the app it holds a
+`Resume_pdfs.id`. Looking up `Candidates` by `id` silently returns the **wrong
+person**. Join on `resume_id`.
 
-**Three vocabularies for "what step is a student on"**: `Users.current_page`
-(`'dashboard' | 'resumepage' | 'resumepage2' | 'jobdes' | 'interviewpage' |
-'makeofferpage'`), `Progress.step` (`'none' | 'job_description' | 'res_1' |
-'res_2' | 'interview' | 'offer' | 'employer'`), and the route paths. They do not
-map to each other. Collapsing them is ticket `STU-16`. Until then, check which
-one a piece of code means.
+**Three names for the same thing.** `Users.current_page`, `Progress.step`, and
+the route paths are three vocabularies for the same six steps and they do not
+map to each other. `frontend/src/app/components/useProgress.tsx` has the one
+`STEP_TO_ROUTE` table that translates. The API has its own copy in
+`group.controller.ts` because force-advance sends a route over the wire —
+**change both together.** Do not add a fourth.
 
-**`npm run lint` does not work.** No ESLint config exists anywhere, so
-`next lint` drops into an interactive setup prompt. Ticket `INFRA-5`.
+**Group and socket changes need two browser sessions.** Barriers, shared
+checkboxes, and offers cannot be tested alone. One normal window, one incognito,
+both in the same group.
 
-**There are no tests.** `npx tsc --noEmit` in both packages is your entire
-safety net. Run it before every push.
+**`.next` sync artifacts break typecheck.** Files like `cache-life.d 2.ts` (a
+cloud-sync duplicate) produce duplicate-identifier errors that are not your
+code. `rm -rf frontend/.next` and re-run.
 
-**Uploads are committed to git** and the upload directory is not on a volume, so
-a deploy would wipe files the professor uploaded while the database rows survive
-pointing at nothing. Ticket `INFRA-11`.
-
-**The whole repo runs on one replica.** `onlineStudents` lives in process
-memory. Two replicas split a group and it never reaches its completion count.
+**Don't add `console.log`.** There are hundreds already and they bury real
+errors during a live class.
 
 ---
 
-# 4. Your first ticket
+## 8. Giving yourself teacher access locally
 
-Read [AGENTS.md](AGENTS.md) before you write code. It is short and every rule in
-it exists because the obvious approach went wrong here.
+**The seed already did it.** `.local/seed.sql` inserts
+`advisor@northeastern.edu` into `Moderator` with `crn = 1` and into `Users` with
+`affiliation = 'admin'`. Just log in as the advisor account below.
 
-Then pick one. Twelve starter tickets below, verified as genuinely open. Each
-names the files. Fuller detail lives in [TICKETS.md](TICKETS.md) and
-[CLEANUP.md](CLEANUP.md).
+**To make a different account a teacher**, two things must both be true:
 
-| #   | Ticket                                                                                                                                                                                                             | Level | Est | Files                                                                                                                         |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- | --- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **`ONB-1`** Run the app and write down every place these docs lied. Do it on a fresh clone in a temp directory, not your existing checkout                                                                         | GFI   | 3h  | `ONBOARDING.md`                                                                                                               |
-| 2   | **`CU-2`** A Keycloak account with no `name` claim crashes login. `profile.name.split(' ')` assumes the claim exists and that names have exactly two words                                                         | GFI   | 2h  | `api/src/config/passport.ts:56`, `api/src/controller/auth.controller.ts:109`                                                  |
-| 3   | **`CU-4`** CSV import picks the first header _containing_ "email", so Canvas's `Secondary Email` column can win and the whole class is imported under unusable addresses                                           | GFI   | 2h  | `frontend/src/app/components/StudentCSVTab.tsx:184`                                                                           |
-| 4   | **`CU-1`** The interview shortlist query filters on `group_id` alone, so it leaks across course sections and returns one duplicate row per group member                                                            | MED   | 3h  | `api/src/controller/resume.controller.ts:169`, `api/src/routes/resume.routes.ts`, `frontend/src/app/interview-stage/page.tsx` |
-| 5   | **`CU-7`** The teacher's force-advance override and the student's barrier poll both exist on the server with no UI. Two PRs                                                                                        | MED   | 5h  | `frontend/src/app/components/ManageGroupsTab.tsx`, `frontend/src/app/res-review/page.tsx`                                     |
-| 6   | **`TCH-1`** "Assign Job" deletes every vote, rating and note for the whole class with no confirmation, and the modal never mentions deleting anything                                                              | GFI   | 5h  | `frontend/src/app/components/ManageGroupsTab.tsx`                                                                             |
-| 7   | **`STU-8`** `/jobdes` calls `updateProgress` unconditionally on mount, so a student who re-reads the job description is reset to step 1 and ejected mid-activity                                                   | MED   | 4h  | `frontend/src/app/jobdes/page.tsx`, `api/src/controller/progress.controller.ts`                                               |
-| 8   | **`STU-13`** A YouTube video that never loads leaves Submit disabled forever, so one student blocks their whole group's barrier                                                                                    | MED   | 5h  | `frontend/src/app/interview-stage/page.tsx`                                                                                   |
-| 9   | **`STU-25`** "10 resumes" and "4 candidates" are hardcoded in at least six places. Upload 9 or 12 and every student in that class is permanently stuck                                                             | MED   | 6h  | `frontend/src/app/res-review/page.tsx`, `res-review-group/`, `interview-stage/`                                               |
-| 10  | **`UI-9`** `tailwind.config.js` defines `background: '#fff'` and `foreground: '#fff'`; `sand` is white and `navy` is black. Every page writes `bg-sand/80` thinking it tints warm. Agree a palette as a team first | MED   | 6h  | `frontend/tailwind.config.js`                                                                                                 |
-| 11  | **`INFRA-5`** ESLint does not exist, so `npm run lint` hangs on an interactive prompt. Add a flat config for both packages, `no-console` as a warning                                                              | MED   | 10h | root, `api/`, `frontend/`                                                                                                     |
-| 12  | **`SEC-8`** _(hard, ask the lead for a spec)_ Socket events are not authorized by role. Any client can fake an advisor's accept, yank a group to any page, or spam a class with popups                             | HARD  | 18h | `api/src/config/socket.ts`                                                                                                    |
+1. A row in `Moderator` mapping the email to a CRN
+2. `Users.affiliation = 'admin'` for that email
 
-Before opening a PR:
+Fastest path, straight to the database:
 
-- [ ] Both packages typecheck: `npm run typecheck`
+```bash
+docker exec -it nuhire-mysql mysql -uroot -pnuhire nuhire -e "
+  INSERT INTO Moderator (admin_email, crn) VALUES ('you@northeastern.edu', 2);
+  UPDATE Users SET affiliation='admin' WHERE email='you@northeastern.edu';
+"
+```
+
+Through the UI instead: landing page → **Admin** (top right) → `/mod-signin` →
+`admin` / `admin` (from `MODERATOR_USERNAME` / `MODERATOR_PASSWORD`) → add the
+email and CRN on `/mod-dashboard`. Then that person logs in through Keycloak,
+picks Faculty on the signup form, and `createUser` verifies the `Moderator` row
+server-side before granting admin.
+
+The account must also exist in Keycloak. Seeded users live in
+`.local/realm-export.json`; the realm **re-imports on every container boot**, so
+users you add through the Keycloak admin console (`localhost:8080`,
+`admin`/`admin`) vanish on restart. Add them to the file to make them stick.
+
+### Test accounts
+
+Password is **`nuhire`** for all four (plaintext in `.local/realm-export.json`,
+non-temporary, email verification off).
+
+| Email | Role | Group |
+| --- | --- | --- |
+| `advisor@northeastern.edu` | admin | — |
+| `student1@northeastern.edu` | student | group 1 |
+| `student2@northeastern.edu` | student | group 1 |
+| `student3@northeastern.edu` | student | group 2 |
+
+---
+
+## 9. Full click-through
+
+Do this once, end to end. It is the fastest way to understand the product.
+
+> **[UNVERIFIED]** in this pass: I could not drive a browser in the session that
+> produced this doc. The flow below is reconstructed from the code and from an
+> earlier session where it was run end to end. Treat any mismatch as a doc bug
+> and fix it — that is literally ticket `ONB-1`.
+
+### Part A — teacher
+
+1. Open http://localhost:3000 in your **normal window**
+2. Click **"Click Here to Get Started"**
+3. Log in as `advisor@northeastern.edu` / `nuhire`
+4. You land on **`/advisor-dashboard`** — three cards: Manage Groups, Upload Job
+   and Resumes, Waiting Facts
+5. Click **Manage Groups** (`/grouping`). Two tabs: Manage Groups, CSV Group
+   Assignment
+6. Select class **CRN 1** in the dropdown. Groups 1 and 2 appear with their
+   students
+7. **Assign a job.** Use the per-group "Assign Job" button, or the toolbar
+   "Assign Job to All Groups". Pick e.g. **Carbonite**
+   > ⚠️ This button **deletes every resume vote, interview rating and note for
+   > the affected groups**, with no confirmation and no mention of it in the
+   > modal. Harmless on a fresh seed. Ticket `TCH-1` adds the dialog
+8. **Start the group.** Per-group "Start Group", or "Start All Groups"
+   > ⚠️ Irreversible through the UI — nothing sets `started` back to 0
+9. Leave this window open
+
+### Part B — student
+
+10. Open a **private/incognito window** (not a new tab — SSO is shared)
+11. Go to http://localhost:3000, log in as `student1@northeastern.edu` / `nuhire`
+12. First login goes to **`/about`** (intro video) because `Users.seen = 0`.
+    Continue → **`/instructions`** → **`/dashboard`**
+13. The dashboard shows six step cards. **Job Description** is unlocked
+14. Walk the steps: **Job Description** → **Resume Review** (10 resumes on a
+    timer) → **Group Resume Review** → **Interview Stage** → **Make an Offer**
+15. At **Make an Offer**, pick a candidate and submit. The button then reads
+    *"awaiting advisor approval"*
+16. Back in the teacher window: **Manage Groups** → CRN 1 → group 1 shows the
+    pending offer with accept/reject. Click **accept**
+17. Watch the student window unlock live — that is `makeOfferResponse` arriving
+    over the socket
+
+### To actually feel the group mechanic
+
+Steps 2 and 3 wait for **all** group members. With one student in a group of
+two, you will sit at the barrier — which is the point. Open a third window as
+`student2@northeastern.edu` (also group 1) and finish resume review on both to
+see it release.
+
+If you get stuck there, that is `POST /groups/force-advance` existing for a
+reason.
+
+---
+
+## 10. Ten starter tickets
+
+Full backlog with estimates and dependencies is in
+[TICKETS.md](TICKETS.md). These ten are independent and touch different files,
+so ten people can start at once.
+
+**1. `ONB-1` — Run the app and log every place this doc lied** · 3h · GFI
+Do it on a **fresh clone in a temp directory**, not your existing checkout —
+clone-only failures are the ones that survive every review. PR the fixes.
+
+**2. `TCH-1` — Confirmation dialog on "Assign Job"** · 5h · GFI
+`frontend/src/app/components/ManageGroupsTab.tsx`. The most destructive button
+in the app has weaker friction than "remove one student." Modal must name what
+will be erased, show the affected group count, warn if any group has a pending
+offer, and require typing `ERASE` or the CRN. Cancel is default-focused.
+
+**3. `TCH-8` — Confirm dialog on per-group "Start Group"** · 2h · GFI
+`frontend/src/app/components/ManageGroupsTab.tsx`. Fires immediately and is
+irreversible, while "Start All" gets a confirm. Also: a group created *after*
+"Start All" cannot be started from the toolbar.
+
+**4. `STU-8` — Stop `/jobdes` resetting progress backwards** · 4h · MED
+`frontend/src/app/jobdes/page.tsx` + `api/src/controller/progress.controller.ts`.
+It calls `updateProgress("job_description")` unconditionally on mount and the API
+overwrites unconditionally. A student at the interview stage who re-reads the job
+description is reset to step 1, every later step re-locks, and they are ejected
+while their group waits at a barrier. Make progress monotonic server-side.
+
+**5. `STU-15` — Emit before navigating** · 2h · GFI
+`frontend/src/app/res-review/page.tsx`, `frontend/src/app/interview-stage/page.tsx`.
+Both set `window.location.href` and *then* emit `moveGroup`. Navigation can tear
+down the socket first, so one student advances and their teammates stay behind.
+
+**6. `UI-12` — Build `<Spinner>` / `<PageLoader>`** · 5h · GFI
+The same loading block is copy-pasted **16 times** across `frontend/src/app/`;
+one copy has already drifted to a different colour. Cheapest possible start on
+the design system.
+
+**7. `UI-6` — Unify step-name vocabulary in the UI** · 5h · GFI
+"Interview Stage" vs "Interview Page" vs "Interview Review" for the same step,
+hardcoded in three places. `instructions/page.tsx` lists 5 steps while
+`dashboard/page.tsx` shows 6 cards. Extract one canonical list.
+
+**8. `UI-7` — Fix the progress bar, which always lies** · 4h · GFI · deps: UI-6
+`frontend/src/app/components/instructions.tsx`. Each page passes a hardcoded
+`progress={n}` over a 5-item array, so a student on the **final** step sees 80%
+and one on the first sees 0%.
+
+**9. `UI-9` — Rewrite the Tailwind theme tokens** · 6h · MED
+`frontend/tailwind.config.js` defines `background: '#fff'` **and**
+`foreground: '#fff'`. `sand: '#fff'` is not sand, `navy: '#000'` is not navy.
+Every page writes `bg-sand/80` believing it is tinting warm when it is applying
+flat white. **Agree a palette as a team first** — this is a design decision, not
+a bug fix. Three of the config's four `content` globs also point at directories
+that do not exist.
+
+**10. `ONB-2` — Write a walkthrough of one student step** · 4h · GFI
+Pick `jobdes`, `res-review`, `interview-stage` or `makeOffer`. Document
+component → API call → controller → SQL → response, plus every socket event it
+emits or listens for. Add to `docs/walkthroughs/`. Forces real reading and the
+next cohort uses it.
+
+**Two harder ones** if you want depth, both needing a short spec from the lead
+first: `SEC-8` (authorize socket events by role — what stops a student faking an
+advisor's accept) and `TCH-11`+`TCH-12` (candidate stats endpoint and modal —
+the screen that makes the activity teachable).
+
+---
+
+## Before you open a PR
+
+- [ ] `npm run typecheck` and `npm run build` both pass
 - [ ] You walked the affected flow locally
 - [ ] Group or socket changes tested with **two sessions in one group**
-- [ ] `npm run format`
 - [ ] No new `console.log`, no new `any`, no new env var missing from `.env.example`
+- [ ] `npm run format` run
 - [ ] You did not move code and change behaviour in the same commit
 
----
+That last one matters. Pure-motion refactors should show no net line change
+beyond imports. Mixing a move with a behaviour change makes review impossible.
 
-## What I could not verify
+## What to read next
 
-Being explicit so you do not take any of this on faith:
-
-- **Deployment.** `.github/workflows/deploy.yml` fires a Coolify webhook on push
-  to `main`. I could not reach Coolify, the runner, or any hosted instance, so
-  everything above about deployment comes from reading that file. The app is not
-  currently hosted.
-- **Keycloak against Khoury IT SSO.** The local realm is a throwaway. How this
-  behaves against real Northeastern SSO is untested, and the `CU-2` bug above is
-  most likely to surface exactly there.
-- **The seeded interview videos.** They are YouTube embeds on a channel nobody
-  on the current team owns. If they are deleted or region-blocked, step 4 breaks
-  and there is no fallback. Nobody has checked who controls that channel.
-- **Anything at 30 users.** Every capacity claim in this repo is a projection.
-  The app has never been run above two.
-- **Windows.** Setup above was verified on macOS only. WSL2 should work but no
-  one has done it. If you are on Windows, `ONB-1` is genuinely useful work.
+1. **[AGENTS.md](AGENTS.md)** — the rules file. Applies to humans and AI agents
+2. **[docs/WHAT_IS_NUHIRE.md](docs/WHAT_IS_NUHIRE.md)** — the product, no code
+3. **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — deeper on the code.
+   **Stale on the barrier** (see §5); fixing it is a ticket
+4. **[TICKETS.md](TICKETS.md)** — the backlog
+5. **[CLEANUP.md](CLEANUP.md)** — small jobs if you have a spare hour
