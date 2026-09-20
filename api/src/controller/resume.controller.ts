@@ -170,27 +170,6 @@ export class ResumeController {
     });
   };
 
-  checkResume = async (req: AuthRequest, res: Response): Promise<void> => {
-    const { user_id, group_id, resume_number, checked } = req.body;
-
-    try {
-      this.db.query(
-        'UPDATE resume_votes SET checked = ? WHERE user_id = ? AND group_id = ? AND resume_number = ?',
-        [checked, user_id, group_id, resume_number],
-        (err) => {
-          if (err) {
-            res.status(500).json({ success: false });
-            return;
-          }
-          res.json({ success: true });
-        }
-      );
-    } catch (error) {
-      console.error('Error updating checkbox:', error);
-      res.status(500).json({ success: false });
-    }
-  };
-
   getCheckedResumes = (req: AuthRequest, res: Response): void => {
     const { group_id } = req.params;
     this.db.query('SELECT vote, resume_number FROM Resume WHERE group_id = ? AND checked = "True"', [group_id], (err, results) => {

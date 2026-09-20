@@ -76,11 +76,12 @@ export class AuthController {
           }
           
           // Explicitly set cookie in response header for Safari
+          const cookieSecure = process.env.COOKIE_SECURE !== 'false';
           res.cookie('connect.sid', req.sessionID, {
             maxAge: 86400000,
             httpOnly: true,
-            secure: true,
-            sameSite: 'none',
+            secure: cookieSecure,
+            sameSite: cookieSecure ? 'none' : 'lax',
             path: '/'
           });
           

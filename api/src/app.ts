@@ -74,6 +74,10 @@ export class App {
       database: url.pathname.slice(1)
     });
 
+    // Cross-site cookies need Secure, which browsers only honour over https.
+    // Local http development sets COOKIE_SECURE=false; deployments leave it unset.
+    const cookieSecure = process.env.COOKIE_SECURE !== 'false';
+
     // THEN CONFIGURE SESSION WITH THE STORE
     this.app.use(session({
       secret: process.env.SESSION_SECRET!,
@@ -81,9 +85,9 @@ export class App {
       saveUninitialized: true,  // Change to true
       store: this.sessionStore,  // Now this.sessionStore exists!
       cookie: {
-        secure: true,
+        secure: cookieSecure,
         httpOnly: true,
-        sameSite: "none",
+        sameSite: cookieSecure ? "none" : "lax",
         maxAge: 24 * 60 * 60 * 1000,
       }
     }));
@@ -165,9 +169,6 @@ export class App {
         warnings: stats.filter(s => s.callsLastMinute > 50)
       });
     });
-
-    // API routes
-    this.app.use('/auth', authRoutes(this.db));
 
     // API routes
     this.app.use('/auth', authRoutes(this.db));

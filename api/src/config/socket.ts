@@ -17,11 +17,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     socket.on('studentOnline', ({ studentId }: { studentId: string }) => {
       onlineStudents[studentId] = socket.id;
 
-      socket.on('message', (data: any) => {
-        console.log('Received message:', data);
-        io.emit('message', data);
-      });
-
       db.query('SELECT group_id, current_page FROM Users WHERE email = ?', [studentId], (err, result: any[]) => {
         if (!err && result.length > 0) {
           const { group_id, current_page } = result[0];

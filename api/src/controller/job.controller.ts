@@ -199,10 +199,7 @@ export class JobController {
 
         // Clear all related data for this group
         await promiseDb.query('DELETE FROM InterviewPage WHERE class = ? AND group_id = ?', [class_id, groupId]);
-        await promiseDb.query('DELETE FROM MakeOfferPage WHERE class = ? AND group_id = ?', [class_id, groupId]);
         await promiseDb.query('DELETE FROM Resume WHERE class = ? AND group_id = ?', [class_id, groupId]);
-        await promiseDb.query('DELETE FROM Resumepage2 WHERE class = ? AND group_id = ?', [class_id, groupId]);
-        await promiseDb.query('DELETE FROM Offer_Status WHERE class = ? AND group_id = ?', [class_id, groupId]);
         await promiseDb.query('DELETE FROM Interview_Status WHERE class = ? AND group_id = ?', [class_id, groupId]);
         await promiseDb.query('DELETE FROM InterviewPopup WHERE class = ? AND group_id = ?', [class_id, groupId]);
 
@@ -216,13 +213,6 @@ export class JobController {
 
         if (emails.length > 0) {
           const placeholders = emails.map(() => '?').join(',');
-          await promiseDb.query(
-            `DELETE rp FROM Resumepage rp
-            JOIN Users u ON rp.student_id = u.id
-            WHERE u.email IN (${placeholders}) AND u.class = ? AND u.group_id = ?`,
-            [...emails, class_id, groupId]
-          );
-
           await promiseDb.query(`DELETE FROM Notes WHERE user_email IN (${placeholders})`, emails);
         }
 
@@ -251,8 +241,7 @@ export class JobController {
         groups_updated: groupIds.length,
         group_ids: groupIds,
         cleared_tables: [
-          'InterviewPage', 'MakeOfferPage', 'Resume', 'Resumepage',
-          'Resumepage2', 'Offer_Status', 'Interview_Status', 'InterviewPopup', 'Notes'
+          'InterviewPage', 'Resume', 'Interview_Status', 'InterviewPopup', 'Notes'
         ]
       });
     } catch (error: any) {
@@ -317,10 +306,7 @@ export class JobController {
       );
 
       await promiseDb.query('DELETE FROM InterviewPage WHERE class = ? AND group_id = ?', [class_id, job_group_id]);
-      await promiseDb.query('DELETE FROM MakeOfferPage WHERE class = ? AND group_id = ?', [class_id, job_group_id]);
       await promiseDb.query('DELETE FROM Resume WHERE class = ? AND group_id = ?', [class_id, job_group_id]);
-      await promiseDb.query('DELETE FROM Resumepage2 WHERE class = ? AND group_id = ?', [class_id, job_group_id]);
-      await promiseDb.query('DELETE FROM Offer_Status WHERE class = ? AND group_id = ?', [class_id, job_group_id]);
       await promiseDb.query('DELETE FROM Interview_Status WHERE class = ? AND group_id = ?', [class_id, job_group_id]);
       await promiseDb.query('DELETE FROM InterviewPopup WHERE class = ? AND group_id = ?', [class_id, job_group_id]);
 
@@ -333,13 +319,6 @@ export class JobController {
 
       if (emails.length > 0) {
         const placeholders = emails.map(() => '?').join(',');
-        await promiseDb.query(
-          `DELETE rp FROM Resumepage rp
-           JOIN Users u ON rp.student_id = u.id
-           WHERE u.email IN (${placeholders}) AND u.class = ? AND u.group_id = ?`,
-          [...emails, class_id, job_group_id]
-        );
-
         await promiseDb.query(`DELETE FROM Notes WHERE user_email IN (${placeholders})`, emails);
       }
 
@@ -369,8 +348,7 @@ export class JobController {
         class_id,
         job: jobTitle,
         cleared_tables: [
-          'InterviewPage', 'MakeOfferPage', 'Resume', 'Resumepage',
-          'Resumepage2', 'Offer_Status', 'Interview_Status', 'InterviewPopup', 'Notes'
+          'InterviewPage', 'Resume', 'Interview_Status', 'InterviewPopup', 'Notes'
         ],
         students_affected: emails.length,
         job_assignment_updated: true

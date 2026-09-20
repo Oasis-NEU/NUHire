@@ -171,17 +171,6 @@ export class InterviewController {
     });
   };
 
-  deleteInterview = (req: AuthRequest, res: Response): void => {
-    const { student_id } = req.params;
-    this.db.query('DELETE FROM Interview WHERE student_id = ?', [student_id], (err) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ message: 'Interview vote deleted successfully' });
-    });
-  };
-
   getInterviewPopup = (req: AuthRequest, res: Response): void => {
     const { resId, groupId, classId } = req.params;
 

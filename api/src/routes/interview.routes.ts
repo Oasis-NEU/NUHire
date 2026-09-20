@@ -14,7 +14,6 @@ export default (db: Pool, io: SocketIOServer): Router => {
   router.get('/status/finished-count', requireAuth, interviewController.getFinishedCount);
   router.post('/status/finished', requireAuth, interviewController.updateFinishedStatus);
   router.get('/group/:group_id', requireAuth, interviewController.getInterviewsByGroup);
-  router.delete('/:student_id', requireAuth, interviewController.deleteInterview);
   router.get('/popup/:resId/:groupId/:classId', requireAuth, interviewController.getInterviewPopup);
   router.get('/vids', requireAuth, interviewController.getAllInterviewVids);
   router.get('/group-size/:group_id/:class_id', requireAuth, interviewController.getGroupSize);
