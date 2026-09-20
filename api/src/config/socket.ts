@@ -1,36 +1,162 @@
 // src/config/socket.ts
 
 import { Server as SocketIOServer, Socket } from 'socket.io';
-import { Pool } from 'mysql2';
+import { Pool, RowDataPacket } from 'mysql2';
 import { SocketEvents } from '../models/types';
+
+// Advisors join a room named after their own email (see 'adminOnline' below),
+// so notifying a class's teachers is one emit per Moderator row for that CRN.
+// Use this where the advisor dashboard needs to hear about something; it is
+// never in the group room, and io.emit reached every client in every class.
+export function emitToClassModerators(
+  io: SocketIOServer,
+  db: Pool,
+  classId: number | string,
+  event: string,
+  payload?: unknown
+): void {
+  db.query('SELECT admin_email FROM Moderator WHERE crn = ?', [classId], (err, results) => {
+    if (err) {
+      console.error(`Could not look up moderators for class ${classId}:`, err);
+      return;
+    }
+    (results as RowDataPacket[]).forEach(({ admin_email }) => {
+      io.to(admin_email).emit(event, payload);
+    });
+  });
+}
+
+// The authenticated user behind a socket, populated by the io.use below from
+// the session that app.ts runs over the handshake.
+interface SocketUser {
+  id: number;
+  email: string;
+  affiliation: 'student' | 'admin' | 'none';
+  group_id?: number;
+  class?: number;
+}
+
+// Rejecting an unauthenticated socket outright is the right end state, but it
+// is also the single change most able to take the whole app down at once: if
+// the handshake cookie does not arrive for any reason, every client in the room
+// disconnects and the class stops. Nobody has yet run two real browser sessions
+// against this, so it ships off. Turn it on in staging, confirm the warning
+// below has stopped appearing, then set it in production.
+const SOCKET_AUTH_REQUIRED = process.env.SOCKET_AUTH_REQUIRED === 'true';
 
 export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<string, string> {
   const onlineStudents: Record<string, string> = {};
 
+  io.use((socket, next) => {
+    const user = (socket.request as { user?: SocketUser }).user;
+
+    if (user) {
+      socket.data.user = user;
+      return next();
+    }
+
+    if (SOCKET_AUTH_REQUIRED) {
+      return next(new Error('Unauthorized: no session on this socket'));
+    }
+
+    // Loud on purpose. Every one of these is a socket the room checks below
+    // cannot police, and it is the evidence needed before turning the flag on.
+    console.warn(
+      `Socket ${socket.id} connected with no session. Room scoping is not enforced for it.`
+    );
+    next();
+  });
+
   io.on('connection', (socket: Socket) => {
     console.log('New client connected:', socket.id);
 
-    socket.on('adminOnline', ({ adminEmail }: { adminEmail: string }) => {
-      socket.join(adminEmail);
+    // Register every handler through this instead of socket.on.
+    //
+    // socket.io does not catch a throw inside a handler. It escapes to the
+    // process-level uncaughtException handler in server.ts, which exits. Every
+    // handler below destructures its payload, so one client emitting an event
+    // with no argument (`socket.emit('adminOnline')` from a browser console)
+    // threw a TypeError and took the API down for the whole class, dropping
+    // every socket and losing the in-memory group barriers with it.
+    //
+    // Defaulting the payload stops the destructure from throwing, and the catch
+    // contains anything else the handler does. A malformed message is dropped
+    // and logged; it can no longer end the class.
+    const on = <T>(event: string, handler: (payload: T) => void): void => {
+      socket.on(event, (payload: T) => {
+        try {
+          handler((payload ?? {}) as T);
+        } catch (err) {
+          console.error(`Socket handler "${event}" threw; dropping this message:`, err);
+        }
+      });
+    };
+
+    // Whether this socket is allowed into this room.
+    //
+    // socket.join() used to accept any string the client sent, so a student
+    // could type another group's room name into a console and receive that
+    // group's votes, popups and offer decisions for the rest of the class.
+    //
+    // A socket with no identity is still let through. SOCKET_AUTH_REQUIRED is
+    // off, so those sockets exist, and refusing them here would break exactly
+    // the clients that flag is there to protect. The warning above is how you
+    // find out whether any are left.
+    const mayJoin = (room: string): boolean => {
+      const user = socket.data.user as SocketUser | undefined;
+      if (!user) return true;
+      // Advisors move between groups to help them; that is the job.
+      if (user.affiliation === 'admin') return true;
+
+      const ownRoom = `group_${user.group_id}_class_${user.class}`;
+      if (room === ownRoom || room === String(user.group_id) || room === `class_${user.class}`) {
+        return true;
+      }
+
+      console.warn(
+        `Refusing to join socket ${socket.id} (${user.email}) to room "${room}". Their own room is "${ownRoom}".`
+      );
+      return false;
+    };
+
+    on('adminOnline', ({ adminEmail }: { adminEmail: string }) => {
+      const user = socket.data.user as SocketUser | undefined;
+
+      // This room receives offer requests and every group's progress, so
+      // joining it by sending someone else's address was a way to watch a whole
+      // class. Trust the session over the payload where there is one.
+      if (user && (user.affiliation !== 'admin' || adminEmail !== user.email)) {
+        console.warn(`Socket ${socket.id} (${user.email}) tried to join admin room ${adminEmail}.`);
+        return;
+      }
+
+      socket.join(user?.email ?? adminEmail);
     });
 
-    socket.on('studentOnline', ({ studentId }: { studentId: string }) => {
-      onlineStudents[studentId] = socket.id;
+    on('studentOnline', ({ studentId }: { studentId: string }) => {
+      // Keyed by email: every reader of this map looks up an email, and the
+      // client happens to send one under the name studentId. Prefer the session
+      // so a client cannot register itself as somebody else and collect their
+      // popups.
+      const user = socket.data.user as SocketUser | undefined;
+      onlineStudents[user?.email ?? studentId] = socket.id;
       // Previously also ran a DB lookup here and broadcast an
       // 'updateOnlineStudents' event carrying the student's email to EVERY
       // connected client. Nothing listened for it, in any class.
     });
 
-    socket.on('joinGroup', (group_id: string) => {
+    on('joinGroup', (group_id: string) => {
+      if (!mayJoin(group_id)) return;
       socket.join(group_id);
     });
 
-    socket.on('joinClass', ({ classId }: { classId: number }) => {
+    on('joinClass', ({ classId }: { classId: number }) => {
+      if (!mayJoin(`class_${classId}`)) return;
       console.log(`Socket ${socket.id} joining class room: class_${classId}`);
       socket.join(`class_${classId}`);
     });
 
-    socket.on('check', ({ group_id, resume_number, checked }: SocketEvents['check']) => {
+    on('check', ({ group_id, resume_number, checked }: SocketEvents['check']) => {
       console.log(
         `Checkbox update received: Room ${group_id}, Resume ${resume_number}, Checked: ${checked}`
       );
@@ -66,11 +192,11 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       });
     });
 
-    socket.on('checkint', ({ group_id, interview_number, checked }: SocketEvents['checkint']) => {
+    on('checkint', ({ group_id, interview_number, checked }: SocketEvents['checkint']) => {
       socket.to(group_id).emit('checkboxUpdated', { interview_number, checked });
     });
 
-    socket.on(
+    on(
       'sendPopupToGroups',
       ({
         groups,
@@ -106,7 +232,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       }
     );
 
-    socket.on(
+    on(
       'updateRatingsWithPresetBackend',
       ({
         classId,
@@ -127,7 +253,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       }
     );
 
-    socket.on(
+    on(
       'makeOfferRequest',
       ({ classId, groupId, candidateId }: SocketEvents['makeOfferRequest']) => {
         console.log(
@@ -197,24 +323,28 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       }
     );
 
-    socket.on(
+    on(
       'makeOfferResponse',
       ({ classId, groupId, candidateId, accepted }: SocketEvents['makeOfferResponse']) => {
         console.log(
           `Advisor responded to class ${classId}, group ${groupId} for candidate ${candidateId}: accepted=${accepted}`
         );
-        io.emit('makeOfferResponse', { classId, groupId, candidateId, accepted });
+        // The group hears the decision; the class's advisors hear it so their
+        // own pending-offer views update. Nobody else.
+        const payload = { classId, groupId, candidateId, accepted };
+        io.to(`group_${groupId}_class_${classId}`).emit('makeOfferResponse', payload);
+        emitToClassModerators(io, db, classId, 'makeOfferResponse', payload);
       }
     );
 
-    socket.on('moveGroup', ({ classId, groupId, targetPage }: SocketEvents['moveGroup']) => {
+    on('moveGroup', ({ classId, groupId, targetPage }: SocketEvents['moveGroup']) => {
       console.log(`Moving group ${groupId} in class ${classId} to ${targetPage}`);
       const roomId = `group_${groupId}_class_${classId}`;
       console.log(`Emitting moveGroup to room: ${roomId}`);
       io.to(roomId).emit('moveGroup', { classId, groupId, targetPage });
     });
 
-    socket.on(
+    on(
       'submitInterview',
       ({
         currentVideoIndex,
@@ -237,7 +367,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       }
     );
 
-    socket.on(
+    on(
       'offerSelected',
       ({ candidateId, groupId, classId, roomId, checked }: SocketEvents['offerSelected']) => {
         console.log(
@@ -247,7 +377,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       }
     );
 
-    socket.on(
+    on(
       'offerSubmitted',
       ({ candidateId, groupId, classId, roomId }: SocketEvents['offerSubmitted']) => {
         console.log(
@@ -257,7 +387,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       }
     );
 
-    socket.on('userCompletedResReview', ({ groupId }: SocketEvents['userCompletedResReview']) => {
+    on('userCompletedResReview', ({ groupId }: SocketEvents['userCompletedResReview']) => {
       if (!groupId) {
         console.log('No group ID provided for userCompletedResReview');
         return;
@@ -360,7 +490,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       );
     });
 
-    socket.on(
+    on(
       'confirmOffer',
       ({ groupId, classId, candidateId, studentId, roomId }: SocketEvents['confirmOffer']) => {
         io.to(roomId).emit('confirmOffer', {
@@ -372,7 +502,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       }
     );
 
-    socket.on(
+    on(
       'sentPresetVotes',
       async ({
         student_id,
@@ -425,7 +555,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       }
     );
 
-    socket.on(
+    on(
       'teamConfirmSelection',
       ({ groupId, classId, studentId, roomId }: SocketEvents['teamConfirmSelection']) => {
         io.to(roomId).emit('teamConfirmSelection', {
@@ -437,7 +567,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       }
     );
 
-    socket.on(
+    on(
       'teamUnconfirmSelection',
       ({ groupId, classId, studentId, roomId }: SocketEvents['teamUnconfirmSelection']) => {
         io.to(roomId).emit('teamUnconfirmSelection', {
@@ -449,29 +579,23 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       }
     );
 
-    socket.on(
-      'allowGroupAssignment',
-      ({ classId, message }: SocketEvents['allowGroupAssignment']) => {
-        console.log('Teacher allowing group assignment for class:', classId);
-        io.to(`class_${classId}`).emit('allowGroupAssignmentStudent', {
-          classId: classId,
-          message: message,
-        });
-      }
-    );
+    on('allowGroupAssignment', ({ classId, message }: SocketEvents['allowGroupAssignment']) => {
+      console.log('Teacher allowing group assignment for class:', classId);
+      io.to(`class_${classId}`).emit('allowGroupAssignmentStudent', {
+        classId: classId,
+        message: message,
+      });
+    });
 
-    socket.on(
-      'groupAssignmentClosed',
-      ({ classId, message }: SocketEvents['groupAssignmentClosed']) => {
-        console.log('Teacher closing group assignment for class:', classId);
-        io.to(`class_${classId}`).emit('groupAssignmentClosedStudent', {
-          classId: classId,
-          message: message,
-        });
-      }
-    );
+    on('groupAssignmentClosed', ({ classId, message }: SocketEvents['groupAssignmentClosed']) => {
+      console.log('Teacher closing group assignment for class:', classId);
+      io.to(`class_${classId}`).emit('groupAssignmentClosedStudent', {
+        classId: classId,
+        message: message,
+      });
+    });
 
-    socket.on('disconnect', () => {
+    on('disconnect', () => {
       Object.keys(onlineStudents).forEach((studentId) => {
         if (onlineStudents[studentId] === socket.id) {
           console.log(`Student ${studentId} disconnected`);

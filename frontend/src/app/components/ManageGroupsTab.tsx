@@ -426,7 +426,16 @@ export function ManageGroupsTab() {
   useEffect(() => {
     if (!socket || !user || user.affiliation !== 'admin') return;
 
-    socket.emit('adminOnline', { adminEmail: user.email });
+    // Joining the advisor's room is what makes every notification below
+    // reachable: offer requests, offer responses, progress updates and roster
+    // changes are all addressed to it. A socket that drops and reconnects gets
+    // a new id and is in no rooms, so this has to run again on every connect or
+    // the dashboard goes quiet for the rest of the class with nothing on screen
+    // to say so.
+    const joinAdminRoom = () => socket.emit('adminOnline', { adminEmail: user.email });
+
+    if (socket.connected) joinAdminRoom();
+    socket.on('connect', joinAdminRoom);
 
     const onRequest = ({
       classId,
@@ -492,6 +501,7 @@ export function ManageGroupsTab() {
     socket.on('makeOfferResponse', onResponse);
 
     return () => {
+      socket.off('connect', joinAdminRoom);
       socket.off('makeOfferRequest', onRequest);
       socket.off('makeOfferResponse', onResponse);
     };

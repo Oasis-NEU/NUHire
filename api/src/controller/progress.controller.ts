@@ -5,6 +5,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../models/types';
 import { Pool } from 'mysql2';
+import { emitToClassModerators } from '../config/socket';
 
 export class ProgressController {
   constructor(
@@ -70,7 +71,9 @@ export class ProgressController {
           step,
           email,
         });
-        this.io.emit('progressUpdated', {
+        // The advisor dashboard is not in the group room, so tell the class's
+        // moderators directly rather than every connected client.
+        emitToClassModerators(this.io, this.db, crn, 'progressUpdated', {
           crn,
           group_id,
           step,
