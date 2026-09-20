@@ -1,6 +1,11 @@
-# CLAUDE.md
+# AGENTS.md
 
 Guidance for AI coding agents working in this repo. Humans should read it too.
+
+This is the single source of truth for every tool. `CLAUDE.md` imports it, so
+add project rules here and never copy them into a per-tool file. Cursor,
+Copilot and the rest should point at this file rather than hold their own
+version, because rules that drift between tools are worse than no rules.
 
 Read this before writing code. Most of it is stuff you cannot infer from the
 source, and several rules exist because the obvious approach is wrong here.
@@ -100,8 +105,16 @@ these has stranded a group at some point. When you add or touch a gate:
 ### 4. Emit to rooms, never `io.emit`
 
 `io.emit` broadcasts to every connected client in every class. Use
-`io.to(roomId).emit(...)`. Several existing handlers get this wrong; correctness
-currently depends on clients filtering messages they should never have received.
+`io.to(roomId).emit(...)`. There are zero bare `io.emit` calls left, and it
+should stay that way.
+
+The advisor dashboard is **not** in the group room. It joins a room named after
+its own email, so use `emitToClassModerators(io, db, classId, event, payload)`
+from `config/socket.ts` to reach a class's teachers.
+
+A socket that reconnects gets a new id and is in no rooms. Anything that joins a
+room must re-join on `connect`, not just once on mount, or that client silently
+stops receiving events for the rest of the class.
 
 ```ts
 const roomId = `group_${groupId}_class_${classId}`;
@@ -121,7 +134,8 @@ Until then, if you touch any code path that deletes student work:
 
 ### 6. Transactions need a connection, not the pool
 
-This pattern is in the codebase and it is broken:
+All three sites that got this wrong are fixed. The rule stands because the wrong
+version is the one that looks natural, and nothing yet stops you writing it:
 
 ```ts
 // WRONG. Each query may land on a different pooled connection.
@@ -185,6 +199,15 @@ Read `api/.env.example` and `frontend/.env.example` for the full list. If you ad
 a new variable, add it to the example file in the same commit. A missing env var
 should fail loudly at boot, not produce a page that navigates to
 `undefined/instructions`, which is a bug that actually shipped.
+
+### 11. Schema changes need a migration, not just an edit to the dump
+
+`database-files/Pandployer.sql` is a full dump that only ever runs against an
+empty database. Editing it fixes new environments and does nothing for the one
+with the real data in it. Anything that changes the shape of a live database
+needs a numbered file in `database-files/migrations/` in the same commit. Read
+that directory's README first; it also explains why a migration that adds a
+constraint has to clean up the rows violating it.
 
 ---
 
@@ -258,12 +281,12 @@ beyond imports. Mixing a move with a behaviour change makes review impossible.
 
 Do not treat these as examples to follow:
 
-| File                                   | Problem                                      |
-| -------------------------------------- | -------------------------------------------- |
-| `components/ManageGroupsTab.tsx`       | 1,717 lines, ~40 `useState` in one component |
-| `api/src/config/socket.ts`             | no auth, in-memory state, several `io.emit`  |
-| `api/src/controller/job.controller.ts` | fake transactions, destructive deletes       |
-| `components/useProgress.tsx`           | client-side-only gating, redirects to a 404  |
-| `frontend/src/app/employerPanel/`      | stub; the final step does not work           |
+| File                                   | Problem                                                                                                 |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `components/ManageGroupsTab.tsx`       | 2,051 lines, ~40 `useState` in one component                                                            |
+| `api/src/config/socket.ts`             | in-memory state (see rule 2); auth and room scoping are now in, but `SOCKET_AUTH_REQUIRED` is still off |
+| `api/src/controller/job.controller.ts` | destructive deletes (see rule 5); transactions are fixed                                                |
+| `components/useProgress.tsx`           | client-side-only gating, redirects to a 404                                                             |
+| `frontend/src/app/employerPanel/`      | stub; the final step does not work                                                                      |
 
 `TICKETS.md` has the full backlog with file references if you want the detail.

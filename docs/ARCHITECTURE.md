@@ -262,5 +262,5 @@ In order:
 4. `database-files/Pandployer.sql` — the data model
 5. `frontend/src/app/res-review/page.tsx` — a full student step end to end
 
-Then read [CLAUDE.md](../CLAUDE.md) for the rules, and pick a good first issue
+Then read [AGENTS.md](../AGENTS.md) for the rules, and pick a good first issue
 from [TICKETS.md](../TICKETS.md).

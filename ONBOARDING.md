@@ -87,7 +87,7 @@ Use a private window for the second role.
 
 ## What to read next
 
-1. **[CLAUDE.md](CLAUDE.md)** — architecture, conventions, and the rules. Read
+1. **[AGENTS.md](AGENTS.md)** — architecture, conventions, and the rules. Read
    this before writing code.
 2. **[TICKETS.md](TICKETS.md)** — the backlog. Good first issues are labelled.
 3. **[.local/README.md](.local/README.md)** — resetting the database, seeded data.

@@ -61,7 +61,7 @@ Keycloak has to be reachable at the same URL from both the browser and the API.
 
 ## Contributing
 
-Read **[CLAUDE.md](CLAUDE.md)** first. It covers the architecture, the conventions,
+Read **[AGENTS.md](AGENTS.md)** first. It covers the architecture, the conventions,
 and a set of rules that exist because the obvious approach is wrong in several
 places here. It is written for AI coding agents but applies to everyone.
 
