@@ -308,6 +308,11 @@ CREATE TABLE `Resume` (
   `checked` tinyint(1) NOT NULL DEFAULT '0',
   `id` int NOT NULL AUTO_INCREMENT,
   PRIMARY KEY (`id`),
+  -- One row per student per resume. Both vote writers use ON DUPLICATE KEY
+  -- UPDATE, which silently did nothing without this: the only keys were the
+  -- auto-increment id and a non-unique index, so every submission appended a
+  -- row and the group's tally counted the same student repeatedly.
+  UNIQUE KEY `uniq_resume_vote` (`student_id`, `group_id`, `class`, `resume_number`),
   KEY `student_id` (`student_id`),
   CONSTRAINT `Resume_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `Users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

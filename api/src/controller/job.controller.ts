@@ -160,11 +160,18 @@ export class JobController {
       return;
     }
 
-    try {
-      const promiseDb = this.db.promise();
+    // This runs every DELETE below inside one real transaction. It used to send
+    // START TRANSACTION through the pool, which hands each query whichever
+    // connection is free, so the statements ran on different connections, every
+    // DELETE auto-committed on its own, the ROLLBACK in the catch applied to a
+    // connection that had done nothing, and a connection went back to the pool
+    // with a transaction still open on it. A failure halfway through this loop
+    // left one group's votes deleted and the next group's intact, permanently.
+    const conn = await this.db.promise().getConnection();
 
+    try {
       // Get all groups for the class
-      const [groupsResult] = (await promiseDb.query(
+      const [groupsResult] = (await conn.query(
         'SELECT DISTINCT group_id FROM `GroupsInfo` WHERE class_id = ? ORDER BY group_id',
         [class_id]
       )) as any[];
@@ -177,12 +184,12 @@ export class JobController {
       const groupIds = groupsResult.map((group: any) => group.group_id);
       console.log(`Found ${groupIds.length} groups for class ${class_id}:`, groupIds);
 
-      await promiseDb.query('START TRANSACTION');
+      await conn.beginTransaction();
 
       // Process each group
       for (const groupId of groupIds) {
         // Insert/update job assignment
-        await promiseDb.query(
+        await conn.query(
           `INSERT INTO Job_Assignment (\`group\`, \`class\`, job)
           VALUES (?, ?, ?)
           ON DUPLICATE KEY UPDATE job = VALUES(job)`,
@@ -190,37 +197,37 @@ export class JobController {
         );
 
         // Update students' current page
-        await promiseDb.query(
+        await conn.query(
           "UPDATE Users SET `current_page` = 'jobdes' WHERE group_id = ? AND class = ? AND affiliation = 'student'",
           [groupId, class_id]
         );
 
         // Update progress
-        await promiseDb.query(
+        await conn.query(
           "UPDATE Progress SET step = 'job_description' WHERE crn = ? AND group_id = ?",
           [class_id, groupId]
         );
 
         // Clear all related data for this group
-        await promiseDb.query('DELETE FROM InterviewPage WHERE class = ? AND group_id = ?', [
+        await conn.query('DELETE FROM InterviewPage WHERE class = ? AND group_id = ?', [
           class_id,
           groupId,
         ]);
-        await promiseDb.query('DELETE FROM Resume WHERE class = ? AND group_id = ?', [
+        await conn.query('DELETE FROM Resume WHERE class = ? AND group_id = ?', [
           class_id,
           groupId,
         ]);
-        await promiseDb.query('DELETE FROM Interview_Status WHERE class = ? AND group_id = ?', [
+        await conn.query('DELETE FROM Interview_Status WHERE class = ? AND group_id = ?', [
           class_id,
           groupId,
         ]);
-        await promiseDb.query('DELETE FROM InterviewPopup WHERE class = ? AND group_id = ?', [
+        await conn.query('DELETE FROM InterviewPopup WHERE class = ? AND group_id = ?', [
           class_id,
           groupId,
         ]);
 
         // Get students in this group and clear their data
-        const [students] = (await promiseDb.query(
+        const [students] = (await conn.query(
           "SELECT email FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
           [groupId, class_id]
         )) as any[];
@@ -229,24 +236,25 @@ export class JobController {
 
         if (emails.length > 0) {
           const placeholders = emails.map(() => '?').join(',');
-          await promiseDb.query(`DELETE FROM Notes WHERE user_email IN (${placeholders})`, emails);
+          await conn.query(`DELETE FROM Notes WHERE user_email IN (${placeholders})`, emails);
         }
+      }
 
-        // Reset completedResReview tracking for this group
+      await conn.commit();
+
+      // Only after the commit. These used to fire inside the loop, so a failure
+      // partway through told the earlier groups their job had changed and then
+      // rolled the change back underneath them.
+      for (const groupId of groupIds) {
         const groupKey = `${groupId}_${class_id}`;
         if ((global as any).completedResReview && (global as any).completedResReview[groupKey]) {
           (global as any).completedResReview[groupKey] = new Set();
-          console.log(`Reset completedResReview for group ${groupId}, class ${class_id}`);
         }
 
-        // Emit socket event to this group
-        const roomID = `group_${groupId}_class_${class_id}`;
-        this.io.to(roomID).emit('jobUpdated', {
+        this.io.to(`group_${groupId}_class_${class_id}`).emit('jobUpdated', {
           job: job_title,
         });
       }
-
-      await promiseDb.query('COMMIT');
 
       console.log(
         `✅ Successfully assigned job "${job_title}" to ${groupIds.length} groups in class ${class_id}`
@@ -262,7 +270,7 @@ export class JobController {
       });
     } catch (error: any) {
       try {
-        await this.db.promise().query('ROLLBACK');
+        await conn.rollback();
       } catch (rollbackError) {
         console.error('Rollback failed:', rollbackError);
       }
@@ -272,6 +280,8 @@ export class JobController {
         error: 'Database error occurred while assigning job to all groups',
         details: error.message,
       });
+    } finally {
+      conn.release();
     }
   };
 
@@ -299,46 +309,50 @@ export class JobController {
 
     console.log('Updating job for group:', { job_group_id: groupIdInt, class_id: classIdInt, job });
 
+    // Same fix as assignJobToAllGroups: one connection, a real transaction, and
+    // a release in `finally`. Through the pool the four DELETEs below each
+    // committed on their own and the ROLLBACK did nothing.
+    const conn = await this.db.promise().getConnection();
+
     try {
-      const promiseDb = this.db.promise();
-      await promiseDb.query('START TRANSACTION');
+      await conn.beginTransaction();
 
       const jobTitle = Array.isArray(job) ? job[0] : job;
-      await promiseDb.query(
+      await conn.query(
         `INSERT INTO Job_Assignment (\`group\`, \`class\`, job)
          VALUES (?, ?, ?)
          ON DUPLICATE KEY UPDATE job = VALUES(job)`,
         [job_group_id, class_id, jobTitle]
       );
 
-      await promiseDb.query(
+      await conn.query(
         "UPDATE Users SET `current_page` = 'jobdes' WHERE group_id = ? AND class = ? AND affiliation = 'student'",
         [job_group_id, class_id]
       );
 
-      await promiseDb.query(
+      await conn.query(
         "UPDATE Progress SET step = 'job_description' WHERE crn = ? AND group_id = ?",
         [class_id, job_group_id]
       );
 
-      await promiseDb.query('DELETE FROM InterviewPage WHERE class = ? AND group_id = ?', [
+      await conn.query('DELETE FROM InterviewPage WHERE class = ? AND group_id = ?', [
         class_id,
         job_group_id,
       ]);
-      await promiseDb.query('DELETE FROM Resume WHERE class = ? AND group_id = ?', [
+      await conn.query('DELETE FROM Resume WHERE class = ? AND group_id = ?', [
         class_id,
         job_group_id,
       ]);
-      await promiseDb.query('DELETE FROM Interview_Status WHERE class = ? AND group_id = ?', [
+      await conn.query('DELETE FROM Interview_Status WHERE class = ? AND group_id = ?', [
         class_id,
         job_group_id,
       ]);
-      await promiseDb.query('DELETE FROM InterviewPopup WHERE class = ? AND group_id = ?', [
+      await conn.query('DELETE FROM InterviewPopup WHERE class = ? AND group_id = ?', [
         class_id,
         job_group_id,
       ]);
 
-      const [students] = (await promiseDb.query(
+      const [students] = (await conn.query(
         "SELECT email FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
         [job_group_id, class_id]
       )) as any[];
@@ -347,7 +361,7 @@ export class JobController {
 
       if (emails.length > 0) {
         const placeholders = emails.map(() => '?').join(',');
-        await promiseDb.query(`DELETE FROM Notes WHERE user_email IN (${placeholders})`, emails);
+        await conn.query(`DELETE FROM Notes WHERE user_email IN (${placeholders})`, emails);
       }
 
       if ((global as any).completedResReview && (global as any).completedResReview[job_group_id]) {
@@ -355,7 +369,7 @@ export class JobController {
         console.log(`Reset completedResReview for group ${job_group_id}`);
       }
 
-      await promiseDb.query('COMMIT');
+      await conn.commit();
 
       console.log('Emitting jobUpdated event via Socket.IO to online students in the group/class');
       console.log('Online students record:', this.onlineStudents);
@@ -380,7 +394,7 @@ export class JobController {
       });
     } catch (error: any) {
       try {
-        await this.db.promise().query('ROLLBACK');
+        await conn.rollback();
       } catch (rollbackError) {
         console.error('Rollback failed:', rollbackError);
       }
@@ -390,6 +404,8 @@ export class JobController {
         error: 'Database error occurred while updating job and clearing data',
         details: error.message,
       });
+    } finally {
+      conn.release();
     }
   };
 

@@ -16,14 +16,19 @@ export class ModeratorController {
       return;
     }
 
-    const promiseDb = this.db.promise();
+    // Creating a class seeds job descriptions, resumes, candidates and
+    // interview videos. Sent through the pool these landed on whichever
+    // connection was free, so each INSERT committed on its own and the ROLLBACK
+    // below applied to a connection that had run nothing: a failure partway
+    // through left a half-seeded class that the professor could not delete or
+    // recreate, because the CRN row was already there.
+    const conn = await this.db.promise().getConnection();
 
     try {
-      // Start transaction
-      await promiseDb.query('START TRANSACTION');
+      await conn.beginTransaction();
 
       // Insert the new class
-      await promiseDb.query('INSERT INTO Moderator (admin_email, crn) VALUES (?, ?)', [
+      await conn.query('INSERT INTO Moderator (admin_email, crn) VALUES (?, ?)', [
         admin_email,
         crn,
       ]);
@@ -48,7 +53,7 @@ export class ModeratorController {
       ];
 
       for (const job of jobDescriptions) {
-        await promiseDb.query(
+        await conn.query(
           'INSERT IGNORE INTO job_descriptions (title, file_path, class_id) VALUES (?, ?, ?)',
           [job.title, job.file_path, crn]
         );
@@ -71,7 +76,7 @@ export class ModeratorController {
       // Insert resumes and get their IDs
       const resumeIds: number[] = [];
       for (const resume of resumePdfs) {
-        const [result] = (await promiseDb.query(
+        const [result] = (await conn.query(
           'INSERT IGNORE INTO Resume_pdfs (title, file_path, class_id) VALUES (?, ?, ?)',
           [resume.title, resume.file_path, crn]
         )) as any;
@@ -81,7 +86,7 @@ export class ModeratorController {
           resumeIds.push(result.insertId);
         } else {
           // If INSERT IGNORE skipped, fetch the existing ID
-          const [existing] = (await promiseDb.query(
+          const [existing] = (await conn.query(
             'SELECT id FROM Resume_pdfs WHERE title = ? AND class_id = ?',
             [resume.title, crn]
           )) as any;
@@ -157,7 +162,7 @@ export class ModeratorController {
 
       for (const candidate of candidates) {
         if (resumeIds[candidate.resume_index]) {
-          await promiseDb.query(
+          await conn.query(
             'INSERT IGNORE INTO Candidates (resume_id, interview, f_name, l_name) VALUES (?, ?, ?, ?)',
             [
               resumeIds[candidate.resume_index],
@@ -225,7 +230,7 @@ export class ModeratorController {
 
       for (const vid of interviewVids) {
         if (resumeIds[vid.resume_index]) {
-          await promiseDb.query(
+          await conn.query(
             'INSERT IGNORE INTO Interview_vids (resume_id, title, video_path) VALUES (?, ?, ?)',
             [resumeIds[vid.resume_index], vid.title, vid.video_path]
           );
@@ -233,7 +238,7 @@ export class ModeratorController {
       }
 
       // Commit transaction
-      await promiseDb.query('COMMIT');
+      await conn.commit();
 
       console.log(
         `✅ Class ${crn} created with seeded data: ${jobDescriptions.length} jobs, ${resumePdfs.length} resumes, ${candidates.length} candidates`
@@ -252,7 +257,7 @@ export class ModeratorController {
     } catch (err: any) {
       // Rollback on error
       try {
-        await promiseDb.query('ROLLBACK');
+        await conn.rollback();
       } catch (rollbackError) {
         console.error('Rollback failed:', rollbackError);
       }
@@ -264,6 +269,8 @@ export class ModeratorController {
 
       console.error('Error creating class with seed data:', err);
       res.status(500).json({ error: err.message });
+    } finally {
+      conn.release();
     }
   };
 
