@@ -144,9 +144,6 @@ export class App {
         routeCallTimestamps[route] = stamps.filter((t) => t >= cutoff);
       }
 
-      // Log every request with count
-      console.log(`📊 [${new Date().toISOString()}] ${route} - Call #${routeCallCount[route]}`);
-
       // Warn if same route called many times in short period
       const recentCalls = routeCallTimestamps[route].filter(
         (timestamp) => Date.now() - timestamp < 60000 // Last minute

@@ -29,8 +29,6 @@ export class OfferController {
       return;
     }
 
-    console.log('Creating new offer:', { group_id, class_id, candidate_id });
-
     // A group submits one offer. Two members hitting submit at the same moment
     // used to insert two pending rows, and the professor's pending-offers list
     // showed the group twice: accepting one left the other pending forever.
@@ -59,7 +57,6 @@ export class OfferController {
           return;
         }
 
-        console.log('Offer created successfully:', result.insertId);
         res.json({
           id: result.insertId,
           message: 'Offer submitted successfully',
@@ -71,8 +68,6 @@ export class OfferController {
 
   getOffersByGroupAndClass = (req: AuthRequest, res: Response): void => {
     const { group_id, class_id } = req.params;
-
-    console.log('Fetching pending offers for class:', class_id);
 
     const query = `SELECT * FROM Offers WHERE class_id = ? AND group_id = ?`;
 
@@ -90,8 +85,6 @@ export class OfferController {
   getOffersByClass = (req: AuthRequest, res: Response): void => {
     const { class_id } = req.params;
 
-    console.log('Fetching pending offers for class:', class_id);
-
     const query = `SELECT * FROM Offers WHERE class_id = ?`;
 
     this.db.query(query, [class_id], (err, results) => {
@@ -101,7 +94,6 @@ export class OfferController {
         return;
       }
 
-      console.log(`Found ${(results as any[]).length} pending offers for class ${class_id}`);
       res.json(results);
     });
   };
@@ -130,7 +122,6 @@ export class OfferController {
           return;
         }
 
-        console.log('Offer updated successfully');
         res.json({ message: 'Offer updated successfully' });
       }
     );

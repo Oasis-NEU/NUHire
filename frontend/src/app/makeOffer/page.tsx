@@ -1,9 +1,9 @@
 'use client';
 export const dynamic = 'force-dynamic';
-import React, { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { useSocket } from '../components/socketContext';
 import Navbar from '../components/navbar';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useProgress } from '../components/useProgress';
 import Footer from '../components/footer';
 import Popup from '../components/popup';
@@ -20,14 +20,6 @@ type VoteData = {
   Quality: number;
   Personality: number;
 };
-
-interface User {
-  id: string;
-  group_id: number;
-  email: string;
-  class: number;
-  affiliation: string;
-}
 
 interface InterviewPopup {
   question1: number;
@@ -48,7 +40,7 @@ export default function MakeOffer() {
   useProgress();
   const socket = useSocket();
   const { user, loading } = useAuth();
-  const { updateProgress, fetchProgress } = useProgressManager();
+  const { updateProgress } = useProgressManager();
   const [checkedState, setCheckedState] = useState<{ [key: number]: boolean }>({});
   const [voteCounts, setVoteCounts] = useState<{ [key: number]: VoteData }>({});
   const [isConnected, setIsConnected] = useState(false);
@@ -388,15 +380,6 @@ export default function MakeOffer() {
   }, [interviews]);
 
   useEffect(() => {
-    if (selectedCandidateId && groupSize > 0) {
-      const confirmations = offerConfirmations[selectedCandidateId] || [];
-      if (confirmations.length >= groupSize) {
-        console.log('📡 Group size changed - all remaining members confirmed');
-      }
-    }
-  }, [groupSize, offerConfirmations, selectedCandidateId]);
-
-  useEffect(() => {
     const handleShowInstructions = () => {
       setShowInstructions(true);
     };
@@ -653,9 +636,6 @@ export default function MakeOffer() {
 
     const handleStudentRemoved = ({ groupId, classId }: { groupId: number; classId: number }) => {
       if (groupId === user.group_id && classId == user.class) {
-        console.log('📡 [STUDENT-REMOVED] Event received');
-        console.log('📡 [STUDENT-REMOVED] Resetting offer confirmations due to group change');
-
         // Reset confirmations for the selected candidate
         if (selectedCandidateId) {
           setOfferConfirmations((prev) => ({
@@ -670,9 +650,6 @@ export default function MakeOffer() {
 
     const handleStudentAdded = ({ groupId, classId }: { groupId: number; classId: number }) => {
       if (groupId === user.group_id && classId == user.class) {
-        console.log('📡 [STUDENT-ADDED] Event received');
-        console.log('📡 [STUDENT-ADDED] Resetting offer confirmations due to group change');
-
         // Reset confirmations for the selected candidate
         if (selectedCandidateId) {
           setOfferConfirmations((prev) => ({
@@ -709,17 +686,9 @@ export default function MakeOffer() {
   useEffect(() => {
     if (groupSize > 0 && selectedCandidateId) {
       const currentConfirmations = offerConfirmations[selectedCandidateId] || [];
-      console.log('📊 [GROUP-SIZE-CHANGE] Group size changed to:', groupSize);
-      console.log(
-        '📊 [GROUP-SIZE-CHANGE] Current confirmations for candidate',
-        selectedCandidateId,
-        ':',
-        currentConfirmations.length
-      );
 
       // If everyone confirmed but group size increased, reset confirmations
       if (currentConfirmations.length > 0 && currentConfirmations.length >= groupSize) {
-        console.log('📊 [GROUP-SIZE-CHANGE] Resetting confirmations - group size increased');
         setOfferConfirmations((prev) => ({
           ...prev,
           [selectedCandidateId]: [],
@@ -1169,7 +1138,7 @@ export default function MakeOffer() {
             }`}
             disabled={!acceptedOffer && !allRejected}
           >
-            {allRejected ? 'Next: Employer Panel →' : 'Next: Employer Panel →'}
+            Next: Employer Panel →
           </button>
         </footer>
       </div>

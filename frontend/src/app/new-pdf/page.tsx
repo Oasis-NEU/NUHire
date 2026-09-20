@@ -2,19 +2,9 @@
 export const dynamic = 'force-dynamic';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import NavbarAdmin from '../components/navbar-admin';
-import AdminReactionPopup from '../components/adminReactionPopup';
-import { useSocket } from '../components/socketContext';
 import Popup from '../components/popup';
 import { useAuth } from '../components/AuthContext';
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  affiliation: string;
-}
 
 interface Job {
   id: number;
@@ -69,8 +59,6 @@ const Upload = () => {
     canScrollDown: false,
     canScrollUp: false,
   });
-
-  const socket = useSocket();
 
   const handleJobsScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const element = e.currentTarget;
@@ -170,7 +158,7 @@ const Upload = () => {
     }
   };
 
-  const deleteResume = async (resumeId: number, filePath: string, classId: number) => {
+  const deleteResume = async (filePath: string, classId: number) => {
     const fileName = filePath.split('/').pop();
     try {
       const response = await fetch(
@@ -193,7 +181,7 @@ const Upload = () => {
     }
   };
 
-  const deleteJob = async (jobId: number, filePath: string, classId: number) => {
+  const deleteJob = async (filePath: string, classId: number) => {
     const fileName = filePath.split('/').pop();
     try {
       const response = await fetch(`${API_BASE_URL}/delete/job/${fileName}?class_id=${classId}`, {
@@ -257,11 +245,6 @@ const Upload = () => {
     }
 
     return null;
-  };
-
-  const isValidYouTubeUrl = (url: string): boolean => {
-    const extractedUrl = extractYouTubeUrl(url);
-    return extractedUrl !== null;
   };
 
   const uploadJobDescription = async () => {
@@ -503,7 +486,7 @@ const Upload = () => {
                               View PDF
                             </a>
                             <button
-                              onClick={() => deleteJob(job.id, job.file_path, job.class_id)}
+                              onClick={() => deleteJob(job.file_path, job.class_id)}
                               className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition duration-200"
                             >
                               Delete
@@ -614,9 +597,7 @@ const Upload = () => {
                               </a>
                             )}
                             <button
-                              onClick={() =>
-                                deleteResume(resume.id, resume.file_path, resume.class_id)
-                              }
+                              onClick={() => deleteResume(resume.file_path, resume.class_id)}
                               className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition duration-200 ml-auto text-sm"
                             >
                               Delete

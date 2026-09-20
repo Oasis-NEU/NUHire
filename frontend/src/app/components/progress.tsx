@@ -52,9 +52,7 @@ export const useProgressManager = (): ProgressOperations => {
         }),
       });
 
-      if (response.ok) {
-        console.log('===================Progress updated successfully to, ', step);
-      } else {
+      if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to update progress: ${errorText}`);
       }

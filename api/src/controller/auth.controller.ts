@@ -16,12 +16,8 @@ export class AuthController {
 
   handleKeycloakCallback = [
     (req: AuthRequest, res: Response, next: NextFunction) => {
-      console.log('🔄 Starting Keycloak callback processing...');
-      console.log('🔍 Query params:', req.query);
-
       // If no OAuth code parameter, this is not a legitimate callback
       if (!req.query.code) {
-        console.log('⚠️ No OAuth code - this is a duplicate/invalid callback');
         const FRONT_URL = process.env.REACT_APP_FRONT_URL;
 
         // If authenticated, check their role and redirect appropriately
@@ -62,9 +58,6 @@ export class AuthController {
       failureFlash: false,
     }),
     (req: AuthRequest, res: Response) => {
-      console.log('✅ Auth succeeded!');
-      console.log('📦 Session ID after auth:', req.sessionID);
-
       const user = req.user;
       const FRONT_URL = process.env.REACT_APP_FRONT_URL;
 
@@ -91,7 +84,6 @@ export class AuthController {
             path: '/',
           });
 
-          console.log('🍪 Explicitly setting cookie:', req.sessionID);
           res.redirect(redirectUrl);
         });
       };
@@ -117,10 +109,6 @@ export class AuthController {
           const parts = prof.name.split(' ');
           const firstName = parts[0];
           const lastName = parts[1];
-
-          console.log(
-            `This is the profile info from Keycloak: ${email}, ${firstName}, ${lastName}`
-          );
 
           this.db.query('SELECT * FROM Users WHERE email = ?', [email], (err, results: any[]) => {
             if (err) {
@@ -160,8 +148,6 @@ export class AuthController {
                     return;
                   }
 
-                  console.log('seen group results:', dbUser);
-
                   if (startResults.length > 0 && startResults[0].started === 1) {
                     if (dbUser.seen === 1) {
                       setCookieAndRedirect(`${FRONT_URL}/dashboard?name=${fullName}`);
@@ -185,15 +171,7 @@ export class AuthController {
   ];
 
   getAuthenticatedUser = (req: AuthRequest, res: Response): void => {
-    console.log('=== GET AUTH USER DEBUG ===');
-    console.log('Session ID:', req.sessionID);
-    console.log('Session:', req.session);
-    console.log('Is Authenticated:', req.isAuthenticated ? req.isAuthenticated() : 'N/A');
-    console.log('User:', req.user);
-    console.log('===========================');
-
     if (!req.isAuthenticated || !req.isAuthenticated()) {
-      console.log('❌ User not authenticated');
       res.status(401).json({ error: 'Not authenticated' });
       return;
     }
@@ -237,21 +215,18 @@ export class AuthController {
 
     if (username === expectedUser && password === expectedPass) {
       req.session.isModerator = true;
-      console.log('req.session:', req.session);
-
       res.status(200).json({ success: true });
     } else {
       res.status(401).json({ error: 'Invalid credentials' });
     }
   };
 
-  verifyModerator = (req: AuthRequest, res: Response, next: NextFunction): void => {
+  verifyModerator = (req: AuthRequest, res: Response): void => {
     if (req.session.isModerator) {
       res.status(200).json({
         authenticated: true,
       });
     } else {
-      console.log('❌ Moderator not authenticated');
       res.status(401).json({ authenticated: false });
     }
   };

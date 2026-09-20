@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { User } from '../../types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL; // "https://nuhire-api-cz6c.onrender.com";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface AuthContextType {
   user: User | null;
@@ -19,16 +19,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUser = async () => {
     try {
-      console.log('Attempting to fetch user data from API...');
       const response = await fetch(`${API_BASE_URL}/auth/user`, {
         credentials: 'include',
       });
 
       if (response.ok) {
-        console.log('User data fetched successfully.');
         const userData = await response.json();
         setUser(userData);
-        console.log('User data:', userData);
       } else {
         setUser(null);
       }
@@ -36,13 +33,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Error fetching user:', error);
       setUser(null);
     } finally {
-      console.log('loading complete.');
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log('Fetching user data...');
     fetchUser();
   }, []);
 

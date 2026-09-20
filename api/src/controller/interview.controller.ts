@@ -106,7 +106,6 @@ export class InterviewController {
         res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch finished count' });
         return;
       }
-      console.log(results);
       res.json({ finishedCount: results[0].finishedCount });
     });
   };
@@ -176,7 +175,6 @@ export class InterviewController {
 
   getGroupSize = (req: AuthRequest, res: Response): void => {
     const { group_id, class_id } = req.params;
-    console.log('group id and class id', group_id, class_id);
     this.db.query(
       'SELECT COUNT(*) AS count FROM Users WHERE group_id = ? AND class = ?',
       [group_id, class_id],
@@ -186,7 +184,6 @@ export class InterviewController {
           res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch group size' });
           return;
         }
-        console.log('results from group api', results);
         res.json({ group_id, count: results[0].count });
       }
     );
@@ -222,8 +219,6 @@ export class InterviewController {
   getInterviewPopup = (req: AuthRequest, res: Response): void => {
     const { resId, groupId, classId } = req.params;
 
-    console.log(`Fetching popup votes for candidate ${resId}, group ${groupId}, class ${classId}`);
-
     const query =
       'SELECT * FROM InterviewPopup WHERE candidate_id = ? AND group_id = ? AND class = ?';
 
@@ -234,8 +229,6 @@ export class InterviewController {
         return;
       }
 
-      console.log(`Found ${results.length} popup vote records for candidate ${resId}`);
-
       const result = results[0] || {
         question1: 0,
         question2: 0,
@@ -243,7 +236,6 @@ export class InterviewController {
         question4: 0,
       };
 
-      console.log('Returning popup votes:', result);
       res.json(result);
     });
   };
@@ -290,7 +282,7 @@ export class InterviewController {
           question4 = VALUES(question4)
       `;
 
-      this.db.query(query, [values], (err, result) => {
+      this.db.query(query, [values], (err) => {
         if (err) {
           // `details` put the raw MySQL message, table and column names into
           // the response body. The same information is still logged here.
@@ -301,7 +293,6 @@ export class InterviewController {
           return;
         }
 
-        console.log(`✅ Saved ${votes.length} interview votes successfully`);
         res.json({ success: true, votesCount: votes.length });
       });
     } catch (error) {

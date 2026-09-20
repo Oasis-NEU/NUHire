@@ -162,7 +162,6 @@ export class UserController {
           res.status(500).json({ error: err.message });
           return;
         }
-        console.log(results);
         res.json(results);
       });
     } catch (error) {
@@ -183,7 +182,7 @@ export class UserController {
       this.db.query(
         'UPDATE Users SET `current_page` = ? WHERE email = ?',
         [page, user_email],
-        (err, result) => {
+        (err) => {
           if (err) {
             console.error('Database error:', err);
             res.status(500).json({ error: 'Failed to update current page.' });
@@ -243,7 +242,6 @@ export class UserController {
   };
 
   updateUserSeen = async (req: AuthRequest, res: Response): Promise<void> => {
-    console.log('=== POST /user/update-seen endpoint hit ===');
     try {
       if (!req.isAuthenticated || !req.isAuthenticated()) {
         res.status(401).json({ message: 'Unauthorized' });
@@ -251,19 +249,17 @@ export class UserController {
       }
 
       const { email } = req.body;
-      console.log('Request body:', { email });
 
       if (!email) {
         res.status(400).json({ error: 'Email is required.' });
         return;
       }
-      this.db.query('UPDATE Users SET `seen` = 1 WHERE email = ?', [email], (err, result) => {
+      this.db.query('UPDATE Users SET `seen` = 1 WHERE email = ?', [email], (err) => {
         if (err) {
           console.error('Database error:', err);
           res.status(500).json({ error: 'Failed to update seen.' });
           return;
         }
-        console.log("User 'seen' field updated successfully for email:", email);
         res.json({ message: 'Seen updated successfully!' });
       });
     } catch (error) {

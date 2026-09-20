@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import NavbarAdmin from '../components/navbar-admin'; // Importing the admin navbar component
 import { useSocket } from '../components/socketContext'; // Importing custom hook to use socket context
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL; // "https://nuhire-api-cz6c.onrender.com";
@@ -21,10 +21,6 @@ export default function AdminFactsPage() {
     three: string;
   } | null>(null);
   const socket = useSocket();
-
-  useEffect(() => {
-    console.log('current facts changed', currentFacts);
-  }, [currentFacts]);
 
   // Fetch classes for dropdown
   useEffect(() => {
@@ -49,27 +45,6 @@ export default function AdminFactsPage() {
     };
     fetchClasses();
   }, []);
-
-  // Fetch groups for selected class
-  useEffect(() => {
-    if (!selectedClass) {
-      setCurrentFacts(null);
-      return;
-    }
-    const fetchGroups = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/groups?class=${selectedClass}`, {
-          credentials: 'include',
-        });
-        if (res.ok) {
-          const data = await res.json();
-        }
-      } catch (error) {
-        setPopup({ headline: 'Error', message: 'Failed to fetch groups.' });
-      }
-    };
-    fetchGroups();
-  }, [selectedClass]);
 
   // Fetch current saved facts for the selected class
   useEffect(() => {
@@ -153,8 +128,6 @@ export default function AdminFactsPage() {
         }
       })();
     };
-
-    socket.on('connect', () => {});
 
     socket.on('factsUpdated', handleFactsUpdated);
 

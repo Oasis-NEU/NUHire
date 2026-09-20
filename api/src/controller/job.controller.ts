@@ -144,8 +144,6 @@ export class JobController {
   assignJobToAllGroups = async (req: AuthRequest, res: Response): Promise<void> => {
     const { class_id, job_title } = req.body;
 
-    console.log('Assigning job to all groups in class:', { class_id, job_title });
-
     if (!class_id || !job_title) {
       res.status(400).json({
         error: 'Missing required fields: class_id, job_title',
@@ -155,7 +153,6 @@ export class JobController {
 
     const classIdInt = parseInt(class_id);
     if (isNaN(classIdInt) || classIdInt <= 0) {
-      console.log('❌ Invalid class_id:', class_id);
       res.status(400).json({ error: 'class_id must be a valid positive integer.' });
       return;
     }
@@ -194,7 +191,6 @@ export class JobController {
       }
 
       const groupIds = groupsResult.map((group: any) => group.group_id);
-      console.log(`Found ${groupIds.length} groups for class ${class_id}:`, groupIds);
 
       await conn.beginTransaction();
 
@@ -273,10 +269,6 @@ export class JobController {
         });
       }
 
-      console.log(
-        `✅ Successfully assigned job "${job_title}" to ${groupIds.length} groups in class ${class_id}`
-      );
-
       res.json({
         message: 'Job assigned to all groups successfully',
         class_id: classIdInt,
@@ -312,19 +304,15 @@ export class JobController {
 
     const groupIdInt = parseInt(job_group_id);
     if (isNaN(groupIdInt) || groupIdInt <= 0) {
-      console.log('❌ Invalid job_group_id:', job_group_id);
       res.status(400).json({ error: 'job_group_id must be a valid positive integer.' });
       return;
     }
 
     const classIdInt = parseInt(class_id);
     if (isNaN(classIdInt) || classIdInt <= 0) {
-      console.log('❌ Invalid class_id:', class_id);
       res.status(400).json({ error: 'class_id must be a valid positive integer.' });
       return;
     }
-
-    console.log('Updating job for group:', { job_group_id: groupIdInt, class_id: classIdInt, job });
 
     // Same fix as assignJobToAllGroups: one connection, a real transaction, and
     // a release in `finally`. Through the pool the four DELETEs below each
@@ -398,17 +386,10 @@ export class JobController {
 
       await conn.commit();
 
-      console.log('Emitting jobUpdated event via Socket.IO to online students in the group/class');
-      console.log('Online students record:', this.onlineStudents);
-      console.log('this is the emails', emails);
       const roomID = `group_${job_group_id}_class_${class_id}`;
       this.io.to(roomID).emit('jobUpdated', {
         job: jobTitle,
       });
-
-      console.log(
-        `Job "${jobTitle}" assigned to Group ${job_group_id} in Class ${class_id}. All related data cleared.`
-      );
 
       res.json({
         message: 'Group job updated and all related data cleared successfully!',

@@ -45,25 +45,44 @@ it. Work top-down within each section.
 A bug-fix pass landed before this file was rewritten. These are done and
 verified; the detail is in git history.
 
-| ID                     | What was fixed                                                                                                                        |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `SEC-1`                | Moderator login accepted an empty body when env vars were unset                                                                       |
-| `SEC-2`                | Notes IDOR — any student could read any other student's notes                                                                         |
-| `SEC-3`                | `POST /users` had no middleware; anyone could self-promote to admin. Instructor status is now checked server-side against `Moderator` |
-| `SEC-4` _(partial)_    | The three unauthenticated `/moderator/crns` routes now require a moderator session. Super-admin is still undefined — see `SEC-4b`     |
-| `SEC-6`                | `requireAdmin` applied across group/job/csv/facts/delete/upload/offer mutations                                                       |
-| `SEC-10`               | Path traversal in the resume download. `..%2f..%2f.env` resolved to the real `api/.env`; now contained by `basename` + `root`         |
-| `SEC-11`               | `GET /users` is admin-only; `check/:email` answers only for the caller                                                                |
-| `SEC-12` _(partial)_   | `saveUninitialized: false` — anonymous requests no longer write a MySQL session row. `SESSION_SECRET` length check still open         |
-| `SEC-13`               | `/stats` requires admin; the route-timestamp arrays are bounded                                                                       |
-| `API-2`                | No `process.exit` on unhandled rejection, Express error middleware, `restart: unless-stopped`, `/health` healthcheck                  |
-| `API-8`                | Real transactions on a checked-out connection at all three sites. `withTransaction` helper and CI grep still open — see `API-8b`      |
-| `API-10`               | Zero bare `io.emit` remain; advisor events go to the class's moderators                                                               |
-| `API-12`               | `getCheckedResumes` returned the inverted set (`checked = "True"` coerced to 0)                                                       |
-| `STU-1,2,4,5`          | `/employerPannel` 404, `NEXT_PUBLIC_FRONT_URL`, dashboard progress field, `/about` wiping localStorage                                |
-| `STU-17`               | Duplicate sockets in `note.tsx` and `mod-dashboard` (the latter opened a connection per render for two events with no listeners)      |
-| `STU-22`               | `checkExistingOffer` read an array as an object, so the guard never fired and two clicks made two offers                              |
-| `UI-1`, `UI-2`, `UI-5` | Undefined Tailwind classes, invalid z-index utilities, debug output rendered into the student UI                                      |
+| ID                     | What was fixed                                                                                                                                                                |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SEC-1`                | Moderator login accepted an empty body when env vars were unset                                                                                                               |
+| `SEC-2`                | Notes IDOR — any student could read any other student's notes                                                                                                                 |
+| `SEC-3`                | `POST /users` had no middleware; anyone could self-promote to admin. Instructor status is now checked server-side against `Moderator`                                         |
+| `SEC-4` _(partial)_    | The three unauthenticated `/moderator/crns` routes now require a moderator session. Super-admin is still undefined — see `SEC-4b`                                             |
+| `SEC-6`                | `requireAdmin` applied across group/job/csv/facts/delete/upload/offer mutations                                                                                               |
+| `SEC-10`               | Path traversal in the resume download. `..%2f..%2f.env` resolved to the real `api/.env`; now contained by `basename` + `root`                                                 |
+| `SEC-11`               | `GET /users` is admin-only; `check/:email` answers only for the caller                                                                                                        |
+| `SEC-12` _(partial)_   | `saveUninitialized: false` — anonymous requests no longer write a MySQL session row. `SESSION_SECRET` length check still open                                                 |
+| `SEC-13`               | `/stats` requires admin; the route-timestamp arrays are bounded                                                                                                               |
+| `API-2`                | No `process.exit` on unhandled rejection, Express error middleware, `restart: unless-stopped`, `/health` healthcheck                                                          |
+| `API-8`                | Real transactions on a checked-out connection at all three sites. `withTransaction` helper and CI grep still open — see `API-8b`                                              |
+| `API-10`               | Zero bare `io.emit` remain; advisor events go to the class's moderators                                                                                                       |
+| `API-12`               | `getCheckedResumes` returned the inverted set (`checked = "True"` coerced to 0)                                                                                               |
+| `STU-1,2,4,5`          | `/employerPannel` 404, `NEXT_PUBLIC_FRONT_URL`, dashboard progress field, `/about` wiping localStorage                                                                        |
+| `STU-17`               | Duplicate sockets in `note.tsx` and `mod-dashboard` (the latter opened a connection per render for two events with no listeners)                                              |
+| `STU-22`               | `checkExistingOffer` read an array as an object, so the guard never fired and two clicks made two offers                                                                      |
+| `UI-1`, `UI-2`, `UI-5` | Undefined Tailwind classes, invalid z-index utilities, debug output rendered into the student UI                                                                              |
+| `STU-6`                | res-review now persists each decision as it is cast, with a retry queue; completion is announced only once the server holds the rows                                          |
+| `STU-7`                | teamConfirmations persisted in GroupConfirmations, re-read on mount and reconnect; unconfirm wired up                                                                         |
+| `STU-3`                | useProgress maps step to route instead of redirecting to /res_1 and 404ing                                                                                                    |
+| `API-4`                | the group barrier moved from process memory into Step_Completion, re-evaluated by query on completion and room join, with GET /groups/barrier-status as a non-socket fallback |
+| `API-5`                | POST /groups/force-advance, admin only, so a deadlocked group no longer needs a DBA mid-class                                                                                 |
+| `API-7`                | finite queueLimit, connect and query timeouts, /health/db reporting free/used/queued                                                                                          |
+| `API-15`               | sixteen handlers stopped returning raw MySQL errors to the browser                                                                                                            |
+| `API-1`                | single-replica constraint documented and a boot warning when INSTANCE_COUNT exceeds 1                                                                                         |
+| `SEC-9`                | uploads behind auth with uuid filenames, size limit and PDF magic-byte check; /uploads no longer express.static                                                               |
+| `SEC-19`               | OAuth state turned on; a forged or missing state is rejected before any token exchange                                                                                        |
+| `SEC-12b`              | API refuses to boot when SESSION_SECRET is unset or under 32 chars                                                                                                            |
+| `API-8b`               | acquire failures answer 503 instead of hanging the request                                                                                                                    |
+| `API-12b`              | Resume.checked settled as group-level, documented at the column, drifted rows realigned by migration 003                                                                      |
+| `TCH-4`                | CSV email validation restored, invalid rows listed with row number and excluded from submit                                                                                   |
+| `TCH-5`                | RFC-4180 parser replacing split(','), handling quoted commas, escapes, CRLF and BOM                                                                                           |
+| `TCH-6`                | students-per-group input with auto-assign, replacing the hardcoded group_id 1                                                                                                 |
+| `UI-3`                 | stray literal 't' removed from the notes textarea                                                                                                                             |
+| `UI-8`                 | pending-offers and sendpopups deleted, 1,106 unreachable lines                                                                                                                |
+| `TCH-10`               | pending-offers deleted; ManageGroupsTab is the one implementation                                                                                                             |
 
 Also landed, previously untracked:
 
@@ -82,16 +101,25 @@ Also landed, previously untracked:
 Three lead tickets must land **before** devs pick anything up: `INFRA-1`,
 `INFRA-2`, `INFRA-3`. Without them eight people show up with nothing they can do.
 
-Then these six, all independent, all different files:
+Then these six. All independent, all different files, so six people can start
+at once without colliding. Two are deliberately hard: the team is experienced
+and nobody stays interested on a diet of two-hour fixes.
 
 | #   | Ticket                                                | Est | Level |
 | --- | ----------------------------------------------------- | --- | ----- |
 | 1   | `ONB-1` Run the app and log every place the docs lied | 3h  | GFI   |
 | 2   | `UI-9` Rewrite the Tailwind theme tokens              | 6h  | MED   |
-| 3   | `STU-6` Persist resume votes as they are cast         | 8h  | MED   |
-| 4   | `STU-3` Fix the progress guard redirecting to a 404   | 2h  | GFI   |
-| 5   | `TCH-1` Confirmation dialog on "Assign Job"           | 5h  | GFI   |
-| 6   | `INFRA-5` ESLint, and enforce it                      | 10h | MED   |
+| 3   | `TCH-1` Confirmation dialog on "Assign Job"           | 5h  | GFI   |
+| 4   | `STU-8` Stop `/jobdes` resetting progress backwards   | 4h  | MED   |
+| 5   | `SEC-8` Authorize socket events by role               | 18h | HARD  |
+| 6   | `TCH-11`+`TCH-12` Candidate stats endpoint and modal  | 26h | HARD  |
+
+`SEC-8` and `TCH-11`/`TCH-12` each want a short spec from the lead first.
+`SEC-8` is what stops a student faking an advisor's accept. `TCH-12` is the
+screen that makes the activity teachable, and it is the most satisfying thing
+on this board to build.
+
+Anyone with a spare hour and no appetite for a spec: [CLEANUP.md](CLEANUP.md).
 
 **ONB-1 [GFI] 3h — Run the app locally and log every place the docs lied**
 First ticket for every new dev. Proves setup works and improves it in the same
@@ -287,53 +315,6 @@ touches the database name and deploy config.
 
 ## Short term
 
-**API-1 [GFI] 3h — Pin the API to one replica and document why**
-`onlineStudents` and the completion barrier are per-process, and Socket.IO rooms
-have no adapter. With two replicas a group splits across them and **never**
-reaches its completion count. Coolify makes scaling up a one-click accident.
-
-- [ ] Coolify API service explicitly set to 1 replica
-- [ ] Comment block at the top of `socket.ts` naming every piece of in-process state
-- [ ] Startup warning if an instance-count env var exceeds 1
-
-**API-7 [MED] 8h — Bound the DB pool queue so saturation errors instead of hanging**
-`connectionLimit: 15, queueLimit: 0`. An unlimited queue with no acquire timeout
-means a saturated pool produces requests that never resolve **and never error**.
-Worst failure mode: logs look healthy while 30 laptops spin.
-
-- [ ] `connectionLimit` 25 and env-configurable; finite `queueLimit` returning 503
-- [ ] `connectTimeout` and a query timeout
-- [ ] `/health/db` reporting free, used, queued
-
-**API-8b [GFI] 4h — Make the transaction pattern impossible to get wrong** — deps: API-8
-The three broken sites are fixed, but the next person will reach for the pool
-again because nothing stops them.
-
-- [ ] A `withTransaction(db, async conn => {...})` helper that always releases in `finally`
-- [ ] Convert the three existing sites to it
-- [ ] CI grep: no `START TRANSACTION`, `COMMIT` or `ROLLBACK` string outside the helper
-
-**API-12b [GFI] 3h — Decide what `checked` means** — deps: API-12
-The comparison bug is fixed, but the column is written per-group by the `check`
-socket handler and read per-student. Nobody has written down which it is, so the
-next change to the shortlist will pick the other one.
-
-- [ ] Decide, document in `AGENTS.md`, and make the read and write agree
-
-**SEC-12b [GFI] 2h — Fail fast on a weak session secret** — deps: SEC-12
-`SESSION_SECRET` is read with `!` and never validated. An unset value in a deploy
-produces a running app whose sessions are forgeable.
-
-- [ ] Boot fails if unset or under 32 chars, naming the variable
-
-**SEC-19 [GFI] [SEC] 3h — Turn on OAuth state**
-The Keycloak authorize URL contains no `state` parameter, so the callback has no
-CSRF protection: an attacker can complete a login flow in a victim's browser.
-Found while verifying the session change; not in the original audit.
-
-- [ ] `state: true` on the strategy; confirm the session survives the round trip
-- [ ] Test: a callback with a missing or wrong state is rejected
-
 ## Medium term
 
 **API-3 [HARD] [SPEC] 20h — Migration: the remaining barrier-critical schema defects** — deps: INFRA-10, INFRA-3
@@ -348,30 +329,6 @@ remain, each of which independently corrupts a live class:
 - [ ] Composite PKs on the three `*_Status` tables
 - [ ] `getFinishedCount` uses `COUNT(DISTINCT resume_number)`, not `COUNT(*)`
 - [ ] Each change ships with a test proving the specific bug is fixed
-
-**API-4 [HARD] [SPEC] 28h — Persist the group-completion barrier in MySQL** — deps: INFRA-10, API-3, SEC-7
-**The top live-class risk, and it must land by week 9** to leave testing time.
-`socket.ts` keeps completions in `global.completedResReview`. Every path out is a
-permanent stuck:
-
-- **API restart** → state is gone; already-finished students never re-emit, so the count restarts at 0 and can never reach total
-- **Socket reconnect** → the handler identifies the student by reverse-lookup in `onlineStudents`; after a reconnect the lookup fails, the server logs "Could not identify student" and **returns silently**
-- **One-shot delivery** → release is emitted to a cached socket id, then the key is deleted. A student offline at that instant never gets it and never gets a retry
-- **`reconnectionAttempts: 5`** means the client gives up permanently after ~5s of bad wifi, with no polling fallback
-- [ ] `Step_Completion (student_id, class, group_id, step, completed_at)`, PK on the first three
-- [ ] Handler upserts; identity from `socket.data.user`, which now exists, not the reverse lookup
-- [ ] Completion evaluated by query, re-evaluated on completion, room join, roster change, and a `GET /groups/barrier-status/...` poll
-- [ ] Test: restart the API with 3 of 4 done, 4th completes, group releases
-
-**API-5 [MED] [SPEC] 14h — Teacher "force advance group" endpoint** — deps: API-3, API-4
-**Highest-value ticket in the backlog.** `moveGroup` is emitted only by
-_students_. When a group deadlocks the professor has no button; her only recourse
-is editing the database mid-class.
-
-- [ ] `POST /groups/force-advance {class_id, group_id, target_step}`, admin only
-- [ ] Writes the step for every member, then emits `moveGroup` to that room only
-- [ ] Clears barrier state; idempotent; works when zero members are connected
-- [ ] Audit log line
 
 **API-6 [MED] 10h — Teacher "live group status" endpoint** — deps: API-4, INFRA-3
 When a group stalls the professor needs to know _which student_ is blocking, in
@@ -397,30 +354,12 @@ page, `sendPopupToGroups` spams any class.
 - [ ] Student events derive group and class from `socket.data.user`, never the payload
 - [ ] Test: a student socket emitting an admin event is rejected and logged
 
-**SEC-9 [MED] [SEC] 10h — Lock down file uploads**
-`requireAdmin` now covers all three endpoints. The rest is untouched: the
-middleware uses `file.originalname` verbatim with no sanitization, extension
-check or size limit, and `app.ts` serves `/uploads` through unauthenticated
-`express.static`, so **an uploaded HTML file is stored XSS**. Same-named uploads
-overwrite each other.
-
-- [ ] Server-generated uuid filenames; original name kept in the DB only
-- [ ] `limits.fileSize` plus a MIME and magic-byte check restricted to PDF
-- [ ] Serve uploads through an authenticated route, not `express.static`
-- [ ] Replace `multer@1.4.5-lts.2`, deprecated specifically for vulnerabilities, and fix `@types/multer@2` typing a different major
-- [ ] Test: a file named `../../../x.pdf` writes nothing outside `uploads/`
-
 **SEC-11b [MED] [SEC] 5h — Scope admin reads to the classes the caller owns** — deps: SEC-6
 `GET /users` is admin-only now, but an admin for CRN 1 still reads every student
 in every section. The roster is real Canvas data, so this is the FERPA axis.
 
 - [ ] Admin reads filter to CRNs the caller has a `Moderator` row for
 - [ ] Named columns, never `SELECT *`
-
-**API-15 [MED] 12h — Stop leaking raw MySQL errors** — deps: API-2
-~25 handlers return `err.message` to the browser, exposing table and column
-names. Many callbacks never check `err` before touching `results`, which throws
-inside a callback.
 
 **API-13 [MED] 12h — Make group-join capacity race-free** — deps: API-8b, INFRA-10
 Classic check-then-act. All 30 students click join within seconds, every one
@@ -529,34 +468,6 @@ tinting warm when it is applying flat white.
 - [ ] Agree a real palette first; put it in the PR description as swatches
 - [ ] Three of the config's four `content` globs point at directories that do not exist — fix those too
 
-**STU-3 [GFI] 2h — Fix the progress guard redirecting to a 404**
-`useProgress.tsx` does `window.location.replace('/' + progress)` where progress
-is `res_1`, not a route. The guard that protects students is itself a 404
-generator.
-
-- [ ] A `stepToRoute` map; unknown progress goes to `/dashboard`
-- [ ] Do not redirect until auth and progress have loaded
-
-**STU-6 [MED] 8h — Persist resume votes as they are cast**
-**The single worst student bug.** Votes accumulate in React state and only POST
-when the array hits exactly 10. The per-resume _counters_ persist to
-localStorage; the _votes array_ does not. Refresh at resume 7, resume at 7,
-finish all 10 on screen, POST never fires, never counted finished, **group
-barrier never opens for anyone**.
-
-- [ ] Each decision POSTs immediately, or the array persists alongside the counters
-- [ ] Failed POST surfaces a visible retry
-- [ ] Test: refresh at 3, 7 and 9; finish; confirm 10 rows and a correct count
-
-**STU-7 [MED] 8h — Persist group-confirmation state**
-`teamConfirmations` in `res-review-group` is pure client state. Any refresh
-resets it to `[]`, and teammates who already confirmed **cannot re-confirm**
-because the button is disabled. Permanent deadlock unless the whole group reloads
-in unison.
-
-- [ ] Stored server-side per (group, class, student), fetched on mount
-- [ ] Add unconfirm — the socket handler exists and nothing triggers it
-
 **STU-8 [MED] 4h — Stop `/jobdes` resetting progress backwards**
 It calls `updateProgress("job_description")` unconditionally on mount, and the
 API overwrites unconditionally. A student at the interview stage who re-reads the
@@ -569,10 +480,6 @@ ejected mid-activity while their group waits at a barrier.
 `res-review` and `interview-stage` set `window.location.href` and _then_ emit
 `moveGroup`. Navigation can tear down the socket first, so one student advances
 and their teammates stay behind.
-
-**UI-3 [GFI] 2h — Fix visible text typos**
-`components/note.tsx` ends a `<textarea />` with a stray literal `t`, rendering a
-floating "t" in the Notes dropdown on **every page with the student navbar**.
 
 **UI-6 [GFI] 5h — Unify step-name vocabulary in the UI**
 "Interview Stage" vs "Interview Page" vs "Interview Review" for the same step,
@@ -762,14 +669,6 @@ class, with no confirmation. The modal never mentions deleting anything.
 - [ ] Distinct warning if any affected group has a pending or accepted offer
 - [ ] Requires typing `ERASE` or the CRN; Cancel is default-focused
 
-**TCH-4 [GFI] 3h — Turn the CSV email validation back on**
-`StudentCSVTab.tsx` has the real regex commented out and replaced with `/^.*$/`.
-Any non-empty cell becomes a student, and those rows then count toward the group
-barrier and hang real students.
-
-- [ ] Restore a format check, enforced **server-side** too
-- [ ] Invalid rows listed with row number and value, excluded from submit
-
 **TCH-8 [GFI] 2h — Confirm dialog on per-group "Start Group"**
 Fires immediately and is irreversible, while "Start All" gets a confirm. Also fix:
 a group created _after_ "Start All" cannot be started from the toolbar.
@@ -788,20 +687,6 @@ do it without nuking the class.
 `Offers` is the one table the reset does not clear, so a group that already
 submitted gets wiped **and then permanently blocked** from making a new one.
 Dead-ended, mid-class.
-
-**TCH-5 [GFI] 5h — Use a real CSV parser**
-`parseCSV` is `split(',')`. Canvas quotes names containing commas, which shifts
-every following column. Windows line endings leave `\r` on the last field.
-
-- [ ] `papaparse` or equivalent; fixtures for a real Canvas export, quoted names, CRLF, BOM
-- [ ] Verified against a real Canvas gradebook export
-
-**TCH-6 [GFI] 5h — Fix "all students land in group 1"**
-`StudentCSVTab.tsx` hardcodes `group_id: 1`, contradicting the comment above it.
-The professor hand-types 30 group numbers under time pressure, every term.
-
-- [ ] "Students per group" input with auto-assign and optional shuffle
-- [ ] Manual per-student override still works
 
 **TCH-7 [GFI] 4h — Prefer an exact email-column match** — deps: TCH-5
 Takes the first header _containing_ "email", so `Secondary Email` silently wins.
@@ -898,14 +783,6 @@ who is stuck. This is the screen the professor actually stands in front of.
 "None of these is a good fit" is a legitimate hiring outcome with no way to
 express it. Also `allRejected` promises a restart from the job description stage,
 and **no restart mechanism exists**.
-
-**TCH-10 [GFI] 3h — Link or delete `/pending-offers`** — needs a decision
-470 working lines reachable from nowhere, while a partial copy of the same logic
-lives inside `ManageGroupsTab`. Two implementations, one invisible, drifting.
-
-**UI-8 [GFI] 4h — Delete orphaned pages** — needs a decision
-`sendpopups/` and `pending-offers/` are ~1,100 lines of _working_ advisor tooling
-reachable from nowhere, duplicated inside `ManageGroupsTab`.
 
 ---
 

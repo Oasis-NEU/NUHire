@@ -121,10 +121,6 @@ export function ManageGroupsTab() {
     return () => clearTimeout(timer);
   }, [isNotTeacher, router]);
 
-  useEffect(() => {
-    console.log('acceptedoffers updated', acceptedOffers);
-  }, [acceptedOffers]);
-
   const fetchGroupJobAndProgress = useCallback(async (groupId: number, classId: string) => {
     try {
       const jobResponse = await fetch(`${API_BASE_URL}/jobs/assignment/${groupId}/${classId}`, {
@@ -338,7 +334,6 @@ export function ManageGroupsTab() {
     if (!socket) return;
 
     const handleUserAdded = () => {
-      console.log('User added event received, refreshing data...');
       refreshGroupsAndStudents();
     };
 
@@ -358,9 +353,6 @@ export function ManageGroupsTab() {
       step: string;
       email: string;
     }) => {
-      console.log('Progress updated event received:', data);
-      console.log('Currently selected class:', selectedClass);
-
       if (data.crn.toString() === selectedClass) {
         try {
           const progress = data.step;
@@ -378,16 +370,11 @@ export function ManageGroupsTab() {
             jobAssignment = jobData.job || 'No job assigned';
           }
 
-          console.log(`Updating progress for group ${data.group_id} to: ${progress}`);
-          console.log(`Job assignment for group ${data.group_id}: ${jobAssignment}`);
-
           setGroups((prevGroups) =>
             prevGroups.map((group) =>
               group.group_id === data.group_id ? { ...group, progress, jobAssignment } : group
             )
           );
-
-          console.log(`Successfully updated group ${data.group_id}`);
         } catch (error) {
           console.error('Error refreshing progress:', error);
         }
@@ -461,8 +448,6 @@ export function ManageGroupsTab() {
       candidateId: number;
       accepted: boolean;
     }) => {
-      console.log('Received offer response:', data);
-
       setPendingOffers((prev) =>
         prev.filter(
           (o) =>
@@ -524,7 +509,6 @@ export function ManageGroupsTab() {
             id: candidate.id || candidate.resume_id,
             name: `${candidate.f_name} ${candidate.l_name}`,
           }));
-          console.log('the cnaddidate', formattedCandidates);
           setCandidates(formattedCandidates);
         }
       } catch (error) {
@@ -550,7 +534,6 @@ export function ManageGroupsTab() {
 
         if (response.ok) {
           const groupData = await response.json();
-          console.log('Available groups from GroupsInfo:', groupData);
           const groupNumbers = Array.isArray(groupData)
             ? groupData.map(Number).sort((a, b) => a - b)
             : [];
@@ -595,7 +578,6 @@ export function ManageGroupsTab() {
             candidateName: candidate ? candidate.name : `Candidate ${offer.candidate_id}`,
           };
         });
-        console.log('offers changed', formattedOffers);
         setAcceptedOffers(formattedOffers);
       } catch (error) {
         console.error('Error fetching accepted offers:', error);
@@ -1200,8 +1182,6 @@ export function ManageGroupsTab() {
     offerId?: number
   ) => {
     try {
-      console.log(`Responding to offer: ${accepted ? 'ACCEPT' : 'REJECT'}`);
-
       let actualOfferId = offerId;
       if (!actualOfferId) {
         const response = await fetch(`${API_BASE_URL}/offers/group/${groupId}/class/${classId}`, {
@@ -1244,8 +1224,6 @@ export function ManageGroupsTab() {
 
       socket.emit('makeOfferResponse', { classId, groupId, candidateId, accepted });
 
-      console.log('Socket response emitted');
-
       setPendingOffers((prev) =>
         prev.filter(
           (o) => !(o.classId === classId && o.groupId === groupId && o.candidateId === candidateId)
@@ -1254,7 +1232,6 @@ export function ManageGroupsTab() {
 
       if (accepted && candidateName) {
         setAcceptedOffers((prev) => [...prev, { groupId, candidateName }]);
-        console.log('offer accepted for', candidateName);
       }
 
       const candidateDisplayName = candidateName || `Candidate ${candidateId}`;

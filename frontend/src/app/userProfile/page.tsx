@@ -1,15 +1,9 @@
 'use client';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-import { useState, useEffect } from 'react';
 import Navbar from '../components/navbar';
 import NavbarAdmin from '../components/navbar-admin';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../components/AuthContext';
-
-interface ClassItem {
-  id: number;
-  name: string;
-}
 
 export default function UserProfile() {
   const router = useRouter();

@@ -1,5 +1,4 @@
 'use client';
-import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Slideshow from '../components/slideshow';
@@ -14,8 +13,6 @@ export default function InstructionsPage() {
     if (!user?.email) return false;
 
     try {
-      console.log('Updating user-see-dash field for email:', user.email);
-
       const response = await fetch(`${API_BASE_URL}/users/update-seen`, {
         method: 'POST',
         headers: {
@@ -27,10 +24,7 @@ export default function InstructionsPage() {
         }),
       });
 
-      console.log('Response from update-seen endpoint:', response);
       if (response.ok) {
-        const result = await response.json();
-        console.log('Successfully updated user-see-dash field:', result);
         return true;
       } else {
         console.error('Failed to update user-see-dash field:', response.statusText);

@@ -39,7 +39,6 @@ const Navbar = () => {
   }, [isOpen]);
 
   const handleShowInstructions = () => {
-    console.log('pressed and inside function');
     window.dispatchEvent(new CustomEvent('showInstructions'));
   };
 

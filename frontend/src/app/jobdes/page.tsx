@@ -2,7 +2,7 @@
 export const dynamic = 'force-dynamic';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-import { useState, useEffect, JSX, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { pdfSource } from '../../lib/pdfSource';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
@@ -30,16 +30,10 @@ interface CommentType {
   isEditing?: boolean;
 }
 
-interface User {
-  email: string;
-  class: number;
-  group_id: number;
-}
-
 export default function JobDescriptionPage() {
   const socket = useSocket();
   const { user, loading: userloading } = useAuth();
-  const { updateProgress, fetchProgress } = useProgressManager();
+  const { updateProgress } = useProgressManager();
   const [fileUrl, setJob] = useState('');
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
@@ -65,7 +59,6 @@ export default function JobDescriptionPage() {
 
   useEffect(() => {
     const handleShowInstructions = () => {
-      console.log('Help button clicked - showing instructions');
       setShowInstructions(true);
     };
 
@@ -153,26 +146,22 @@ export default function JobDescriptionPage() {
   useEffect(() => {
     const fetchJob = async () => {
       if (!user?.group_id || !user?.class) {
-        console.log('No user group_id or class found');
         return;
       }
 
       try {
         // First, get the job assignment for this group/class
-        console.log(`Fetching job assignment for group ${user.group_id} in class ${user.class}`);
         const jobAssignmentResponse = await fetch(
           `${API_BASE_URL}/jobs/assignment/${user.group_id}/${user.class}`,
           { credentials: 'include' }
         );
 
         if (!jobAssignmentResponse.ok) {
-          console.log('No job assignment found for this group');
           return;
         }
 
         const jobAssignmentData = await jobAssignmentResponse.json();
         const jobTitle = jobAssignmentData.job;
-        console.log('Found job assignment:', jobTitle);
 
         // Then fetch the PDF file using the job title
         const response = await fetch(
@@ -189,7 +178,6 @@ export default function JobDescriptionPage() {
         }
 
         const job = await response.json();
-        console.log('Job PDF data:', job);
         setJob(`${API_BASE_URL}/${job.file_path}`);
       } catch (error) {
         console.error('Error fetching job description:', error);
@@ -219,7 +207,6 @@ export default function JobDescriptionPage() {
     if (tool !== 'comment') return;
     const pdfPage = document.querySelector('.react-pdf__Page') as HTMLElement | null;
     if (!pdfPage) {
-      console.log('PDF page not found.');
       return;
     }
     const pageRect = pdfPage.getBoundingClientRect();
@@ -241,8 +228,6 @@ export default function JobDescriptionPage() {
         isEditing: true,
       };
       setComments([...comments, newComment]);
-    } else {
-      console.log('Clicked outside the PDF page, comment not added.');
     }
   };
 
@@ -432,7 +417,6 @@ export default function JobDescriptionPage() {
               // ✅ Make async
               await updateProgress(user, 'res_1'); // ✅ Await
               localStorage.setItem('progress', 'res_1');
-              console.log('Progress updated to res_1');
               window.location.href = '/res-review';
             }}
             className="px-4 py-2 bg-redHeader text-white rounded-lg shadow-md hover:bg-navy transition duration-300 font-rubik"

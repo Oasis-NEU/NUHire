@@ -240,10 +240,6 @@ export class ModeratorController {
       // Commit transaction
       await conn.commit();
 
-      console.log(
-        `✅ Class ${crn} created with seeded data: ${jobDescriptions.length} jobs, ${resumePdfs.length} resumes, ${candidates.length} candidates`
-      );
-
       res.status(201).json({
         admin_email,
         crn,
@@ -275,7 +271,6 @@ export class ModeratorController {
   };
 
   getAllModeratorCRNs = (req: AuthRequest, res: Response): void => {
-    console.log('Fetching all moderator CRNs');
     this.db.query('SELECT * FROM Moderator', (err, results) => {
       if (err) {
         res.status(500).json({ error: err.message });

@@ -1,31 +1,12 @@
 'use client';
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import NavbarAdmin from '../components/navbar-admin';
 import Tabs from '../components/tabs';
-import Popup from '../components/popup';
 import { StudentCSVTab } from '../components/StudentCSVTab';
 import { ManageGroupsTab } from '../components/ManageGroupsTab';
 import { useAuth } from '../components/AuthContext';
 
 const Grouping = () => {
-  interface Student {
-    f_name: string;
-    l_name: string;
-    email: string;
-  }
-
-  interface Offer {
-    id: number;
-    class_id: number;
-    group_id: number;
-    candidate_id: number;
-    status: 'pending' | 'accepted' | 'rejected';
-  }
-
   const { user, loading: userloading } = useAuth();
-  const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
 
   if (userloading) {
     return (
@@ -39,7 +20,6 @@ const Grouping = () => {
   }
 
   if (!user || user.affiliation !== 'admin') {
-    console.log('Unauthorized access attempt to /grouping by user:', user);
     return <div>This account is not authorized for this page</div>;
   }
 
@@ -61,10 +41,6 @@ const Grouping = () => {
           </div>
         </Tabs>
       </div>
-
-      {popup && (
-        <Popup headline={popup.headline} message={popup.message} onDismiss={() => setPopup(null)} />
-      )}
     </div>
   );
 };

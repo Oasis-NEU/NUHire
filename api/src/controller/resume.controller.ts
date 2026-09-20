@@ -27,13 +27,6 @@ export class ResumeController {
   getFinishedCount = (req: AuthRequest, res: Response): void => {
     const { group_id, class_id } = req.params;
 
-    console.log(
-      '📊 [GET-FINISHED-COUNT] Request received for group:',
-      group_id,
-      'class:',
-      class_id
-    );
-
     if (!group_id || !class_id) {
       res.status(400).json({ error: 'group_id and class_id are required' });
       return;
@@ -58,22 +51,12 @@ export class ResumeController {
       // Count the number of students who have finished
       const finishedCount = results.length;
 
-      console.log('✅ [GET-FINISHED-COUNT] Finished count:', finishedCount);
       res.json({ finishedCount });
     });
   };
 
   submitVote = (req: AuthRequest, res: Response): void => {
     const { student_id, group_id, class: classId, timespent, resume_number, vote } = req.body;
-
-    console.log('🗳️ [BACKEND-VOTE] Received vote submission:', {
-      student_id,
-      group_id,
-      class: classId,
-      timespent,
-      resume_number,
-      vote,
-    });
 
     if (
       !student_id ||
@@ -84,14 +67,6 @@ export class ResumeController {
       timespent === null ||
       !vote
     ) {
-      console.log('❌ [BACKEND-VOTE] Validation failed. Received data:', {
-        student_id,
-        group_id,
-        classId,
-        timespent,
-        resume_number,
-        vote,
-      });
       res.status(400).json({
         error: 'student_id, group_id, class, resume_number, timespent, and vote are required',
       });
@@ -109,28 +84,15 @@ export class ResumeController {
           VALUES (?, ?, ?, ?, ?, ?)
           ON DUPLICATE KEY UPDATE timespent = VALUES(timespent), vote = VALUES(vote);`;
 
-        console.log('🗳️ [BACKEND-VOTE] Executing query with params:', [
-          student_id,
-          group_id,
-          classId,
-          timespent,
-          resume_number,
-          vote,
-        ]);
-
         this.db.query(
           query,
           [student_id, group_id, classId, timespent, resume_number, vote],
-          (err, result) => {
+          (err) => {
             if (err) {
               console.error('❌ [BACKEND-VOTE] Error saving vote:', err);
               res.status(500).json({ error: 'Database error' });
               return;
             }
-
-            console.log(
-              `✅ [BACKEND-VOTE] Vote recorded for resume ${resume_number} by student ${student_id} in group ${group_id}, class ${classId}`
-            );
 
             // EMIT socket event to all group members
             const roomId = `group_${group_id}_class_${classId}`;
@@ -140,9 +102,6 @@ export class ResumeController {
               newVote: vote,
               student_id,
             });
-            console.log(
-              `📡 [SOCKET] Emitted voteUpdated to room ${roomId}: Resume ${resume_number}, ${oldVote} -> ${vote}`
-            );
 
             res.status(200).json({ message: 'Resume review updated successfully' });
           }
@@ -177,13 +136,6 @@ export class ResumeController {
     const { group_id } = req.params;
     const { class: studentClass } = req.query;
 
-    console.log(
-      '📊 [BACKEND-GET-VOTES] Fetching votes for group:',
-      group_id,
-      'class:',
-      studentClass
-    );
-
     if (!studentClass) {
       res.status(400).json({ error: 'class query parameter is required' });
       return;
@@ -207,7 +159,6 @@ export class ResumeController {
         return;
       }
 
-      console.log('📊 [BACKEND-GET-VOTES] All votes from Resume table:', votes);
       res.json(votes); // Return ALL votes, not merged
     });
   };
@@ -352,10 +303,6 @@ export class ResumeController {
               return;
             }
 
-            console.log(
-              `Deleted ${candidateResult.affectedRows} candidate(s) for resume ID ${resumeId}`
-            );
-
             // Delete the resume entry for this specific class
             this.db.query(
               'DELETE FROM Resume_pdfs WHERE id = ? AND class_id = ?',
@@ -366,10 +313,6 @@ export class ResumeController {
                   res.status(500).json({ error: 'Resume deletion failed' });
                   return;
                 }
-
-                console.log(
-                  `Deleted resume: ${fileName}, Resume ID: ${resumeId} for class ${classId}`
-                );
 
                 // Check if this file is still used by other classes
                 this.db.query(
@@ -485,14 +428,13 @@ export class ResumeController {
         ON DUPLICATE KEY UPDATE timespent = VALUES(timespent), vote = VALUES(vote)
       `;
 
-      this.db.query(query, [values], (err, result) => {
+      this.db.query(query, [values], (err) => {
         if (err) {
           console.error('Error saving batch votes:', err);
           res.status(500).json({ error: 'Failed to save votes' });
           return;
         }
 
-        console.log(`✅ Saved ${votes.length} votes successfully`);
         res.json({ success: true, votesCount: votes.length });
       });
     } catch (error) {

@@ -15,10 +15,6 @@ export default function SignupDetails() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    console.log('Message updated:', message);
-  }, [message]);
-
-  useEffect(() => {
     const fetchUserDetails = async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const userEmail = urlParams.get('email');
@@ -44,10 +40,6 @@ export default function SignupDetails() {
     fetchUserDetails();
   }, []);
 
-  useEffect(() => {
-    console.log('email changed:', email);
-  }, [email]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
@@ -67,10 +59,6 @@ export default function SignupDetails() {
           credentials: 'include',
         });
 
-        console.log('Response status:', checkRes.status);
-        console.log('Response ok:', checkRes.ok);
-        console.log('Response type:', checkRes.type);
-
         if (!checkRes.ok) {
           setMessage('Error checking your registration status.');
           setSubmitting(false);
@@ -78,7 +66,6 @@ export default function SignupDetails() {
         }
 
         const checkData = await checkRes.json();
-        console.log('Check data for student affiliation:', checkData);
 
         if (checkData.group_id === null || checkData.class_id === null) {
           setMessage(
@@ -107,7 +94,6 @@ export default function SignupDetails() {
         }
 
         const emailData = await emailRes.json();
-        console.log(emailData);
 
         if (emailData.length !== 0) {
           setMessage('Please use a student email to sign up.');
@@ -157,8 +143,6 @@ export default function SignupDetails() {
       Email: email,
       Affiliation: affiliation,
     };
-
-    console.log('Submitting user:', user);
 
     try {
       const response = await fetch(`${API_BASE_URL}/users`, {

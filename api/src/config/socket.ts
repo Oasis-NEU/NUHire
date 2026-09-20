@@ -157,8 +157,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
   });
 
   io.on('connection', (socket: Socket) => {
-    console.log('New client connected:', socket.id);
-
     // Register every handler through this instead of socket.on.
     //
     // socket.io does not catch a throw inside a handler. It escapes to the
@@ -260,15 +258,10 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
 
     on('joinClass', ({ classId }: { classId: number }) => {
       if (!mayJoin(`class_${classId}`)) return;
-      console.log(`Socket ${socket.id} joining class room: class_${classId}`);
       socket.join(`class_${classId}`);
     });
 
     on('check', ({ group_id, resume_number, checked }: SocketEvents['check']) => {
-      console.log(
-        `Checkbox update received: Room ${group_id}, Resume ${resume_number}, Checked: ${checked}`
-      );
-
       let actualGroupId = group_id;
       let classId = null;
 
@@ -292,11 +285,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
           return;
         }
 
-        console.log(`Database updated successfully for resume ${resume_number}`);
         io.to(group_id).emit('checkboxUpdated', { resume_number, checked });
-        console.log(
-          `Emitted checkboxUpdated to room ${group_id}: Resume ${resume_number}, Checked: ${checked}`
-        );
       });
     });
 
@@ -331,8 +320,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
                 io.to(studentSocketId).emit('receivePopup', { headline, message, candidateId });
               }
             });
-
-            console.log(`Popup sent to Groups: ${groups.join(', ')} in Class ${classId || 'All'}`);
           } else {
             console.log('No online students in the selected groups.');
           }
@@ -364,10 +351,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     on(
       'makeOfferRequest',
       ({ classId, groupId, candidateId }: SocketEvents['makeOfferRequest']) => {
-        console.log(
-          `Student in class ${classId}, group ${groupId} wants to offer candidate ${candidateId}`
-        );
-
         // First, fetch the candidate information using resume_id
         db.query(
           'SELECT f_name, l_name FROM Candidates WHERE resume_id = ?',
@@ -386,14 +369,11 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
             const firstName = candidates.length > 0 ? candidates[0].f_name : '';
             const lastName = candidates.length > 0 ? candidates[0].l_name : '';
 
-            console.log(`Candidate name: ${candidateName}`);
-
             // Then fetch moderators and emit with candidate info
             db.query(
               'SELECT admin_email FROM Moderator WHERE crn = ?',
               [classId],
               (err, moderators: any[]) => {
-                console.log('Moderator query result:', moderators);
                 if (!err && moderators.length > 0) {
                   moderators.forEach(({ admin_email }) => {
                     io.to(admin_email).emit('makeOfferRequest', {
@@ -404,9 +384,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
                       firstName,
                       lastName,
                     });
-                    console.log(
-                      `Notified ${admin_email} about offer request for ${candidateName} from group ${groupId}`
-                    );
                   });
                 } else {
                   console.log(
@@ -434,9 +411,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     on(
       'makeOfferResponse',
       ({ classId, groupId, candidateId, accepted }: SocketEvents['makeOfferResponse']) => {
-        console.log(
-          `Advisor responded to class ${classId}, group ${groupId} for candidate ${candidateId}: accepted=${accepted}`
-        );
         // The group hears the decision; the class's advisors hear it so their
         // own pending-offer views update. Nobody else.
         const payload = { classId, groupId, candidateId, accepted };
@@ -446,9 +420,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     );
 
     on('moveGroup', ({ classId, groupId, targetPage }: SocketEvents['moveGroup']) => {
-      console.log(`Moving group ${groupId} in class ${classId} to ${targetPage}`);
       const roomId = `group_${groupId}_class_${classId}`;
-      console.log(`Emitting moveGroup to room: ${roomId}`);
       io.to(roomId).emit('moveGroup', { classId, groupId, targetPage });
     });
 
@@ -461,9 +433,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
         groupId,
         classId,
       }: SocketEvents['submitInterview']) => {
-        console.log(
-          `Interview ${currentVideoIndex + 1} submitted by group ${groupId}, class ${classId}, moving to video ${nextVideoIndex + 1}, isLast: ${isLastInterview}`
-        );
         const roomId = `group_${groupId}_class_${classId}`;
         io.to(roomId).emit('interviewSubmitted', {
           currentVideoIndex,
@@ -478,9 +447,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     on(
       'offerSelected',
       ({ candidateId, groupId, classId, roomId, checked }: SocketEvents['offerSelected']) => {
-        console.log(
-          `Candidate ${candidateId} ${checked ? 'selected' : 'deselected'} for offer by group ${groupId}, class ${classId}`
-        );
         socket.to(roomId).emit('offerSelected', { candidateId, groupId, classId, checked });
       }
     );
@@ -488,9 +454,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     on(
       'offerSubmitted',
       ({ candidateId, groupId, classId, roomId }: SocketEvents['offerSubmitted']) => {
-        console.log(
-          `Offer submitted for candidate ${candidateId} by group ${groupId}, class ${classId}`
-        );
         socket.to(roomId).emit('offerSubmitted', { candidateId, groupId, classId });
       }
     );
@@ -589,7 +552,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     on(
       'sentPresetVotes',
       async ({
-        student_id,
         group_id,
         class: classId,
         question1,
@@ -598,16 +560,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
         question4,
         candidate_id,
       }: SocketEvents['sentPresetVotes']) => {
-        console.log('inside sentPresetVotes, with data:', {
-          student_id,
-          group_id,
-          classId,
-          question1,
-          question2,
-          question3,
-          question4,
-          candidate_id,
-        });
         try {
           const query = `
           INSERT INTO InterviewPopup 
@@ -626,10 +578,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
             (err) => {
               if (err) {
                 console.error('Error updating interview popup votes:', err);
-              } else {
-                console.log(
-                  `Updated interview popup votes for candidate ${candidate_id} in group ${group_id} class ${classId}`
-                );
               }
             }
           );
@@ -664,7 +612,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     );
 
     on('allowGroupAssignment', ({ classId, message }: SocketEvents['allowGroupAssignment']) => {
-      console.log('Teacher allowing group assignment for class:', classId);
       io.to(`class_${classId}`).emit('allowGroupAssignmentStudent', {
         classId: classId,
         message: message,
@@ -672,7 +619,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     });
 
     on('groupAssignmentClosed', ({ classId, message }: SocketEvents['groupAssignmentClosed']) => {
-      console.log('Teacher closing group assignment for class:', classId);
       io.to(`class_${classId}`).emit('groupAssignmentClosedStudent', {
         classId: classId,
         message: message,
@@ -682,7 +628,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     on('disconnect', () => {
       Object.keys(onlineStudents).forEach((studentId) => {
         if (onlineStudents[studentId] === socket.id) {
-          console.log(`Student ${studentId} disconnected`);
           delete onlineStudents[studentId];
         }
       });

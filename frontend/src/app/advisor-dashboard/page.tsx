@@ -1,7 +1,6 @@
 'use client'; //Declares that this page is a client component
 export const dynamic = 'force-dynamic';
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL; // API base URL from environment variables
-import React, { useState, useEffect } from 'react'; // Importing React and hooks for state and effect management
+import React, { useEffect } from 'react'; // Importing React and the effect hook
 import { useRouter } from 'next/navigation'; // Importing useRouter for navigation
 import Link from 'next/link'; // Importing Link for client-side navigation
 import NavbarAdmin from '../components/navbar-admin'; // Importing the admin navbar component
@@ -10,28 +9,17 @@ import { useSocket } from '../components/socketContext'; // Importing custom hoo
 import { useAuth } from '../components/AuthContext'; // Importing custom hook to use authentication context
 
 const Dashboard = () => {
-  // Define the User interface to match the expected user data structure
-  interface User {
-    id: number;
-    name: string;
-    email: string;
-    affiliation: string;
-  }
-
-  // State variables to manage user data and loading state
   const router = useRouter();
   const socket = useSocket();
   const { user, loading: userloading } = useAuth();
 
   // Socket connection - only run when both socket AND user are ready
   useEffect(() => {
-    if (!socket || !user?.email) return; // ✅ Check both socket and user
+    if (!socket || !user?.email) return;
 
-    console.log('Admin coming online:', user.email); // Debug log
     socket.emit('adminOnline', { adminEmail: user.email });
 
     return () => {
-      console.log('Admin going offline:', user.email); // Debug log
       socket.emit('adminOffline', { adminEmail: user.email });
     };
   }, [socket, user?.email]);

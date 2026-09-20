@@ -14,8 +14,6 @@ export class CandidateController {
     const { classId, groupIds } = req.params;
     const groupIdArray = groupIds.split(',');
 
-    console.log(`Fetching candidates being interviewed by groups ${groupIds} in class ${classId}`);
-
     const placeholders = groupIdArray.map(() => '?').join(',');
 
     const query = `
@@ -44,17 +42,12 @@ export class CandidateController {
         return;
       }
 
-      console.log(
-        `Found ${(results as any[]).length} candidates being interviewed by groups ${groupIds} in class ${classId}`
-      );
       res.json(results);
     });
   };
 
   getCandidatesByClass = (req: AuthRequest, res: Response): void => {
     const { classId } = req.params;
-
-    console.log(`Fetching candidates for class ${classId}`);
 
     const query = `
       SELECT DISTINCT 
@@ -78,7 +71,6 @@ export class CandidateController {
         return;
       }
 
-      console.log(`Found ${(results as any[]).length} candidates for class ${classId}`);
       res.json(results);
     });
   };
@@ -129,7 +121,6 @@ export class CandidateController {
           res.status(404).json({ error: 'Candidate not found' });
           return;
         }
-        console.log(`Fetched candidate with resume number ${resume_number}:`, results[0]);
         res.json(results[0]);
       }
     );
@@ -161,7 +152,6 @@ export class CandidateController {
         res.status(404).json({ error: 'Candidate not found' });
         return;
       }
-      console.log(`Fetched candidate with resume number ${resume_number}:`, results[0]);
       res.json(results[0]);
     });
   };

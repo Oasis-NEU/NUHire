@@ -87,7 +87,7 @@ const dropForeignProgress = (userId: string) => {
 export default function ResumesPage() {
   useProgress();
   const socket = useSocket();
-  const { updateProgress, fetchProgress } = useProgressManager();
+  const { updateProgress } = useProgressManager();
   const [resumes, setResumes] = useState(0);
   const [resumesList, setResumesList] = useState<
     {
@@ -141,7 +141,6 @@ export default function ResumesPage() {
   const maxDecisions = totalDecisions >= 10;
   const resumeRef = useRef<HTMLDivElement | null>(null);
   const hasUpdatedPageRef = useRef(false);
-  const lastLoggedIndexRef = useRef(-1);
   const hadSavedProgressRef = useRef(false);
   const serverRestoreDoneRef = useRef(false);
   const announcedFinishRef = useRef(false);
@@ -156,28 +155,15 @@ export default function ResumesPage() {
 
   const fetchResumes = useCallback(async (userClass: number) => {
     try {
-      console.log('📄 [FETCH] Fetching resumes for class:', userClass);
-      console.log('📄 [FETCH] Request URL:', `${API_BASE_URL}/resume_pdf?class_id=${userClass}`);
-
       const response = await fetch(`${API_BASE_URL}/resume_pdf?class_id=${userClass}`, {
         credentials: 'include',
       });
 
-      console.log('📄 [FETCH] Response status:', response.status, response.statusText);
-      console.log('📄 [FETCH] Response headers:', response.headers);
-
       const data = await response.json();
-      console.log('📄 [FETCH] Raw response data:', JSON.stringify(data, null, 2));
-      console.log('📄 [FETCH] Number of resumes:', data.length);
-
-      data.forEach((resume: any, index: number) => {
-        console.log(`📄 [FETCH] Resume ${index}:`, JSON.stringify(resume, null, 2));
-      });
 
       const missingPaths = data.filter((r: any) => !r.file_path);
       if (missingPaths.length > 0) {
         console.warn(`⚠️ [FETCH] ${missingPaths.length} resumes are missing file_path!`);
-        console.warn('⚠️ [FETCH] Resumes missing file_path:', missingPaths);
       }
 
       setResumesList(data);
@@ -187,9 +173,6 @@ export default function ResumesPage() {
   }, []);
 
   const fetchGroupSize = async () => {
-    console.log('🔍 [FETCH-GROUP-SIZE] Starting fetchGroupSize...');
-    console.log('🔍 [FETCH-GROUP-SIZE] Current groupSize:', groupSize);
-
     try {
       const response = await fetch(
         `${API_BASE_URL}/interview/group-size/${user?.group_id}/${user?.class}`,
@@ -197,9 +180,7 @@ export default function ResumesPage() {
       );
       if (response.ok) {
         const data = await response.json();
-        console.log('🔍 [FETCH-GROUP-SIZE] Response received - new size:', data.count);
         setGroupSize(data.count);
-        console.log('🔍 [FETCH-GROUP-SIZE] State updated - groupSize:', data.count);
       }
     } catch (err) {
       console.error('❌ [FETCH-GROUP-SIZE] Failed to fetch group size:', err);
@@ -207,14 +188,6 @@ export default function ResumesPage() {
   };
 
   const fetchFinished = async () => {
-    console.log('🔍 [FETCH-FINISHED] Starting fetchFinished...');
-    console.log(
-      '🔍 [FETCH-FINISHED] Current state - groupSubmissions:',
-      groupSubmissions,
-      'groupSize:',
-      groupSize
-    );
-
     try {
       const response = await fetch(
         `${API_BASE_URL}/resume/finished-count/${user?.group_id}/${user?.class}`,
@@ -225,12 +198,7 @@ export default function ResumesPage() {
 
       if (response.ok) {
         const data = await response.json();
-        const newGroupSubmissions = data.finishedCount;
-        console.log('🔍 [FETCH-FINISHED] Response received - finishedCount:', newGroupSubmissions);
-
-        setGroupSubmissions(newGroupSubmissions);
-
-        console.log('🔍 [FETCH-FINISHED] State updated - groupSubmissions:', newGroupSubmissions);
+        setGroupSubmissions(data.finishedCount);
       }
     } catch (err) {
       console.error('❌ [FETCH-FINISHED] Failed to fetch finished count:', err);
@@ -360,7 +328,6 @@ export default function ResumesPage() {
 
   useEffect(() => {
     const handleShowInstructions = () => {
-      console.log('Help button clicked - showing instructions');
       setShowInstructions(true);
     };
 
@@ -422,17 +389,7 @@ export default function ResumesPage() {
   useEffect(() => {
     if (!socket || !user) return;
 
-    console.log(
-      '🔌 [SOCKET-SETUP] Setting up socket listeners for user:',
-      user.email,
-      'group:',
-      user.group_id,
-      'class:',
-      user.class
-    );
-
     const roomId = `group_${user.group_id}_class_${user.class}`;
-    console.log('🚪 [JOIN-ROOM] Joining socket room:', roomId);
     socket.emit('joinGroup', roomId);
     socket.emit('studentOnline', { studentId: user.email });
     socket.emit('studentPageChanged', { studentId: user.email, currentPage: pathname });
@@ -467,68 +424,21 @@ export default function ResumesPage() {
 
     const handleUserCompletedResReview = ({ groupId }: { groupId: number }) => {
       if (groupId === user.group_id) {
-        console.log('📡 [USER-COMPLETED] Another group member finished - refreshing count');
         fetchFinished();
       }
     };
 
     const handleStudentRemoved = ({ groupId, classId }: { groupId: number; classId: number }) => {
-      console.log('📡 [STUDENT-REMOVED] Event received - groupId:', groupId, 'classId:', classId);
-      console.log(
-        '📡 [STUDENT-REMOVED] User check - user.group_id:',
-        user?.group_id,
-        'user.class:',
-        user?.class
-      );
-
       if (user && groupId === user.group_id && classId == user.class) {
-        console.log("📡 [STUDENT-REMOVED] ✅ Event is for this user's group");
-        console.log(
-          '📡 [STUDENT-REMOVED] Current state - totalDecisions:',
-          totalDecisions,
-          'groupSize:',
-          groupSize,
-          'groupSubmissions:',
-          groupSubmissions
-        );
-        console.log('📡 [STUDENT-REMOVED] Refreshing group size and finished count...');
-
         fetchGroupSize();
         fetchFinished();
-
-        console.log('📡 [STUDENT-REMOVED] Fetch calls completed');
-      } else {
-        console.log('📡 [STUDENT-REMOVED] ❌ Event ignored - not for this group/class');
       }
     };
 
     const handleStudentAdded = ({ groupId, classId }: { groupId: number; classId: number }) => {
-      console.log('📡 [STUDENT-ADDED] Event received - groupId:', groupId, 'classId:', classId);
-      console.log(
-        '📡 [STUDENT-ADDED] User check - user.group_id:',
-        user?.group_id,
-        'user.class:',
-        user?.class
-      );
-
       if (user && groupId === user.group_id && classId == user.class) {
-        console.log("📡 [STUDENT-ADDED] ✅ Event is for this user's group");
-        console.log(
-          '📡 [STUDENT-ADDED] Current state - totalDecisions:',
-          totalDecisions,
-          'groupSize:',
-          groupSize,
-          'groupSubmissions:',
-          groupSubmissions
-        );
-        console.log('📡 [STUDENT-ADDED] Refreshing group size and finished count...');
-
         fetchGroupSize();
         fetchFinished();
-
-        console.log('📡 [STUDENT-ADDED] Fetch calls completed');
-      } else {
-        console.log('📡 [STUDENT-ADDED] ❌ Event ignored - not for this group/class');
       }
     };
 
@@ -550,7 +460,7 @@ export default function ResumesPage() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleGroupCompletedResReview = (data: any) => {
+    const handleGroupCompletedResReview = () => {
       setDisabled(false);
     };
 
@@ -562,30 +472,8 @@ export default function ResumesPage() {
   }, [socket]);
 
   useEffect(() => {
-    console.log('🔄 [AUTO-PROGRESS] useEffect triggered');
-    console.log(
-      '🔄 [AUTO-PROGRESS] Dependencies - totalDecisions:',
-      totalDecisions,
-      'groupSize:',
-      groupSize,
-      'groupSubmissions:',
-      groupSubmissions
-    );
-    console.log(
-      '🔄 [AUTO-PROGRESS] Condition check - totalDecisions === 10 && groupSize > 0 && groupSubmissions >= groupSize:',
-      totalDecisions === 10 && groupSize > 0 && groupSubmissions >= groupSize
-    );
-
     if (totalDecisions === 10 && groupSize > 0 && groupSubmissions >= groupSize) {
-      console.log('✅ [AUTO-PROGRESS] All conditions met - enabling progression');
       setDisabled(false);
-    } else {
-      console.log('⏸️ [AUTO-PROGRESS] Conditions not met - waiting');
-      if (totalDecisions < 10)
-        console.log('   - User has not finished yet (decisions:', totalDecisions, '/10)');
-      if (groupSize <= 0) console.log('   - Group size is 0 or invalid');
-      if (groupSubmissions < groupSize)
-        console.log(`   - Waiting for more submissions (${groupSubmissions}/${groupSize})`);
     }
   }, [groupSize, groupSubmissions, totalDecisions]);
 
@@ -743,7 +631,6 @@ export default function ResumesPage() {
   ]);
 
   const completeResumes = async () => {
-    // ✅ Make it async
     if (!socket || !user) {
       console.error('Socket or user not available');
       return;
@@ -764,7 +651,7 @@ export default function ResumesPage() {
     }
 
     // Wait for progress update before navigating
-    await updateProgress(user, 'res_2'); // ✅ Await
+    await updateProgress(user, 'res_2');
     localStorage.setItem('progress', 'res_2');
     clearSavedProgress(String(user.id));
     window.location.href = '/res-review-group';
@@ -781,27 +668,6 @@ export default function ResumesPage() {
       fetchResumes(user.class);
     }
   }, [user?.class, fetchResumes]);
-
-  useEffect(() => {
-    if (
-      resumesList.length > 0 &&
-      resumesList[currentResumeIndex] &&
-      lastLoggedIndexRef.current !== currentResumeIndex
-    ) {
-      const currentResume = resumesList[currentResumeIndex];
-      console.log('📋 [CURRENT RESUME] Index:', currentResumeIndex);
-      console.log('📋 [CURRENT RESUME] Data:', currentResume);
-      console.log('📋 [CURRENT RESUME] ID:', currentResume.id);
-      console.log('📋 [CURRENT RESUME] File Path:', currentResume.file_path);
-      console.log('📋 [CURRENT RESUME] Full URL:', `${API_BASE_URL}/${currentResume.file_path}`);
-      console.log(
-        '📋 [CURRENT RESUME] Name:',
-        `${currentResume.first_name} ${currentResume.last_name}`
-      );
-      console.log('📋 [CURRENT RESUME] Title:', currentResume.title);
-      lastLoggedIndexRef.current = currentResumeIndex;
-    }
-  }, [currentResumeIndex, resumesList]);
 
   useEffect(() => {
     if (!showInstructions) {
@@ -973,17 +839,12 @@ export default function ResumesPage() {
   }, [timeRemaining, showInstructions]);
 
   const handleAccept = () => {
-    console.log('✅ [ACTION] handleAccept called');
-    console.log('✅ [ACTION] maxDecisions:', maxDecisions);
-    console.log('✅ [ACTION] resumeLoading:', resumeLoading);
-
     if (maxDecisions) return;
     if (!user || userloading || resumeLoading) {
       console.warn('⚠️ [ACTION] User data not ready or resume still loading, skipping vote');
       return;
     }
 
-    console.log("✅ [ACTION] About to call sendVoteToBackend with 'yes'");
     sendVoteToBackend('yes');
     setAccepted((prev) => prev + 1);
     setResumes((prev) => prev + 1);
@@ -991,13 +852,11 @@ export default function ResumesPage() {
   };
 
   const handleReject = () => {
-    console.log('❌ [ACTION] handleReject called');
     if (maxDecisions) return;
     if (!user || userloading || resumeLoading) {
       console.warn('⚠️ [ACTION] User data not ready or resume still loading, skipping vote');
       return;
     }
-    console.log("❌ [ACTION] About to call sendVoteToBackend with 'no'");
     sendVoteToBackend('no');
     setRejected((prev) => prev + 1);
     setResumes((prev) => prev + 1);
@@ -1005,13 +864,11 @@ export default function ResumesPage() {
   };
 
   const handleNoResponse = () => {
-    console.log('⏭️ [ACTION] handleNoResponse called');
     if (maxDecisions) return;
     if (!user || userloading || resumeLoading) {
       console.warn('⚠️ [ACTION] User data not ready or resume still loading, skipping vote');
       return;
     }
-    console.log("⏭️ [ACTION] About to call sendVoteToBackend with 'unanswered'");
     sendVoteToBackend('unanswered');
     setNoResponse((prev) => prev + 1);
     nextResume();
@@ -1184,7 +1041,6 @@ export default function ResumesPage() {
                   file={pdfSource(currentJobDescFile)}
                   onLoadError={console.error}
                   onLoadSuccess={({ numPages }) => {
-                    console.log('Job description loaded with', numPages, 'pages');
                     setJobDescNumPages(numPages);
                   }}
                   loading={
@@ -1205,7 +1061,6 @@ export default function ResumesPage() {
                   file={pdfSource(currentResumeFile)}
                   onLoadError={console.error}
                   onLoadSuccess={() => {
-                    console.log('Resume loaded successfully');
                     setResumeLoading(false);
                   }}
                   loading={
@@ -1220,7 +1075,6 @@ export default function ResumesPage() {
                     renderTextLayer={true}
                     renderAnnotationLayer={true}
                     onLoadSuccess={() => {
-                      console.log('Page rendered successfully');
                       setResumeLoading(false);
                     }}
                   />

@@ -25,13 +25,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString();
 
-interface User {
-  id: string;
-  group_id: number;
-  email: string;
-  class: number;
-}
-
 interface CandidateInterview {
   resume_id: number;
   title: string;
@@ -40,14 +33,6 @@ interface CandidateInterview {
   first_name: string;
   last_name: string;
   file_path?: string;
-}
-
-interface Interview {
-  id: number;
-  resume_id: number;
-  interview: string;
-  first_name: string;
-  last_name: string;
 }
 
 interface Resume {
@@ -60,7 +45,7 @@ type ViewMode = 'video' | 'resume' | 'jobDescription';
 export default function Interview() {
   useProgress();
   const socket = useSocket();
-  const { updateProgress, fetchProgress } = useProgressManager();
+  const { updateProgress } = useProgressManager();
   const { user, loading: userloading } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState(true);
@@ -125,8 +110,6 @@ export default function Interview() {
 
   const hasUpdatedPageRef = useRef(false);
 
-  // Use ref to always have access to current interviews state
-  const interviewsRef = useRef(interviews);
   const [groupSubmissions, setGroupSubmissions] = useState(0);
   const [groupSize, setGroupSize] = useState(0);
   const [groupFinished, setGroupFinished] = useState(false);
@@ -162,14 +145,6 @@ export default function Interview() {
   }, [user?.group_id, user?.class]);
 
   const fetchFinished = async () => {
-    console.log('🔍 [FETCH-FINISHED] Starting fetchFinished...');
-    console.log(
-      '🔍 [FETCH-FINISHED] Current state - groupSubmissions:',
-      groupSubmissions,
-      'groupSize:',
-      groupSize
-    );
-
     try {
       const response = await axios.get(`${API_BASE_URL}/interview/status/finished-count`, {
         params: { group_id: user?.group_id, class_id: user?.class },
@@ -184,7 +159,6 @@ export default function Interview() {
     }
   };
 
-  // Add this helper function near the top of your component, after the interfaces
   const getYouTubeEmbedUrl = (url: string) => {
     if (!url) return url;
 
@@ -199,9 +173,6 @@ export default function Interview() {
   };
 
   const fetchGroupSize = async () => {
-    console.log('🔍 [FETCH-GROUP-SIZE] Starting fetchGroupSize...');
-    console.log('🔍 [FETCH-GROUP-SIZE] Current groupSize:', groupSize);
-
     try {
       const response = await fetch(
         `${API_BASE_URL}/interview/group-size/${user?.group_id}/${user?.class}`,
@@ -209,9 +180,7 @@ export default function Interview() {
       );
       if (response.ok) {
         const data = await response.json();
-        console.log('🔍 [FETCH-GROUP-SIZE] Response received - new size:', data.count);
         setGroupSize(data.count);
-        console.log('🔍 [FETCH-GROUP-SIZE] State updated - groupSize:', data.count);
       }
     } catch (err) {
       console.error('❌ [FETCH-GROUP-SIZE] Failed to fetch group size:', err);
@@ -275,12 +244,7 @@ export default function Interview() {
   }, [finished]);
 
   useEffect(() => {
-    console.log('Interviews updated:', interviews);
-  }, [interviews]);
-
-  useEffect(() => {
     const handleShowInstructions = () => {
-      console.log('Help button clicked - showing instructions');
       setShowInstructions(true);
     };
 
@@ -290,11 +254,6 @@ export default function Interview() {
       window.removeEventListener('showInstructions', handleShowInstructions);
     };
   }, []);
-
-  // Update ref whenever interviews change
-  useEffect(() => {
-    interviewsRef.current = interviews;
-  }, [interviews]);
 
   // Reset video loaded state when video changes
   useEffect(() => {
@@ -309,45 +268,6 @@ export default function Interview() {
       setDonePopup(true);
     }
   }, [finished]);
-
-  // Send interview ratings to backend (add to queue)
-  const sendResponseToBackend = (
-    overall: number,
-    professionalPresence: number,
-    qualityOfAnswer: number,
-    personality: number,
-    candidate_id: number
-  ) => {
-    console.log('🗳️ [INTERVIEW-VOTE] Adding vote to queue');
-
-    if (!user || !user.id || !user.group_id) {
-      console.error('❌ [INTERVIEW-VOTE] Student ID or Group ID not found');
-      return;
-    }
-
-    const voteData: {
-      student_id: string;
-      group_id: number;
-      studentClass: number;
-      question1: number;
-      question2: number;
-      question3: number;
-      question4: number;
-      candidate_id: number;
-    } = {
-      student_id: String(user.id),
-      group_id: user.group_id,
-      studentClass: user.class,
-      question1: overall,
-      question2: professionalPresence,
-      question3: qualityOfAnswer,
-      question4: personality,
-      candidate_id,
-    };
-
-    console.log('🗳️ [INTERVIEW-VOTE] Adding vote to array:', voteData);
-    setVotes((prev) => [...prev, voteData]);
-  };
 
   useEffect(() => {
     if (!user?.group_id) return;
@@ -385,8 +305,6 @@ export default function Interview() {
               withCredentials: true,
             })
             .then((response) => {
-              console.log(`Raw response for resume ${resume.resume_number}:`, response.data);
-
               const candidateData: CandidateInterview = {
                 resume_id: response.data.resume_id,
                 title: response.data.title || `Candidate ${response.data.resume_id}`,
@@ -397,10 +315,6 @@ export default function Interview() {
                 file_path: response.data.file_path,
               };
 
-              console.log(
-                `Formatted candidate data for resume ${resume.resume_number}:`,
-                candidateData
-              );
               return candidateData;
             })
             .catch((err) => {
@@ -410,15 +324,6 @@ export default function Interview() {
         );
 
         const results = await Promise.allSettled(candidatePromises);
-        console.log('Promise.allSettled results:', results);
-
-        results.forEach((result, index) => {
-          if (result.status === 'fulfilled') {
-            console.log(`Result ${index} (fulfilled):`, result.value);
-          } else {
-            console.log(`Result ${index} (rejected):`, result.reason);
-          }
-        });
 
         const finalInterviews = results
           .map((result) =>
@@ -428,7 +333,6 @@ export default function Interview() {
           .slice(0, 4);
 
         setInterviews(finalInterviews);
-        console.log('Final interviews array:', finalInterviews);
       } catch (err) {
         console.error('Error fetching interviews:', err);
         setError('Failed to load interview data. Please try refreshing the page.');
@@ -456,7 +360,6 @@ export default function Interview() {
       const currentVideoCandidate = interviews[videoIndex]?.resume_id;
 
       if (currentVideoCandidate !== currentCandidateId) {
-        console.log('Candidate mismatch after refresh, resetting ratings');
         resetRatings();
         setNoShow(false);
         setCurrentCandidateId(currentVideoCandidate);
@@ -526,7 +429,7 @@ export default function Interview() {
             },
             { withCredentials: true }
           );
-          hasUpdatedPageRef.current = true; // Mark as updated
+          hasUpdatedPageRef.current = true;
         } catch (error) {
           console.error('Error updating current page:', error);
         }
@@ -560,45 +463,15 @@ export default function Interview() {
 
     const handleStudentRemoved = ({ groupId, classId }: { groupId: number; classId: number }) => {
       if (user && groupId === user.group_id && classId == user.class) {
-        console.log('📡 [STUDENT-REMOVED] Event received - groupId:', groupId, 'classId:', classId);
-        console.log(
-          '📡 [STUDENT-REMOVED] Current state - finished:',
-          finished,
-          'groupSize:',
-          groupSize,
-          'groupSubmissions:',
-          groupSubmissions
-        );
-        console.log('📡 [STUDENT-REMOVED] Refreshing group size and finished count...');
-
         fetchGroupSize();
         fetchFinished();
-
-        console.log('📡 [STUDENT-REMOVED] Fetch calls completed');
-      } else {
-        console.log('📡 [STUDENT-REMOVED] Event ignored - not for this group/class');
       }
     };
 
-    // Update  (around line 528-538)
     const handleStudentAdded = ({ groupId, classId }: { groupId: number; classId: number }) => {
       if (user && groupId === user.group_id && classId == user.class) {
-        console.log('📡 [STUDENT-ADDED] Event received - groupId:', groupId, 'classId:', classId);
-        console.log(
-          '📡 [STUDENT-ADDED] Current state - finished:',
-          finished,
-          'groupSize:',
-          groupSize,
-          'groupSubmissions:',
-          groupSubmissions
-        );
-        console.log('📡 [STUDENT-ADDED] Refreshing group size and finished count...');
         fetchGroupSize();
         fetchFinished();
-
-        console.log('📡 [STUDENT-ADDED] Fetch calls completed');
-      } else {
-        console.log('📡 [STUDENT-ADDED] Event ignored - not for this group/class');
       }
     };
 
@@ -620,12 +493,8 @@ export default function Interview() {
   // Reset group finished state when group size changes
   useEffect(() => {
     if (groupSize > 0) {
-      console.log('📊 [GROUP-SIZE-CHANGE] Group size changed to:', groupSize);
-      console.log('📊 [GROUP-SIZE-CHANGE] Current groupSubmissions:', groupSubmissions);
-
       // If group size increased and we were finished, reset
       if (groupFinished && groupSubmissions < groupSize) {
-        console.log('📊 [GROUP-SIZE-CHANGE] Resetting groupFinished - group size increased');
         setGroupFinished(false);
       }
     }
@@ -633,44 +502,13 @@ export default function Interview() {
 
   // Auto-complete if group size changes and all remaining members are done
   useEffect(() => {
-    console.log('🔄 [AUTO-PROGRESS] useEffect triggered');
-    console.log(
-      '🔄 [AUTO-PROGRESS] Dependencies - finished:',
-      finished,
-      'groupSize:',
-      groupSize,
-      'groupSubmissions:',
-      groupSubmissions
-    );
-    console.log(
-      '🔄 [AUTO-PROGRESS] Condition check - finished && groupSize > 0 && groupSubmissions >= groupSize:',
-      finished && groupSize > 0 && groupSubmissions >= groupSize
-    );
-
     if (finished && groupSize > 0 && groupSubmissions >= groupSize) {
-      console.log('✅ [AUTO-PROGRESS] All conditions met - enabling progression');
       setGroupFinished(true);
-    } else {
-      console.log('⏸️ [AUTO-PROGRESS] Conditions not met - waiting');
-      if (!finished) console.log('   - User has not finished yet');
-      if (groupSize <= 0) console.log('   - Group size is 0 or invalid');
-      if (groupSubmissions < groupSize)
-        console.log(`   - Waiting for more submissions (${groupSubmissions}/${groupSize})`);
     }
   }, [groupSize, groupSubmissions, finished]);
 
   useEffect(() => {
-    if (!socket || !user || !currentVid) {
-      console.log('Missing user or currentVid, not setting up socket listeners', user, currentVid);
-      return;
-    }
-
-    console.log(
-      'Setting up socket listeners with user:',
-      user.id,
-      'and currentVid:',
-      currentVid.resume_id
-    );
+    if (!socket || !user || !currentVid) return;
 
     const handleUpdateRatingsWithPreset = ({
       classId,
@@ -690,14 +528,6 @@ export default function Interview() {
       isNoShow: boolean;
       candidateId: number;
     }) => {
-      console.log('Received updateRatingsWithPreset event', {
-        classId,
-        groupId,
-        vote,
-        isNoShow,
-        candidateId,
-      });
-
       const voteData = {
         student_id: user.id,
         group_id: groupId,
@@ -709,14 +539,12 @@ export default function Interview() {
         candidate_id: candidateId,
       };
 
-      console.log('Emitting sentPresetVotes with data:', voteData);
       socket.emit('sentPresetVotes', voteData);
     };
 
     socket.on('updateRatingsWithPresetFrontend', handleUpdateRatingsWithPreset);
 
     return () => {
-      console.log('Cleaning up socket listeners');
       socket.off('updateRatingsWithPresetFrontend', handleUpdateRatingsWithPreset);
     };
   }, [socket, user, currentVid]);
@@ -726,7 +554,7 @@ export default function Interview() {
 
     // Votes are already submitted when the last interview was submitted
     // Just update progress and navigate
-    await updateProgress(user, 'offer'); // ✅ Await the database update
+    await updateProgress(user, 'offer');
     localStorage.setItem('progress', 'offer');
     localStorage.removeItem('interviewStage_videoIndex');
     localStorage.removeItem('interviewStage_candidateId');
@@ -820,10 +648,6 @@ export default function Interview() {
       setNoShow(false);
     } else {
       // This is the last interview - submit all votes to database
-      console.log(
-        `📤 [BATCH-INTERVIEW-VOTE] Last interview submitted - sending ${updatedVotes.length} votes to backend`
-      );
-
       try {
         const response = await axios.post(
           `${API_BASE_URL}/interview/batch-vote`,
@@ -837,11 +661,6 @@ export default function Interview() {
           console.error('❌ [BATCH-INTERVIEW-VOTE] Error response from backend');
           throw new Error('Failed to save interview votes');
         }
-
-        console.log(
-          '✅ [BATCH-INTERVIEW-VOTE] All interview votes saved successfully:',
-          response.data
-        );
 
         // Mark as finished in the database
         await axios.post(
@@ -1178,11 +997,8 @@ export default function Interview() {
                     file={pdfSource(`${API_BASE_URL}/${currentVid.file_path}`)}
                     onLoadError={(error) => {
                       console.error('Resume PDF load error:', error);
-                      console.log('Attempted path:', `${API_BASE_URL}/${currentVid.file_path}`);
-                      console.log('Current candidate data:', currentVid);
                     }}
                     onLoadSuccess={({ numPages }) => {
-                      console.log('Resume loaded successfully with', numPages, 'pages');
                       setResumeNumPages(numPages);
                     }}
                     loading={
@@ -1213,7 +1029,6 @@ export default function Interview() {
                     file={pdfSource(`${API_BASE_URL}/${jobDescPath}`)}
                     onLoadError={console.error}
                     onLoadSuccess={({ numPages }) => {
-                      console.log('Job description loaded with', numPages, 'pages');
                       setJobDescNumPages(numPages);
                     }}
                     loading={

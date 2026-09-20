@@ -30,15 +30,6 @@ export default function ResReviewGroup() {
     undecided: number;
   }
 
-  interface User {
-    id: number;
-    name: string;
-    email: string;
-    affiliation: string;
-    group_id: number;
-    class: number;
-  }
-
   interface ResumeData {
     resume_number: number;
     vote: 'yes' | 'no' | 'unanswered';
@@ -54,11 +45,10 @@ export default function ResReviewGroup() {
     vote: 'yes' | 'no' | 'unanswered';
   }
 
-  const { updateProgress, fetchProgress } = useProgressManager();
+  const { updateProgress } = useProgressManager();
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
   const [checkedState, setCheckedState] = useState<{ [key: number]: boolean }>({});
   const [voteCounts, setVoteCounts] = useState<{ [key: number]: VoteData }>({});
-  const [isConnected, setIsConnected] = useState<boolean>(false);
   const [showInstructions, setShowInstructions] = useState(true);
   const [resumes, setResumes] = useState<Resume[]>([]);
   const router = useRouter();
@@ -82,7 +72,6 @@ export default function ResReviewGroup() {
   const [teamConfirmations, setTeamConfirmations] = useState<string[]>([]);
   const [confirming, setConfirming] = useState(false);
   const [groupSize, setGroupSize] = useState(4);
-  const [confirmedSelection, setConfirmedSelection] = useState<number[]>([]);
 
   // Derived from the fetched list rather than tracked separately, so a refresh
   // cannot leave a student's own button out of step with the server.
@@ -241,8 +230,6 @@ export default function ResReviewGroup() {
   useEffect(() => {
     if (!socket || !user) return;
 
-    setIsConnected(true);
-
     const roomId = `group_${user.group_id}_class_${user.class}`;
     socket.emit('joinGroup', roomId);
 
@@ -342,22 +329,12 @@ export default function ResReviewGroup() {
       classId: number;
       targetPage: string;
     }) => {
-      console.log('[handleMoveGroup] called with:', { groupId, classId, targetPage });
-      if (!user) {
-        console.log('[handleMoveGroup] No user found, aborting.');
-        return;
-      }
+      if (!user) return;
 
       if (groupId == user.group_id && classId == user.class) {
-        console.log('[handleMoveGroup] Group/class match. Attempting progress update...');
         try {
-          await updateProgress(user, 'interview'); // ✅ Wait for DB update
-          console.log('[handleMoveGroup] updateProgress completed.');
-
+          await updateProgress(user, 'interview');
           localStorage.setItem('progress', 'interview');
-          console.log('[handleMoveGroup] localStorage set.');
-
-          console.log('[handleMoveGroup] Navigating to:', targetPage);
           window.location.href = targetPage;
         } catch (err) {
           console.error('[handleMoveGroup] Error:', err);
@@ -377,16 +354,10 @@ export default function ResReviewGroup() {
             setGroupSize(data.count);
           })
           .catch((err) => console.error('❌ [STUDENT-ADDED] Failed to fetch group size:', err));
-      } else {
       }
     };
 
-    const handleDisconnect = () => {
-      setIsConnected(false);
-    };
-
     const handleConnect = () => {
-      setIsConnected(true);
       // A reconnected socket has a new id and is in no rooms, so the join has
       // to happen here and not only on mount.
       const roomId = `group_${user.group_id}_class_${user.class}`;
@@ -398,24 +369,18 @@ export default function ResReviewGroup() {
     };
 
     socket.on('connect', handleConnect);
-    socket.on('studentAddedToGroup', handleStudentAdded); // ADD THIS
+    socket.on('studentAddedToGroup', handleStudentAdded);
     socket.on('studentRemovedFromGroup', handleStudentRemoved);
-    socket.on('disconnect', handleDisconnect);
     socket.on('checkboxUpdated', handleCheckboxUpdated);
-    socket.on('voteUpdated', handleVoteUpdated); // NEW
+    socket.on('voteUpdated', handleVoteUpdated);
     socket.on('teamConfirmSelection', handleTeamConfirmSelection);
     socket.on('teamUnconfirmSelection', handleTeamUnconfirmSelection);
     socket.on('moveGroup', handleMoveGroup);
 
-    if (socket.connected) {
-      setIsConnected(true);
-    }
-
     return () => {
       socket.off('connect', handleConnect);
-      socket.off('studentAddedToGroup', handleStudentAdded); // ADD THIS
+      socket.off('studentAddedToGroup', handleStudentAdded);
       socket.off('studentRemovedFromGroup', handleStudentRemoved);
-      socket.off('disconnect', handleDisconnect);
       socket.off('checkboxUpdated', handleCheckboxUpdated);
       socket.off('voteUpdated', handleVoteUpdated);
       socket.off('teamConfirmSelection', handleTeamConfirmSelection);
@@ -503,7 +468,6 @@ export default function ResReviewGroup() {
   };
 
   const completeResumes = () => {
-    console.log(socket, user);
     if (!socket || !user) return;
 
     updateProgress(user, 'interview');
@@ -554,11 +518,6 @@ export default function ResReviewGroup() {
   const handleTeamConfirm = () => {
     if (hasConfirmed) return;
 
-    const currentSelected = Object.entries(checkedState)
-      .filter(([_, isChecked]) => isChecked)
-      .map(([num, _]) => parseInt(num));
-    setConfirmedSelection(currentSelected);
-
     changeConfirmation('POST');
   };
 
@@ -571,9 +530,6 @@ export default function ResReviewGroup() {
 
   const selectedResume = resumes.find((r) => r.resume_number === selectedResumeNumber);
   const selectedCount = Object.values(checkedState).filter((checked) => checked).length;
-
-  // Add this useEffect to res-review-group to log state changes
-  useEffect(() => {}, [selectedCount, teamConfirmations, groupSize]);
 
   if (userloading) {
     return (

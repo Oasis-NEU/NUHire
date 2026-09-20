@@ -15,18 +15,10 @@ const Facts: React.FC = () => {
 
   const socket = useSocket();
 
-  useEffect(() => {
-    console.log('user changed', user);
-  }, [user]);
-
   const fetchFacts = async () => {
-    console.log('Fetching facts...');
-    console.log('User in fetchFacts:', user);
-
     const factsUrl = `${API_BASE_URL}/facts/get/${user?.class}`;
     try {
       const factsRes = await fetch(factsUrl, { credentials: 'include', method: 'GET' });
-      console.log('Facts response:', factsRes);
       if (factsRes.ok) {
         const factsData = await factsRes.json();
 

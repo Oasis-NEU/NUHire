@@ -2,13 +2,11 @@
 export const dynamic = 'force-dynamic';
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/navbar';
-import { useRouter } from 'next/navigation';
 import { useSocket } from '../components/socketContext';
 import { useAuth } from '../components/AuthContext';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const NotesPage: React.FC = () => {
-  const router = useRouter();
   const socket = useSocket();
 
   interface Note {
@@ -16,21 +14,10 @@ const NotesPage: React.FC = () => {
     content: string;
   }
 
-  interface User {
-    id: string;
-    group_id: string;
-    email: string;
-    class: number;
-    affiliation: string;
-  }
   const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState('');
 
   const { user, loading: userloading } = useAuth();
-
-  useEffect(() => {
-    fetchNotes();
-  }, [user?.email]);
 
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
@@ -44,7 +31,6 @@ const NotesPage: React.FC = () => {
       });
 
       if (!response.ok) throw new Error(`Failed to save note: ${user?.email}`);
-      console.log('Note saved successfully');
       const newN = await response.json();
       setNotes([...notes, newN]);
       fetchNotes();

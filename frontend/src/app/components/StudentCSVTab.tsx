@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Popup from './popup';
 import { useAuth } from './AuthContext';
 import type { ClassInfo } from '../../types';
@@ -35,7 +34,6 @@ export function StudentCSVTab() {
   const [isSubmitting, setIsSubmitting] = useState(false); // Add submit loading state
   const [submitSuccess, setSubmitSuccess] = useState(false); // Add submit success state
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
   const { user, loading: userloading } = useAuth();
 
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
@@ -183,7 +181,6 @@ export function StudentCSVTab() {
 
     // Find email column
     const headers = data[0].map((h) => h.toLowerCase().trim());
-    console.log('CSV Headers:', headers);
     const emailIndex = headers.findIndex((h) => h.includes('email'));
 
     if (emailIndex === -1) {
@@ -308,8 +305,6 @@ export function StudentCSVTab() {
         num_groups: numGroups,
       };
 
-      console.log('Creating groups with payload:', createPayload);
-
       const createRes = await fetch(`${API_BASE_URL}/groups/create-groups`, {
         method: 'POST',
         headers: {
@@ -355,12 +350,8 @@ export function StudentCSVTab() {
           });
           return;
         }
-      } else {
-        const createResult = await createRes.json();
-        console.log(`✅ Created ${createResult.groups_created} groups for class ${selectedClass}`);
       }
 
-      console.log('Assigning students to groups...');
       const response = await fetch(`${API_BASE_URL}/csv/import`, {
         method: 'POST',
         headers: {
@@ -371,7 +362,6 @@ export function StudentCSVTab() {
       });
 
       if (response.ok) {
-        const result = await response.json();
         setSubmitSuccess(true);
         setPopup({ headline: 'Success', message: '✅ Group assignments submitted successfully!' });
       } else {

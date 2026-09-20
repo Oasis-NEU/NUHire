@@ -1,10 +1,9 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Slideshow from '../components/slideshow';
 import Image from 'next/image';
 
-// const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function AboutPage() {
@@ -20,7 +19,6 @@ export default function AboutPage() {
           const userData = await response.json();
 
           if (userData.seen === 1) {
-            console.log('User has already seen intro, redirecting to dashboard');
             router.push('/dashboard');
             return;
           }

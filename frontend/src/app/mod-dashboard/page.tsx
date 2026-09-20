@@ -80,7 +80,6 @@ const ModDashboard = () => {
 
     const fetchCRNs = async () => {
       try {
-        console.log('Fetching CRNs from API line 30');
         const response = await fetch(`${API_BASE_URL}/moderator/crns`, {
           credentials: 'include',
         });
@@ -100,7 +99,7 @@ const ModDashboard = () => {
         } else {
           setPopup({ headline: 'Error', message: 'Failed to fetch CRNs.' });
         }
-      } catch (error) {
+      } catch {
         setPopup({ headline: 'Error', message: 'Failed to fetch CRNs.' });
       }
     };
@@ -131,7 +130,6 @@ const ModDashboard = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      console.log('Submitting form on line 54:', form);
       const res = await fetch(`${API_BASE_URL}/moderator/crns`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -154,7 +152,6 @@ const ModDashboard = () => {
         setPopup({ headline: 'Duplicate', message: 'This CRN already exists.' });
       } else if (res.ok) {
         setForm({ admin_email: '', crn: '' });
-        console.log('setting success popup');
         setPopup({ headline: 'Success', message: 'Class added!' });
       } else {
         setPopup({ headline: 'Error', message: 'Failed to add class.' });
@@ -203,10 +200,6 @@ const ModDashboard = () => {
       setCrnToDelete(null);
     }
   };
-
-  // if (!user || user.affiliation !== 'admin') {
-  //   return null;
-  // }
 
   return (
     <div className="flex flex-col min-h-screen font-rubik relative overflow-hidden">

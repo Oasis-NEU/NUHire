@@ -138,8 +138,6 @@ export class DatabaseService {
 
   private createPool(): Promise<Pool> {
     return new Promise((resolve, reject) => {
-      console.log('🔌 Creating MySQL connection pool using DATABASE_URL...');
-
       this.connectionLimit = positiveIntFromEnv('DB_POOL_SIZE', POOL_DEFAULTS.connectionLimit);
       this.queueLimit = positiveIntFromEnv('DB_POOL_QUEUE_LIMIT', POOL_DEFAULTS.queueLimit);
       this.connectTimeoutMs = positiveIntFromEnv(
@@ -193,7 +191,6 @@ export class DatabaseService {
           console.error('❌ Database pool connection test failed:', err.message);
           reject(err);
         } else {
-          console.log('✅ Database pool connection test successful!');
           connection.release(); // Release test connection back to pool
           resolve(pool);
         }
@@ -203,8 +200,6 @@ export class DatabaseService {
 
   private setupErrorHandling(pool: Pool): void {
     pool.on('connection', (connection) => {
-      console.log('📌 New connection established in pool');
-
       // A server-side cap is the only query timeout mysql2 exposes. Without it
       // one pathological SELECT holds a pooled connection, and therefore a slot
       // in the now-bounded queue, for as long as MySQL is willing to run it.
@@ -270,7 +265,6 @@ export class DatabaseService {
           'INSERT IGNORE INTO job_descriptions (title, file_path, class_id) VALUES (?, ?, ?)',
           [job.title, job.file_path, crn]
         );
-        console.log(`✅ Seeded job description: ${job.title}`);
       } catch (error) {
         console.error(`Error seeding job description ${job.title}:`, error);
       }
@@ -296,7 +290,6 @@ export class DatabaseService {
           'INSERT IGNORE INTO Resume_pdfs (title, file_path, class_id) VALUES (?, ?, ?)',
           [resume.title, resume.file_path, crn]
         );
-        console.log(`✅ Seeded resume PDF: ${resume.title}`);
       } catch (error) {
         console.error(`Error seeding resume PDF ${resume.title}:`, error);
       }
@@ -371,13 +364,10 @@ export class DatabaseService {
           'INSERT IGNORE INTO Candidates (resume_id, f_name, l_name, interview) VALUES (?, ?, ?, ?)',
           [candidate.resume_id, candidate.f_name, candidate.l_name, candidate.interview]
         );
-        console.log(`✅ Seeded candidate: ${candidate.f_name} ${candidate.l_name}`);
       } catch (error) {
         console.error(`Error seeding candidate ${candidate.f_name}:`, error);
       }
     }
-
-    console.log('✅ Database initialization completed!');
   }
 
   private executeQuery(query: string, params: any[] = []): Promise<any> {

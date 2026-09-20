@@ -2,8 +2,7 @@
 export const dynamic = 'force-dynamic';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Navbar from '../components/navbar';
 import Footer from '../components/footer';
 import { usePathname } from 'next/navigation';
@@ -13,18 +12,9 @@ import { useProgressManager } from '../components/progress';
 import { useAuth } from '../components/AuthContext';
 import { useSocket } from '../components/socketContext';
 
-interface User {
-  email: string;
-  affiliation: string;
-  job_des: string;
-  class: number;
-  group_id: number;
-}
-
 const Dashboard = () => {
   const { updateProgress, fetchProgress } = useProgressManager();
   const socket = useSocket();
-  const router = useRouter();
   const pathname = usePathname();
 
   const steps = [
@@ -162,7 +152,6 @@ const Dashboard = () => {
 
     const roomId = `group_${user.group_id}_class_${user.class}`;
     socket.emit('joinGroup', roomId);
-    console.log(`Joined room: ${roomId}`);
 
     const handleReconnect = () => {
       socket.emit('joinGroup', roomId);

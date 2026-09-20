@@ -1,6 +1,6 @@
 'use client'; // Declares that this page is a client component
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL; // "https://nuhire-api-cz6c.onrender.com";
-import React, { useState, useCallback, useEffect } from 'react'; // Importing React and hooks for state and effect management
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useSocket } from './socketContext';
 import type { Note } from '../../types';
@@ -11,7 +11,7 @@ const NotesPage = () => {
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [userEmail, setUserEmail] = useState('');
-  const { user, loading: userloading } = useAuth();
+  const { user } = useAuth();
   // Use the app-wide socket. This component previously called io() at module
   // scope, which opened a SECOND connection per browser tab (the navbar renders
   // it on every page), doubling connection count for the whole class.
@@ -38,12 +38,11 @@ const NotesPage = () => {
     } catch (error) {
       console.error('Error fetching notes:', error);
     }
-  }, [userEmail]); // ✅ Make fetchNotes stable with useCallback
+  }, [userEmail]);
 
-  // Then the useEffect becomes:
   useEffect(() => {
     fetchNotes();
-  }, [fetchNotes]); // ✅ Now depends on the stable callback
+  }, [fetchNotes]);
 
   useEffect(() => {
     if (!socket) return;
@@ -69,7 +68,6 @@ const NotesPage = () => {
       });
 
       if (!response.ok) throw new Error(`Failed to save note: ${userEmail}`);
-      console.log('Note saved successfully');
       const newNote = await response.json();
       setNotes([...notes, newNote]);
       fetchNotes();

@@ -8,12 +8,10 @@ import { UPLOADS_ROOT, UPLOAD_SUBDIRS, webPathFor } from '../middleware/upload.m
 
 interface MulterRequest extends AuthRequest {
   file?: Express.Multer.File;
-  files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
 }
 
 export class UploadController {
   uploadFile = (req: MulterRequest, res: Response): void => {
-    console.log('File received:', req.file);
     if (!req.file) {
       res.status(400).json({ error: 'No file uploaded' });
       return;
@@ -22,7 +20,6 @@ export class UploadController {
   };
 
   uploadResume = (req: MulterRequest, res: Response): void => {
-    console.log('File received:', req.file);
     if (!req.file) {
       res.status(400).json({ error: 'No file uploaded' });
       return;
@@ -31,7 +28,6 @@ export class UploadController {
   };
 
   uploadJob = (req: MulterRequest, res: Response): void => {
-    console.log('File received:', req.file);
     if (!req.file) {
       res.status(400).json({ error: 'No file uploaded' });
       return;
