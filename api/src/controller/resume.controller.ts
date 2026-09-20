@@ -405,16 +405,36 @@ export class ResumeController {
     );
   };
 
+  // `fileName` is attacker-controlled and used to be joined straight onto the
+  // resumes directory. `path.join` resolves `../` before anything inspects the
+  // result, and `res.sendFile` with an absolute path and no `root` does no
+  // containment check of its own, so `..%2f..%2f.env` resolved to the API's own
+  // .env and returned it to any logged-in student. The percent-encoded form was
+  // needed only because `:fileName` will not match a literal slash; Express
+  // decodes the parameter before this runs.
+  //
+  // `path.basename` discards every directory component, so what reaches disk is
+  // always a bare name. `root` is then a second, independent check.
   getResumeFile = (req: AuthRequest, res: Response): void => {
     const { fileName } = req.params;
-    const fullPath = path.join(__dirname, '../../uploads/resumes', fileName);
-    console.log('Serving resume file:', fullPath);
+    const resumesDir = path.join(__dirname, '../../uploads/resumes');
+    const safeName = path.basename(fileName);
 
-    if (fs.existsSync(fullPath)) {
-      res.sendFile(fullPath);
-    } else {
-      res.status(404).json({ error: `Resume not found: ${fileName}` });
+    if (!safeName || safeName === '.' || safeName === '..') {
+      res.status(400).json({ error: 'Invalid file name' });
+      return;
     }
+
+    if (!fs.existsSync(path.join(resumesDir, safeName))) {
+      res.status(404).json({ error: `Resume not found: ${safeName}` });
+      return;
+    }
+
+    res.sendFile(safeName, { root: resumesDir }, (err) => {
+      if (err && !res.headersSent) {
+        res.status(404).json({ error: `Resume not found: ${safeName}` });
+      }
+    });
   };
 
   getResumePdfById = (req: AuthRequest, res: Response): void => {
@@ -447,9 +467,14 @@ export class ResumeController {
         vote.vote,
       ]);
 
+      // Resubmitting must overwrite the student's earlier vote rather than add
+      // a second row. Before the unique key existed this inserted blindly, so a
+      // student who went back and changed an answer, or whose client retried,
+      // counted twice in the group's tally.
       const query = `
         INSERT INTO Resume (student_id, group_id, class, timespent, resume_number, vote)
         VALUES ?
+        ON DUPLICATE KEY UPDATE timespent = VALUES(timespent), vote = VALUES(vote)
       `;
 
       this.db.query(query, [values], (err, result) => {

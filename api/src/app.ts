@@ -1,6 +1,6 @@
 // src/app.ts
 
-import express, { Application } from 'express';
+import express, { Application, NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import session from 'express-session';
@@ -82,20 +82,24 @@ export class App {
     const cookieSecure = process.env.COOKIE_SECURE !== 'false';
 
     // THEN CONFIGURE SESSION WITH THE STORE
-    this.app.use(
-      session({
-        secret: process.env.SESSION_SECRET!,
-        resave: false,
-        saveUninitialized: true, // Change to true
-        store: this.sessionStore, // Now this.sessionStore exists!
-        cookie: {
-          secure: cookieSecure,
-          httpOnly: true,
-          sameSite: cookieSecure ? 'none' : 'lax',
-          maxAge: 24 * 60 * 60 * 1000,
-        },
-      })
-    );
+    const sessionMiddleware = session({
+      secret: process.env.SESSION_SECRET!,
+      resave: false,
+      // Every anonymous request used to get a session row: static PDF fetches,
+      // health checks, and now every Socket.IO handshake, since the session
+      // middleware runs on those too. The OAuth flow still gets one, because
+      // passport writes its state into the session, which marks it modified.
+      saveUninitialized: false,
+      store: this.sessionStore, // Now this.sessionStore exists!
+      cookie: {
+        secure: cookieSecure,
+        httpOnly: true,
+        sameSite: cookieSecure ? 'none' : 'lax',
+        maxAge: 24 * 60 * 60 * 1000,
+      },
+    });
+
+    this.app.use(sessionMiddleware);
 
     // Body parser
     this.app.use(bodyParser.json());
@@ -108,6 +112,16 @@ export class App {
     // Passport initialization
     this.app.use(passport.initialize());
     this.app.use(passport.session());
+
+    // Run the same three on the Socket.IO handshake, so a socket knows who
+    // opened it. Until this existed the socket layer had no identity at all:
+    // there was no io.use anywhere, and socket.join() took whatever room string
+    // the client sent, so any browser could join another group's room and watch
+    // their votes. Engine-level middleware sees the handshake request, which
+    // carries the same cookie the HTTP routes authenticate with.
+    this.io.engine.use(sessionMiddleware);
+    this.io.engine.use(passport.initialize());
+    this.io.engine.use(passport.session());
 
     // Static files
     this.app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -204,6 +218,15 @@ export class App {
     this.app.use('/csv', csvRoutes(this.db, this.io));
     this.app.use('/facts', factsRoutes(this.db, this.io));
     this.app.use('/delete', deleteRoutes(this.db, this.io, this.onlineStudents));
+
+    // Last. A throw inside a route used to become an unhandled rejection with
+    // the request left hanging. Express only treats a handler as an error
+    // handler when it has all four parameters, so keep the unused one.
+    this.app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+      console.error(`Unhandled error on ${req.method} ${req.path}:`, err);
+      if (res.headersSent) return;
+      res.status(500).json({ error: 'Internal server error' });
+    });
   }
 
   public listen(port: number): void {
