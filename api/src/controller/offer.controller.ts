@@ -10,13 +10,48 @@ export class OfferController {
   constructor(private db: Pool) {}
 
   createOffer = (req: AuthRequest, res: Response): void => {
-    const { group_id, class_id, candidate_id, status } = req.body;
+    const { candidate_id } = req.body;
 
-    console.log('Creating new offer:', { group_id, class_id, candidate_id, status });
+    // The group and section come from the session, never the body. With the new
+    // UNIQUE (class_id, group_id) the insert below is an upsert, so a body-supplied
+    // group_id would let any logged-in student overwrite another group's offer
+    // instead of merely adding a stray row (AGENTS.md rule 1).
+    const group_id = req.user?.group_id;
+    const class_id = req.user?.class;
 
+    if (!group_id || !class_id) {
+      res.status(400).json({ error: 'You are not in a group yet' });
+      return;
+    }
+
+    if (!candidate_id) {
+      res.status(400).json({ error: 'candidate_id is required' });
+      return;
+    }
+
+    console.log('Creating new offer:', { group_id, class_id, candidate_id });
+
+    // A group submits one offer. Two members hitting submit at the same moment
+    // used to insert two pending rows, and the professor's pending-offers list
+    // showed the group twice: accepting one left the other pending forever.
+    //
+    // `status` is not taken from the body. The only caller sends 'pending', and
+    // accepting is the professor's call through PUT /offers/:id (requireAdmin);
+    // a student posting status: 'accepted' would otherwise accept their own.
+    //
+    // The ON DUPLICATE clause leaves `status` alone and only moves candidate_id
+    // while the row is still pending, so a late second click cannot reopen or
+    // repoint an offer the professor already accepted or rejected.
+    // LAST_INSERT_ID(id) makes insertId the existing row's id on the update path,
+    // where it would otherwise be 0 and the client would store a bogus offer id.
     this.db.query(
-      'INSERT INTO Offers (group_id, class_id, candidate_id, status) VALUES (?, ?, ?, ?)',
-      [group_id, class_id, candidate_id, status],
+      `INSERT INTO Offers (group_id, class_id, candidate_id, status)
+       VALUES (?, ?, ?, 'pending')
+       ON DUPLICATE KEY UPDATE
+         candidate_id = IF(status IN ('pending', 'rejected'), VALUES(candidate_id), candidate_id),
+         status       = IF(status = 'rejected', 'pending', status),
+         id           = LAST_INSERT_ID(id)`,
+      [group_id, class_id, candidate_id],
       (err, result: any) => {
         if (err) {
           console.error('Error creating offer:', err);

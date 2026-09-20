@@ -1,8 +1,7 @@
 # NUHire Backlog
 
-**Team:** ~8 devs, 10 hrs/wk, ~14 weeks.
-**Goal:** pilot-ready by end of fall, run in one CS1210 section (~30 students)
-spring 2027.
+**Team:** 8 devs, 10 hrs/wk, one 12-week semester.
+**Goal:** pilot-ready by end of term, run in one CS1210 section (~30 students).
 
 New here? Read [docs/WHAT_IS_NUHIRE.md](docs/WHAT_IS_NUHIRE.md), then
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), then [AGENTS.md](AGENTS.md).
@@ -33,8 +32,11 @@ only the grouping moved.
 `[LEAD]` lead does this; a dev can't bootstrap it
 `[SEC]` security
 
-**Capacity.** 8 × 10 × 14 = 1,120 nominal hours, realistically ~650–700 shipped.
-This backlog is larger than that on purpose so it stays a priority queue.
+**Capacity.** 8 × 10 × 12 = 960 nominal hours. The first two weeks go to setup
+and onboarding and nobody gets their full hours every week, so plan on **~550
+shipped**. What is open below is roughly 850 hours, so this is deliberately
+oversubscribed: it is a priority queue, not a to-do list. Do not try to finish
+it. Work top-down within each section.
 
 ---
 

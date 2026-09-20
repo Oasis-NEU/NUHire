@@ -84,10 +84,13 @@ const groupId = req.user!.group_id;
 
 ### 2. Never put group or session state in process memory
 
-`api/src/config/socket.ts` keeps `onlineStudents` and the "has every group member
-finished" barrier in plain JavaScript objects. When the API restarts mid-class,
-that state vanishes and **entire groups get stuck forever with no way out**. It
-also means the API cannot run more than one replica.
+The "has every group member finished" barrier used to live in a plain object in
+`api/src/config/socket.ts`. When the API restarted mid-class that state
+vanished and **entire groups got stuck forever with no way out**. It now lives
+in the `Step_Completion` table and is answered by a query, re-evaluated on
+completion, on room join, and from `GET /groups/barrier-status/...`. Keep it
+that way. `onlineStudents` is still in memory, which is why the API still
+cannot run more than one replica (`INSTANCE_COUNT` in `.env.example`).
 
 Anything that must survive a restart goes in MySQL. If you find yourself writing
 `global.something` or a module-level `Map`, stop.
@@ -97,9 +100,12 @@ Anything that must survive a restart goes in MySQL. If you find yourself writing
 Several steps block a student until all their group members finish. Every one of
 these has stranded a group at some point. When you add or touch a gate:
 
-- the professor must have a way to force the group past it
+- the professor must have a way to force the group past it. For the
+  res-review barrier that is `POST /groups/force-advance`, admin only; reuse
+  it rather than adding a second override
 - the client must be able to recover by polling an endpoint, not only by
-  receiving one socket event at one instant
+  receiving one socket event at one instant. `GET /groups/barrier-status` is
+  the existing poll
 - it must tolerate a student who is on the roster but never logs in
 
 ### 4. Emit to rooms, never `io.emit`
@@ -281,12 +287,12 @@ beyond imports. Mixing a move with a behaviour change makes review impossible.
 
 Do not treat these as examples to follow:
 
-| File                                   | Problem                                                                                                 |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `components/ManageGroupsTab.tsx`       | 2,051 lines, ~40 `useState` in one component                                                            |
-| `api/src/config/socket.ts`             | in-memory state (see rule 2); auth and room scoping are now in, but `SOCKET_AUTH_REQUIRED` is still off |
-| `api/src/controller/job.controller.ts` | destructive deletes (see rule 5); transactions are fixed                                                |
-| `components/useProgress.tsx`           | client-side-only gating, redirects to a 404                                                             |
-| `frontend/src/app/employerPanel/`      | stub; the final step does not work                                                                      |
+| File                                   | Problem                                                                                                                                            |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `components/ManageGroupsTab.tsx`       | 2,051 lines, ~40 `useState` in one component                                                                                                       |
+| `api/src/config/socket.ts`             | `onlineStudents` is still in memory; the barrier moved to `Step_Completion`. Auth and room scoping are in, but `SOCKET_AUTH_REQUIRED` is still off |
+| `api/src/controller/job.controller.ts` | destructive deletes (see rule 5); transactions are fixed                                                                                           |
+| `components/useProgress.tsx`           | client-side-only gating, redirects to a 404                                                                                                        |
+| `frontend/src/app/employerPanel/`      | stub; the final step does not work                                                                                                                 |
 
 `TICKETS.md` has the full backlog with file references if you want the detail.

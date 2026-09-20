@@ -30,6 +30,17 @@ export function configurePassport(db: Pool): void {
         clientSecret: process.env.KEYCLOAK_CLIENT_SECRET,
         callbackURL: process.env.KEYCLOAK_CALLBACK_URL,
         scope: 'openid profile email',
+        // The authorize URL carried no `state`, so /auth/keycloak/callback
+        // accepted any code anyone sent it: an attacker could start a flow with
+        // their own Keycloak account and land a student's browser in that
+        // session, which in this app means their group (SEC-19).
+        //
+        // passport-oauth2 stores the nonce in req.session, so this only works
+        // because the session middleware also runs on /auth. app.ts sets
+        // saveUninitialized: false, and writing the nonce is what marks the
+        // session modified, which is what gets the cookie onto the redirect;
+        // without a `state` there is nothing to write and no cookie either.
+        state: true,
         authorizationURL: `${keycloak_url}/realms/${keycloak_realm}/protocol/openid-connect/auth`,
         tokenURL: `${keycloak_url}/realms/${keycloak_realm}/protocol/openid-connect/token`,
         userInfoURL: `${keycloak_url}/realms/${keycloak_realm}/protocol/openid-connect/userinfo`,

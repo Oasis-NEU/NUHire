@@ -1,7 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Instructions from '../components/instructions';
 import Navbar from '../components/navbar';
 import { usePathname, useRouter } from 'next/navigation';
@@ -14,6 +14,7 @@ import { useAuth } from '../components/AuthContext';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { Document, Page, pdfjs } from 'react-pdf';
+import { pdfSource } from '../../lib/pdfSource';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -74,11 +75,36 @@ export default function ResReviewGroup() {
   const [jobDescNumPages, setJobDescNumPages] = useState<number | null>(null);
   const [jobDescPageNumber, setJobDescPageNumber] = useState(1);
 
-  // Team confirmation state
+  // Team confirmation state. The list is server-backed (GroupConfirmations,
+  // keyed on group_id + class + student_id): it used to be pure client state,
+  // so a refresh reset it to [] while the Confirm button stayed disabled for
+  // whoever had already confirmed, and the group deadlocked with no way out.
   const [teamConfirmations, setTeamConfirmations] = useState<string[]>([]);
-  const [hasConfirmed, setHasConfirmed] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [groupSize, setGroupSize] = useState(4);
   const [confirmedSelection, setConfirmedSelection] = useState<number[]>([]);
+
+  // Derived from the fetched list rather than tracked separately, so a refresh
+  // cannot leave a student's own button out of step with the server.
+  const hasConfirmed = !!user && teamConfirmations.includes(String(user.id));
+
+  // group_id, class and student_id all come from the session on the server, so
+  // there is nothing to pass and nothing for the caller to forget to scope.
+  const fetchConfirmations = useCallback(async () => {
+    if (!user?.group_id || !user?.class) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/progress/confirmations`, {
+        credentials: 'include',
+      });
+      if (!response.ok) return;
+
+      const data = (await response.json()) as { confirmations: string[] };
+      setTeamConfirmations(data.confirmations ?? []);
+    } catch (error) {
+      console.error('Failed to fetch team confirmations:', error);
+    }
+  }, [user?.group_id, user?.class]);
 
   const resumeInstructions = [
     'Review the resumes and decide as a group which 4 candidates continue.',
@@ -361,8 +387,14 @@ export default function ResReviewGroup() {
 
     const handleConnect = () => {
       setIsConnected(true);
+      // A reconnected socket has a new id and is in no rooms, so the join has
+      // to happen here and not only on mount.
       const roomId = `group_${user.group_id}_class_${user.class}`;
       socket.emit('joinGroup', roomId);
+      // Confirmations that landed while this client was disconnected were
+      // broadcast to a room it was not in. Re-read them rather than sit on a
+      // stale tally that blocks the group.
+      fetchConfirmations();
     };
 
     socket.on('connect', handleConnect);
@@ -392,20 +424,17 @@ export default function ResReviewGroup() {
     };
   }, [socket, user]);
 
-  // Add this useEffect after the groupSize fetch useEffect (around line 140)
+  // Runs on mount and again whenever the roster changes, since a student
+  // joining or leaving changes who the tally is measured against. This used to
+  // clear the list locally, which would now desynchronise the page from the
+  // server and cost everyone else their confirmation. Re-read it instead: a
+  // removed student's row is dropped by the foreign key, and a new member
+  // simply has not confirmed yet.
   useEffect(() => {
-    // Reset confirmations when group size changes (student added/removed)
     if (groupSize > 0) {
-      // If confirmations >= old group size, but new size is larger, we need to reset
-      // This handles the case where 2/2 confirmed, then 3rd person joins
-      const previousGroupSize = teamConfirmations.length; // Assuming if everyone confirmed, length = size
-
-      if (teamConfirmations.length > 0 && teamConfirmations.length >= groupSize) {
-        setTeamConfirmations([]);
-        setHasConfirmed(false);
-      }
+      fetchConfirmations();
     }
-  }, [groupSize]);
+  }, [groupSize, fetchConfirmations]);
 
   // Student online and page change
   useEffect(() => {
@@ -486,28 +515,58 @@ export default function ResReviewGroup() {
     });
   };
 
+  // The write and the broadcast both happen server-side, so a teammate who
+  // reacts to the event always reads a database that already contains it, and
+  // there is only one path a confirmation can travel.
+  const changeConfirmation = async (method: 'POST' | 'DELETE') => {
+    if (!user || confirming) return;
+
+    setConfirming(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/progress/confirmations`, {
+        method,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        setPopup({
+          headline: 'Confirmation Not Saved',
+          message: 'Your confirmation could not be saved. Check your connection and try again.',
+        });
+        return;
+      }
+
+      // Trust the reply over our own broadcast: it is the authoritative list,
+      // and it arrives even if this client's socket is down.
+      const data = (await response.json()) as { confirmations: string[] };
+      setTeamConfirmations(data.confirmations ?? []);
+    } catch (error) {
+      console.error('Failed to update team confirmation:', error);
+      setPopup({
+        headline: 'Confirmation Not Saved',
+        message: 'Your confirmation could not be saved. Check your connection and try again.',
+      });
+    } finally {
+      setConfirming(false);
+    }
+  };
+
   const handleTeamConfirm = () => {
-    if (!socket || !user || hasConfirmed) return;
+    if (hasConfirmed) return;
 
     const currentSelected = Object.entries(checkedState)
       .filter(([_, isChecked]) => isChecked)
       .map(([num, _]) => parseInt(num));
     setConfirmedSelection(currentSelected);
 
-    setHasConfirmed(true);
-    setTeamConfirmations((prev) => {
-      if (!prev.includes(user.id.toString())) {
-        return [...prev, user.id.toString()];
-      }
-      return prev;
-    });
+    changeConfirmation('POST');
+  };
 
-    socket.emit('teamConfirmSelection', {
-      groupId: user.group_id,
-      classId: user.class,
-      studentId: user.id.toString(),
-      roomId: `group_${user.group_id}_class_${user.class}`,
-    });
+  // Nothing triggered the unconfirm path before, so a student who confirmed and
+  // then wanted to change the group's four had no way back.
+  const handleTeamUnconfirm = () => {
+    if (!hasConfirmed) return;
+    changeConfirmation('DELETE');
   };
 
   const selectedResume = resumes.find((r) => r.resume_number === selectedResumeNumber);
@@ -595,7 +654,7 @@ export default function ResReviewGroup() {
 
               <div className="flex-1 overflow-auto flex justify-center items-start">
                 <Document
-                  file={`${API_BASE_URL}/${jobDescPath}`}
+                  file={pdfSource(`${API_BASE_URL}/${jobDescPath}`)}
                   onLoadError={console.error}
                   onLoadSuccess={({ numPages }) => {
                     setJobDescNumPages(numPages);
@@ -724,19 +783,36 @@ export default function ResReviewGroup() {
           </div>
 
           <div className="flex gap-3">
-            {selectedCount === 4 && teamConfirmations.length < groupSize && (
+            {selectedCount === 4 && !hasConfirmed && (
               <button
                 onClick={handleTeamConfirm}
-                disabled={hasConfirmed}
+                disabled={confirming}
                 className={`px-4 py-1.5 rounded-lg shadow font-bold transition text-sm ${
-                  hasConfirmed
-                    ? 'bg-green-500 text-white cursor-not-allowed'
+                  confirming
+                    ? 'bg-blue-300 text-white cursor-not-allowed'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
-                {hasConfirmed
-                  ? `✓ Confirmed (${teamConfirmations.length}/${groupSize})`
-                  : 'Confirm Selection'}
+                {confirming ? 'Saving…' : 'Confirm Selection'}
+              </button>
+            )}
+
+            {/* Always offered once confirmed, including at a full tally: a
+                student who wants the group to pick a different four otherwise
+                has no way back, which is what deadlocked this step. */}
+            {hasConfirmed && (
+              <button
+                onClick={handleTeamUnconfirm}
+                disabled={confirming}
+                className={`px-4 py-1.5 rounded-lg shadow font-bold transition text-sm ${
+                  confirming
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+              >
+                {confirming
+                  ? 'Saving…'
+                  : `✓ Confirmed (${teamConfirmations.length}/${groupSize}) — Undo`}
               </button>
             )}
 

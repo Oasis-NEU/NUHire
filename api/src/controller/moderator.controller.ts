@@ -337,60 +337,14 @@ export class ModeratorController {
     });
   };
 
-  updateGroups = (req: AuthRequest, res: Response): void => {
-    const { crn, nom_groups } = req.body;
-
-    if (!crn || !nom_groups) {
-      res.status(400).json({ error: 'crn and nom_groups are required' });
-      return;
-    }
-
-    this.db.query(
-      'SELECT COUNT(*) as group_count FROM `GroupsInfo` WHERE class_id = ?',
-      [crn],
-      (err, result: any[]) => {
-        if (err) {
-          res.status(500).json({ error: 'Failed to check existing groups' });
-          return;
-        }
-
-        const existingGroupCount = result[0].group_count;
-
-        if (existingGroupCount > 0) {
-          res.status(400).json({
-            error:
-              'Groups already exist for this class. Cannot update group count after groups have been created.',
-            existing_groups: existingGroupCount,
-            crn: crn,
-          });
-          return;
-        }
-
-        this.db.query(
-          'UPDATE Moderator SET nom_groups = ? WHERE crn = ?',
-          [nom_groups, crn],
-          (err, result: any) => {
-            if (err) {
-              res.status(500).json({ error: err.message });
-              return;
-            }
-
-            if (result.affectedRows === 0) {
-              res.status(404).json({ error: 'CRN not found' });
-              return;
-            }
-
-            res.json({
-              success: true,
-              crn,
-              nom_groups,
-              message: `Group count updated to ${nom_groups} for CRN ${crn}`,
-            });
-          }
-        );
-      }
-    );
-  };
+  // `updateGroups` (POST /moderators/update-groups) is gone, route and handler.
+  // It wrote `Moderator.nom_groups`, a column in no schema file, no migration
+  // and not the live database, so it 500'd on every call and nothing ever
+  // called it. Group count comes from `num_groups` on create-groups
+  // (GroupController.createGroups). A 410 stub was briefly kept here with a
+  // comment saying the route was still registered; the route had already been
+  // removed in the same change, so the stub was unreachable and the comment
+  // sent readers looking for a route that did not exist.
 
   addStudent = (req: AuthRequest, res: Response): void => {
     const { class_id, group_id, email, f_name, l_name } = req.body;

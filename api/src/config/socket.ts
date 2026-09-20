@@ -36,6 +36,95 @@ interface SocketUser {
   class?: number;
 }
 
+// The only barrier the class waits on today: every member of a group must
+// finish their own resume review before res-review-group opens. Spelled with
+// the `Progress`.`step` vocabulary because `Step_Completion`.`step` stores it,
+// and a second spelling would record a completion nobody looks for.
+export const RES_REVIEW_BARRIER_STEP = 'res_1';
+
+export interface BarrierStatus {
+  step: string;
+  completedCount: number;
+  totalCount: number;
+  released: boolean;
+}
+
+// Has every current member of (group_id, class) recorded `step`?
+//
+// Answered by query every time instead of from a cached count. The count used
+// to live in `global.completedResReview`, which an API restart wiped: the
+// students who had already finished never re-announced, so the group restarted
+// at 0 and could never reach its total again. Rows in MySQL survive a restart,
+// so the same question can be asked as often as anyone needs — on completion,
+// on room join, on a roster change, and from the barrier-status poll.
+export async function evaluateGroupBarrier(
+  db: Pool,
+  classId: number | string,
+  groupId: number | string,
+  step: string
+): Promise<BarrierStatus> {
+  const promiseDb = db.promise();
+
+  const [members] = await promiseDb.query<RowDataPacket[]>(
+    "SELECT id FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
+    [groupId, classId]
+  );
+
+  const [completions] = await promiseDb.query<RowDataPacket[]>(
+    'SELECT student_id FROM Step_Completion WHERE group_id = ? AND class = ? AND step = ?',
+    [groupId, classId, step]
+  );
+
+  // Count only completions belonging to a CURRENT member. A student moved to
+  // another group mid-class leaves their row behind, and counting it would
+  // release a group that still has somebody unfinished.
+  const memberIds = new Set(members.map((row) => row.id as number));
+  const completedCount = completions.filter((row) =>
+    memberIds.has(row.student_id as number)
+  ).length;
+
+  return {
+    step,
+    completedCount,
+    totalCount: members.length,
+    // An empty roster is unknown, not finished. Releasing on 0 >= 0 would walk
+    // a student through a barrier before their group has been assigned anyone.
+    released: members.length > 0 && completedCount >= members.length,
+  };
+}
+
+// Re-evaluate the barrier and, if it is open, tell the group.
+//
+// Emitted to the room rather than to cached socket ids, and nothing is deleted
+// afterwards. The release used to be a single shot at one instant: a student
+// who was offline right then never received it and there was no retry. Now the
+// answer is re-derived from MySQL on every completion, room join and roster
+// change, so a student who rejoins picks it up, and GET /groups/barrier-status
+// is the same answer over HTTP for a client whose socket never came back.
+export function broadcastGroupBarrier(
+  io: SocketIOServer,
+  db: Pool,
+  classId: number | string,
+  groupId: number | string,
+  step: string
+): Promise<BarrierStatus> {
+  return evaluateGroupBarrier(db, classId, groupId, step).then((status) => {
+    // 'groupCompletedResReview' is the res-review page's release event. Other
+    // steps are recorded and counted, but no client listens for them yet, and
+    // emitting this name for one would unlock a page the group is not on.
+    if (status.released && step === RES_REVIEW_BARRIER_STEP) {
+      io.to(`group_${groupId}_class_${classId}`).emit('groupCompletedResReview', {
+        groupId: Number(groupId),
+        classId: Number(classId),
+        completedCount: status.completedCount,
+        totalCount: status.totalCount,
+        message: 'All group members have completed their individual resume reviews!',
+      });
+    }
+    return status;
+  });
+}
+
 // Rejecting an unauthenticated socket outright is the right end state, but it
 // is also the single change most able to take the whole app down at once: if
 // the handshake cookie does not arrive for any reason, every client in the room
@@ -145,9 +234,28 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       // connected client. Nothing listened for it, in any class.
     });
 
+    // Room names arrive as `group_<group_id>_class_<class>` from every page.
+    const roomParts = (room: string): { groupId: string; classId: string } | null => {
+      const match = /^group_(\d+)_class_(\d+)$/.exec(room);
+      return match ? { groupId: match[1], classId: match[2] } : null;
+    };
+
     on('joinGroup', (group_id: string) => {
       if (!mayJoin(group_id)) return;
       socket.join(group_id);
+
+      // Re-evaluate on join, because a reconnected socket is in no rooms and
+      // missed whatever was emitted while it was away. The old barrier fired
+      // once, at one instant, to cached socket ids; a student who was offline
+      // then stayed stuck on a page their whole group had already left.
+      const parts = roomParts(group_id);
+      if (parts) {
+        broadcastGroupBarrier(io, db, parts.classId, parts.groupId, RES_REVIEW_BARRIER_STEP).catch(
+          (err) => {
+            console.error(`Could not re-evaluate the barrier for room ${group_id}:`, err);
+          }
+        );
+      }
     });
 
     on('joinClass', ({ classId }: { classId: number }) => {
@@ -387,107 +495,83 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       }
     );
 
-    on('userCompletedResReview', ({ groupId }: SocketEvents['userCompletedResReview']) => {
-      if (!groupId) {
-        console.log('No group ID provided for userCompletedResReview');
+    // Who is on the other end of this socket, read fresh from the roster.
+    //
+    // Identity comes from the session only. It used to fall back to a
+    // reverse-lookup in `onlineStudents`, but that map is keyed by whatever
+    // email the client sent in 'studentOnline' when the socket has no session,
+    // so a cookieless socket could register as a teammate and then report that
+    // teammate's completion. While the barrier was an in-memory Set the damage
+    // was a transient early release; now that a completion is a Step_Completion
+    // row it would be a forged, restart-surviving record the professor reads.
+    // A socket with no session therefore has no identity here, full stop.
+    // The session runs over the handshake and survives a reconnect, so a real
+    // student is never the one without it.
+    //
+    // Group and class come from `Users`, not from the session or the payload: a
+    // student reassigned mid-class carries a stale group in both, and filing
+    // their completion under the old group leaves the new one short a member.
+    const identifyStudent = async (): Promise<RowDataPacket | null> => {
+      const user = socket.data.user as SocketUser | undefined;
+      if (!user) return null;
+
+      const [rows] = await db.promise().query<RowDataPacket[]>(
+        `SELECT id, email, group_id, class
+           FROM Users
+          WHERE email = ? AND affiliation = 'student'`,
+        [user.email]
+      );
+      return rows[0] ?? null;
+    };
+
+    const recordResReviewCompletion = async (): Promise<void> => {
+      // Refuse before touching the roster. SOCKET_AUTH_REQUIRED is off, so a
+      // sessionless socket is still connected and can still emit this event;
+      // it just cannot write anyone's completion. The warn is the same signal
+      // the io.use above emits: a real client landing here means the cookie is
+      // not reaching the handshake, and that is what to fix, not this check.
+      if (!socket.data.user) {
+        console.warn(
+          `Socket ${socket.id} reported a completion with no session; not recording it.`
+        );
         return;
       }
 
-      const studentEmail = Object.keys(onlineStudents).find(
-        (email) => onlineStudents[email] === socket.id
-      );
-      if (!studentEmail) {
-        console.log('Could not identify student for userCompletedResReview');
+      const student = await identifyStudent();
+      if (!student) {
+        console.warn(`Socket ${socket.id} reported a completion but is not on the roster.`);
+        return;
+      }
+      if (student.group_id == null || student.class == null) {
+        console.warn(`Student ${student.email} reported a completion with no group or class.`);
         return;
       }
 
-      console.log(`Student ${studentEmail} completed res-review in group ${groupId}`);
-
-      db.query(
-        'SELECT class FROM Users WHERE email = ?',
-        [studentEmail],
-        (err, studentData: any[]) => {
-          if (err || !studentData.length) {
-            console.error('Error fetching student class:', err);
-            return;
-          }
-
-          const studentClass = studentData[0].class;
-          console.log(`Student ${studentEmail} is in class ${studentClass}`);
-
-          db.query(
-            "SELECT f_name, l_name, email, current_page FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
-            [groupId, studentClass],
-            (err, groupMembers: any[]) => {
-              if (err) {
-                console.error('Error fetching group members:', err);
-                return;
-              }
-
-              console.log(
-                `Group ${groupId} in class ${studentClass} has ${groupMembers.length} members`
-              );
-
-              if (!(global as any).completedResReview) {
-                (global as any).completedResReview = {};
-              }
-
-              const groupKey = `${groupId}_${studentClass}`;
-              if (!(global as any).completedResReview[groupKey]) {
-                (global as any).completedResReview[groupKey] = new Set();
-              }
-
-              const wasAlreadyCompleted = (global as any).completedResReview[groupKey].has(
-                studentEmail
-              );
-              (global as any).completedResReview[groupKey].add(studentEmail);
-
-              if (wasAlreadyCompleted) {
-                console.log(
-                  `Student ${studentEmail} already marked as completed, ignoring duplicate`
-                );
-                return;
-              }
-
-              const completedCount = (global as any).completedResReview[groupKey].size;
-              const totalCount = groupMembers.length;
-              const allCompleted = completedCount >= totalCount;
-
-              console.log(
-                `Group ${groupId} in class ${studentClass} completion: ${completedCount}/${totalCount} completed by: ${Array.from((global as any).completedResReview[groupKey]).join(', ')}`
-              );
-
-              if (allCompleted) {
-                console.log(
-                  `🎉 All members in group ${groupId}, class ${studentClass} have completed res-review! Notifying group members.`
-                );
-
-                groupMembers.forEach((member) => {
-                  const memberSocketId = onlineStudents[member.email];
-                  if (memberSocketId) {
-                    console.log(`Sending groupCompletedResReview to ${member.email}`);
-                    io.to(memberSocketId).emit('groupCompletedResReview', {
-                      groupId,
-                      classId: studentClass,
-                      completedCount,
-                      totalCount,
-                      message: 'All group members have completed their individual resume reviews!',
-                    });
-                  } else {
-                    console.log(`Student ${member.email} is not online`);
-                  }
-                });
-
-                delete (global as any).completedResReview[groupKey];
-              } else {
-                console.log(
-                  `Group ${groupId} in class ${studentClass} still waiting for ${totalCount - completedCount} more members to complete`
-                );
-              }
-            }
-          );
-        }
+      // Keeping completed_at on a duplicate means a refresh or a reconnect
+      // re-announcing does not rewrite the time the student actually finished,
+      // which is what the professor reads when a group stalls.
+      await db.promise().query(
+        `INSERT INTO Step_Completion (student_id, class, group_id, step)
+           VALUES (?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE completed_at = completed_at`,
+        [student.id, student.class, student.group_id, RES_REVIEW_BARRIER_STEP]
       );
+
+      await broadcastGroupBarrier(
+        io,
+        db,
+        student.class as number,
+        student.group_id as number,
+        RES_REVIEW_BARRIER_STEP
+      );
+    };
+
+    // The payload's groupId is ignored: it is client-supplied, and the roster
+    // row read above is the only trustworthy answer to which group this is.
+    on('userCompletedResReview', () => {
+      recordResReviewCompletion().catch((err) => {
+        console.error('Could not record a res-review completion:', err);
+      });
     });
 
     on(

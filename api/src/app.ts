@@ -25,7 +25,7 @@ import noteRoutes from './routes/note.routes';
 import offerRoutes from './routes/offer.routes';
 import progressRoutes from './routes/progress.routes';
 import candidateRoutes from './routes/candidate.routes';
-import uploadRoutes from './routes/upload.routes';
+import uploadRoutes, { uploadedFileRoutes } from './routes/upload.routes';
 import csvRoutes from './routes/csv.routes';
 import deleteRoutes from './routes/delete.routes';
 import factsRoutes from './routes/facts.routes';
@@ -123,9 +123,6 @@ export class App {
     this.io.engine.use(passport.initialize());
     this.io.engine.use(passport.session());
 
-    // Static files
-    this.app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
     // Logging middleware
     this.app.use((req, res, next) => {
       const route = `${req.method} ${req.path}`;
@@ -215,6 +212,10 @@ export class App {
     this.app.use('/progress', progressRoutes(this.db, this.io));
     this.app.use('/candidates', candidateRoutes(this.db));
     this.app.use('/upload', uploadRoutes());
+    // /uploads used to be express.static with no auth in front of it, which
+    // made every resume public and let an uploaded .html execute as script on
+    // this origin. Same URLs, but authenticated and served as bytes (SEC-9).
+    this.app.use('/uploads', uploadedFileRoutes());
     this.app.use('/csv', csvRoutes(this.db, this.io));
     this.app.use('/facts', factsRoutes(this.db, this.io));
     this.app.use('/delete', deleteRoutes(this.db, this.io, this.onlineStudents));

@@ -1,18 +1,9 @@
 // frontend/src/app/components/AuthContext.tsx
 'use client';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import type { User } from '../../types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL; // "https://nuhire-api-cz6c.onrender.com";
-
-interface User {
-  id: number;
-  f_name: string;
-  l_name: string;
-  email: string;
-  affiliation: string;
-  group_id: number;
-  class: number;
-}
 
 interface AuthContextType {
   user: User | null;

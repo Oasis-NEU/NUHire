@@ -167,7 +167,19 @@ export class JobController {
     // connection that had done nothing, and a connection went back to the pool
     // with a transaction still open on it. A failure halfway through this loop
     // left one group's votes deleted and the next group's intact, permanently.
-    const conn = await this.db.promise().getConnection();
+    // Acquiring is outside the try below on purpose: there is no connection to
+    // release yet. But it must not be bare either. When the pool is saturated
+    // or the DB is down the acquire rejects, Express 4 does not catch a
+    // rejected async handler, and the request hangs with no response while
+    // the process-level handler only logs. Answer 503 so the advisor sees it.
+    let conn;
+    try {
+      conn = await this.db.promise().getConnection();
+    } catch (acquireErr) {
+      console.error('Could not get a database connection for assignJobToAllGroups:', acquireErr);
+      res.status(503).json({ error: 'Database is busy, please try again' });
+      return;
+    }
 
     try {
       // Get all groups for the class
@@ -238,6 +250,16 @@ export class JobController {
           const placeholders = emails.map(() => '?').join(',');
           await conn.query(`DELETE FROM Notes WHERE user_email IN (${placeholders})`, emails);
         }
+
+        // The barrier now lives in Step_Completion, not in process memory. The
+        // Resume rows above were just wiped, so a completion left behind here
+        // would mark this group as already finished with zero decisions in the
+        // table and the barrier would release into an empty review. Clear it in
+        // the same transaction as the work it describes.
+        await conn.query('DELETE FROM Step_Completion WHERE class = ? AND group_id = ?', [
+          class_id,
+          groupId,
+        ]);
       }
 
       await conn.commit();
@@ -246,11 +268,6 @@ export class JobController {
       // partway through told the earlier groups their job had changed and then
       // rolled the change back underneath them.
       for (const groupId of groupIds) {
-        const groupKey = `${groupId}_${class_id}`;
-        if ((global as any).completedResReview && (global as any).completedResReview[groupKey]) {
-          (global as any).completedResReview[groupKey] = new Set();
-        }
-
         this.io.to(`group_${groupId}_class_${class_id}`).emit('jobUpdated', {
           job: job_title,
         });
@@ -312,7 +329,15 @@ export class JobController {
     // Same fix as assignJobToAllGroups: one connection, a real transaction, and
     // a release in `finally`. Through the pool the four DELETEs below each
     // committed on their own and the ROLLBACK did nothing.
-    const conn = await this.db.promise().getConnection();
+    // See assignJobToAllGroups for why the acquire has its own catch.
+    let conn;
+    try {
+      conn = await this.db.promise().getConnection();
+    } catch (acquireErr) {
+      console.error('Could not get a database connection for updateJob:', acquireErr);
+      res.status(503).json({ error: 'Database is busy, please try again' });
+      return;
+    }
 
     try {
       await conn.beginTransaction();
@@ -364,10 +389,12 @@ export class JobController {
         await conn.query(`DELETE FROM Notes WHERE user_email IN (${placeholders})`, emails);
       }
 
-      if ((global as any).completedResReview && (global as any).completedResReview[job_group_id]) {
-        (global as any).completedResReview[job_group_id] = new Set();
-        console.log(`Reset completedResReview for group ${job_group_id}`);
-      }
+      // Same reason as assignJobToAllGroups: the group's work was just wiped,
+      // so its barrier completions must go with it or the group reads as done.
+      await conn.query('DELETE FROM Step_Completion WHERE class = ? AND group_id = ?', [
+        class_id,
+        job_group_id,
+      ]);
 
       await conn.commit();
 

@@ -16,6 +16,7 @@ import Facts from '../components/facts';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { Document, Page, pdfjs } from 'react-pdf';
+import { pdfSource } from '../../lib/pdfSource';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -1174,7 +1175,7 @@ export default function Interview() {
               <div className="h-full w-full overflow-auto flex justify-center items-start bg-gray-100">
                 {currentVid?.file_path ? (
                   <Document
-                    file={`${API_BASE_URL}/${currentVid.file_path}`}
+                    file={pdfSource(`${API_BASE_URL}/${currentVid.file_path}`)}
                     onLoadError={(error) => {
                       console.error('Resume PDF load error:', error);
                       console.log('Attempted path:', `${API_BASE_URL}/${currentVid.file_path}`);
@@ -1209,7 +1210,7 @@ export default function Interview() {
               <div className="h-full w-full overflow-auto flex justify-center items-start bg-gray-100">
                 {jobDescPath ? (
                   <Document
-                    file={`${API_BASE_URL}/${jobDescPath}`}
+                    file={pdfSource(`${API_BASE_URL}/${jobDescPath}`)}
                     onLoadError={console.error}
                     onLoadSuccess={({ numPages }) => {
                       console.log('Job description loaded with', numPages, 'pages');

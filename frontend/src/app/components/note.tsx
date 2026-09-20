@@ -3,15 +3,11 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL; // "https://nuhire-ap
 import React, { useState, useCallback, useEffect } from 'react'; // Importing React and hooks for state and effect management
 import { useAuth } from './AuthContext';
 import { useSocket } from './socketContext';
+import type { Note } from '../../types';
 const NotesPage = () => {
   // State variables to manage notes and their visibility
   const [isOpen, setIsOpen] = useState(false);
   const [note, setNote] = useState('');
-
-  interface Note {
-    id: string;
-    content: string;
-  }
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [userEmail, setUserEmail] = useState('');

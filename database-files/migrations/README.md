@@ -22,6 +22,10 @@ Rules:
 
 Applied so far:
 
-| File                          | What                                              |
-| ----------------------------- | ------------------------------------------------- |
-| `001-resume-unique-vote.sql`  | One vote row per student per resume, and dedupe    |
+| File                              | What                                                 |
+| --------------------------------- | ---------------------------------------------------- |
+| `001-resume-unique-vote.sql`      | One vote row per student per resume, and dedupe       |
+| `002-offers-unique-per-group.sql` | One offer row per group per class, and dedupe         |
+| `003-resume-checked-per-group.sql`| `Resume.checked` is group-level; realign drifted rows |
+| `004-group-confirmations.sql`     | `GroupConfirmations` table; res-review-group confirm state survives refresh |
+| `005-step-completion.sql`         | `Step_Completion` table; the group barrier survives an API restart |

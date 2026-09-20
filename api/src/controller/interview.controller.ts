@@ -5,6 +5,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../models/types';
 import { Pool } from 'mysql2';
+import { dbErrorStatus } from '../config/database';
 
 export class InterviewController {
   constructor(
@@ -75,7 +76,10 @@ export class InterviewController {
   getAllInterviews = (req: AuthRequest, res: Response): void => {
     this.db.query('SELECT * FROM InterviewPage', (err, results) => {
       if (err) {
-        res.status(500).json({ error: err.message });
+        // err.message carried the failing table and column straight to the
+        // browser. Log the real error, tell the client only that it failed.
+        console.error('Error fetching interviews:', err);
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch interviews' });
         return;
       }
       res.json(results);
@@ -98,7 +102,8 @@ export class InterviewController {
 
     this.db.query(query, [group_id, class_id], (err, results: any[]) => {
       if (err) {
-        res.status(500).json({ error: err.message });
+        console.error('Error counting finished interviews:', err);
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch finished count' });
         return;
       }
       console.log(results);
@@ -126,7 +131,8 @@ export class InterviewController {
       [student_id, !!finished, group_id, class_id],
       (err) => {
         if (err) {
-          res.status(500).json({ error: err.message });
+          console.error('Error recording interview finished status:', err);
+          res.status(dbErrorStatus(err)).json({ error: 'Failed to update finished status' });
           return;
         }
 
@@ -135,7 +141,8 @@ export class InterviewController {
           [group_id, class_id],
           (err2, finishedResults: any[]) => {
             if (err2) {
-              res.status(500).json({ error: err2.message });
+              console.error('Error counting finished interviews:', err2);
+              res.status(dbErrorStatus(err2)).json({ error: 'Failed to update finished status' });
               return;
             }
 
@@ -144,7 +151,10 @@ export class InterviewController {
               [group_id, class_id],
               (err3, groupResults: any[]) => {
                 if (err3) {
-                  res.status(500).json({ error: err3.message });
+                  console.error('Error counting group members:', err3);
+                  res
+                    .status(dbErrorStatus(err3))
+                    .json({ error: 'Failed to update finished status' });
                   return;
                 }
 
@@ -172,7 +182,8 @@ export class InterviewController {
       [group_id, class_id],
       (err, results: any[]) => {
         if (err) {
-          res.status(500).json({ error: err.message });
+          console.error('Error fetching group size:', err);
+          res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch group size' });
           return;
         }
         console.log('results from group api', results);
@@ -200,7 +211,8 @@ export class InterviewController {
 
     this.db.query(query, params, (err, results) => {
       if (err) {
-        res.status(500).json({ error: err.message });
+        console.error(`Error fetching interviews for group ${group_id}:`, err);
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch interviews' });
         return;
       }
       res.json(results);
@@ -239,7 +251,8 @@ export class InterviewController {
   getAllInterviewVids = (req: AuthRequest, res: Response): void => {
     this.db.query('SELECT * FROM Interview_vids', (err, results) => {
       if (err) {
-        res.status(500).json({ error: err.message });
+        console.error('Error fetching interview videos:', err);
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch interview videos' });
         return;
       }
       res.json(results);
@@ -279,11 +292,12 @@ export class InterviewController {
 
       this.db.query(query, [values], (err, result) => {
         if (err) {
+          // `details` put the raw MySQL message, table and column names into
+          // the response body. The same information is still logged here.
           console.error('Error saving batch interview votes:', err);
-          console.error('Error details:', err.message);
           console.error('SQL:', query);
           console.error('Values:', values);
-          res.status(500).json({ error: 'Failed to save votes', details: err.message });
+          res.status(dbErrorStatus(err)).json({ error: 'Failed to save votes' });
           return;
         }
 

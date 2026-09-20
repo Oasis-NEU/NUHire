@@ -4,6 +4,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 import { useState, useEffect, JSX, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import { pdfSource } from '../../lib/pdfSource';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import Navbar from '../components/navbar';
@@ -316,7 +317,7 @@ export default function JobDescriptionPage() {
             >
               <div className="bg-white border border-gray-400 rounded-lg shadow-md p-4 h-fit mx-auto w-fit">
                 <Document
-                  file={fileUrl}
+                  file={pdfSource(fileUrl)}
                   onLoadSuccess={({ numPages }) => {
                     setNumPages(numPages);
                     setPdfLoaded(true);

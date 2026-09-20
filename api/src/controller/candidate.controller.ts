@@ -5,6 +5,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../models/types';
 import { Pool } from 'mysql2';
+import { dbErrorStatus } from '../config/database';
 
 export class CandidateController {
   constructor(private db: Pool) {}
@@ -85,7 +86,9 @@ export class CandidateController {
   getAllCandidates = (req: AuthRequest, res: Response): void => {
     this.db.query('SELECT * FROM Candidates', (err, results) => {
       if (err) {
-        res.status(500).json({ error: err.message });
+        // Returning err.message told the browser the table and column names.
+        console.error('Error fetching candidates:', err);
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch candidates' });
         return;
       }
       res.json(results);
@@ -96,7 +99,15 @@ export class CandidateController {
     const { id } = req.params;
     this.db.query('SELECT * FROM Candidates WHERE id = ?', [id], (err, results: any[]) => {
       if (err) {
-        res.status(500).json({ error: err.message });
+        console.error(`Error fetching candidate ${id}:`, err);
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch candidate' });
+        return;
+      }
+      // An unknown id used to send res.json(undefined), which is a 200 with an
+      // empty body: the caller's response.json() then throws "Unexpected end of
+      // JSON input" and the page breaks somewhere unrelated to the real cause.
+      if (results.length === 0) {
+        res.status(404).json({ error: 'Candidate not found' });
         return;
       }
       res.json(results[0]);
@@ -110,7 +121,12 @@ export class CandidateController {
       [resume_number],
       (err, results: any[]) => {
         if (err) {
-          res.status(500).json({ error: err.message });
+          console.error(`Error fetching candidate for resume ${resume_number}:`, err);
+          res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch candidate' });
+          return;
+        }
+        if (results.length === 0) {
+          res.status(404).json({ error: 'Candidate not found' });
           return;
         }
         console.log(`Fetched candidate with resume number ${resume_number}:`, results[0]);
@@ -134,7 +150,15 @@ export class CandidateController {
 
     this.db.query(query, [resume_number], (err, results: any[]) => {
       if (err) {
-        res.status(500).json({ error: err.message });
+        console.error(`Error fetching candidate file for resume ${resume_number}:`, err);
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch candidate' });
+        return;
+      }
+      // interview-stage/page.tsx catches a rejected request and drops that
+      // candidate. The old empty 200 body instead produced a card with every
+      // field undefined and no video, which looked like a broken video player.
+      if (results.length === 0) {
+        res.status(404).json({ error: 'Candidate not found' });
         return;
       }
       console.log(`Fetched candidate with resume number ${resume_number}:`, results[0]);

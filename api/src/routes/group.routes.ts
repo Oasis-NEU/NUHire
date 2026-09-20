@@ -22,13 +22,20 @@ export default (db: Pool, io: SocketIOServer): Router => {
   router.post('/add-student', requireAdmin, groupController.addStudent);
   router.post('/create-single-group', requireAdmin, groupController.createSingleGroup);
   router.delete('/delete-student', requireAdmin, groupController.deleteStudent);
+  // The professor's override for a stuck group. Admin only: it moves a whole
+  // group's progress, so a student able to call it could drag their own team
+  // past a step they have not done.
+  router.post('/force-advance', requireAdmin, groupController.forceAdvance);
 
   // Students read their own group's state from these.
-  router.get('/class-info/:classId', requireAuth, groupController.getClassInfo);
-  router.post('/join-group', requireAuth, groupController.joinGroup);
   router.get('/started/:classId/:groupId', requireAuth, groupController.getGroupStarted);
   router.get('/status/:classId/:groupId', requireAuth, groupController.getGroupStatus);
   router.get('/seen', requireAuth, groupController.getGroupsSeen);
   router.get('/getProgress/:classId/:groupId', requireAuth, groupController.getProgress);
+  // The non-socket way to ask whether the group's barrier is open. A student
+  // whose socket dropped cannot receive the release event, and the client stops
+  // retrying after five attempts; this is how they recover without one. The
+  // handler checks the caller is in the group it names.
+  router.get('/barrier-status/:classId/:groupId', requireAuth, groupController.getBarrierStatus);
   return router;
 };

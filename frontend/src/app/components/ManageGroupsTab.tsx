@@ -5,40 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useSocket } from './socketContext';
 import Popup from './popup';
 import { useAuth } from './AuthContext';
+import type { ClassInfo, Group, JobOption, Student } from '../../types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-interface Student {
-  id: number;
-  email: string;
-  f_name: string;
-  l_name: string;
-  group_id: number;
-  class: number;
-}
-
-interface Group {
-  group_id: number;
-  students: Student[];
-  isStarted: boolean;
-  jobAssignment?: string;
-  progress?: string;
-}
-
-interface ClassInfo {
-  crn: number;
-  class_name: string;
-}
-
-interface User {
-  email: string;
-  affiliation: string;
-}
-
-interface JobOption {
-  id: number;
-  title: string;
-}
 
 export function ManageGroupsTab() {
   const [selectedClass, setSelectedClass] = useState<string>('');
@@ -134,14 +103,23 @@ export function ManageGroupsTab() {
     []
   );
 
-  if (user && user.affiliation !== 'admin') {
-    setPopup({
-      headline: 'Access Denied',
-      message: 'You must be a teacher to access this page.',
-    });
-    setTimeout(() => router.push('/'), 2000);
-    return;
-  }
+  // A signed-in non-teacher. The bounce below has to be an effect, and the
+  // "access denied" screen has to be a return value from the render body after
+  // every hook has run: the previous version called setPopup() during render
+  // and then `return;`, which React answers with "Too many re-renders" and
+  // "Nothing was returned from render", and skipped the ~12 hooks declared
+  // below it, changing the hook count between renders. Any of the three
+  // white-screens the admin tab mid-class.
+  const isNotTeacher = !!user && user.affiliation !== 'admin';
+
+  useEffect(() => {
+    if (!isNotTeacher) return;
+
+    // Cleared on unmount so a professor who navigates away inside the 2s
+    // window is not yanked back to the landing page.
+    const timer = setTimeout(() => router.push('/'), 2000);
+    return () => clearTimeout(timer);
+  }, [isNotTeacher, router]);
 
   useEffect(() => {
     console.log('acceptedoffers updated', acceptedOffers);
@@ -1315,6 +1293,21 @@ export function ManageGroupsTab() {
           <div className="bg-white rounded-lg shadow-lg p-6 w-full">
             <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
             <p className="text-gray-600">You must be logged in to access this page.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isNotTeacher) {
+    return (
+      <div className="flex flex-col h-full overflow-auto bg-gray-50 font-sans">
+        <div className="w-full p-4">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full">
+            <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
+            <p className="text-gray-600">
+              You must be a teacher to access this page. Returning you to the home page...
+            </p>
           </div>
         </div>
       </div>

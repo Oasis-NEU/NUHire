@@ -1,10 +1,109 @@
 // src/config/database.ts
+//
+// SINGLE REPLICA ONLY (API-1). This API cannot be scaled horizontally:
+// config/socket.ts keeps `onlineStudents` and the "has every group member
+// finished" barrier in plain process memory, and Socket.IO is running without a
+// room adapter. Run two replicas and a group's students land on different
+// processes, each of which sees only part of the group, so the group NEVER
+// reaches its completion count and is stuck mid-class with no way out. The pool
+// sizing below is also per-process, so N replicas open N * DB_POOL_SIZE
+// connections against the same MySQL server.
+//
+// server.ts warns at boot when INSTANCE_COUNT is above 1. Keep the Coolify
+// service at 1 replica until that state lives in MySQL (rule 2).
 
 import mysql, { Pool, PoolOptions } from 'mysql2';
+
+/**
+ * mysql2 keeps its pool bookkeeping in these three queues. They are not in the
+ * published types, so /health/db reads them through this shape rather than
+ * through `any`.
+ */
+interface PoolQueues {
+  _allConnections?: { length: number };
+  _freeConnections?: { length: number };
+  _connectionQueue?: { length: number };
+}
+
+export interface PoolStats {
+  total: number;
+  free: number;
+  used: number;
+  queued: number;
+  connectionLimit: number;
+  queueLimit: number;
+}
+
+/**
+ * The database is unreachable or the pool is full. Both are transient and the
+ * browser can act on them by retrying, so they get a 503 rather than a 500.
+ */
+const UNAVAILABLE_CODES = new Set([
+  'ECONNREFUSED',
+  'EPIPE',
+  'ETIMEDOUT',
+  'ER_CON_COUNT_ERROR',
+  'ER_TOO_MANY_USER_CONNECTIONS',
+  'PROTOCOL_CONNECTION_LOST',
+  'PROTOCOL_SEQUENCE_TIMEOUT',
+]);
+
+/**
+ * Status code for a failed query (API-15). Handlers must log the real error and
+ * send a generic message: `err.message` from mysql2 names the table and column,
+ * which is a free schema map for anyone with a browser.
+ *
+ * mysql2 reports a full acquire queue as a plain `Error('Queue limit reached.')`
+ * with no `code`, so the message is the only thing there is to match on.
+ */
+export function dbErrorStatus(err: unknown): number {
+  const asError = err as { code?: string; message?: string } | null | undefined;
+  if (asError?.message === 'Queue limit reached.') {
+    return 503;
+  }
+  if (asError?.code && UNAVAILABLE_CODES.has(asError.code)) {
+    return 503;
+  }
+  return 500;
+}
+
+const POOL_DEFAULTS = {
+  connectionLimit: 25,
+  queueLimit: 30,
+  connectTimeoutMs: 10000,
+  queryTimeoutMs: 15000,
+};
+
+/**
+ * Tuning knobs are optional, but a typo in one must not silently halve the pool
+ * in the middle of a class, so an unusable value is reported and ignored.
+ */
+function positiveIntFromEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') {
+    return fallback;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    console.error(`⚠️ ${name}="${raw}" is not a positive integer; falling back to ${fallback}`);
+    return fallback;
+  }
+  return parsed;
+}
 
 export class DatabaseService {
   private pool: Pool | null = null;
   private readonly maxRetries = 30;
+
+  // Filled in by createPool(), deliberately not by a field initialiser: those
+  // run when server.ts imports this module, which is before its dotenv.config()
+  // call has read .env, so every one of these would silently take its default
+  // no matter what the file said. /health/db reports these same fields, so they
+  // always describe the pool that was actually built.
+  private connectionLimit = POOL_DEFAULTS.connectionLimit;
+  private queueLimit = POOL_DEFAULTS.queueLimit;
+  private connectTimeoutMs = POOL_DEFAULTS.connectTimeoutMs;
+  private queryTimeoutMs = POOL_DEFAULTS.queryTimeoutMs;
 
   async connect(): Promise<Pool> {
     if (this.pool) {
@@ -41,6 +140,14 @@ export class DatabaseService {
     return new Promise((resolve, reject) => {
       console.log('🔌 Creating MySQL connection pool using DATABASE_URL...');
 
+      this.connectionLimit = positiveIntFromEnv('DB_POOL_SIZE', POOL_DEFAULTS.connectionLimit);
+      this.queueLimit = positiveIntFromEnv('DB_POOL_QUEUE_LIMIT', POOL_DEFAULTS.queueLimit);
+      this.connectTimeoutMs = positiveIntFromEnv(
+        'DB_CONNECT_TIMEOUT_MS',
+        POOL_DEFAULTS.connectTimeoutMs
+      );
+      this.queryTimeoutMs = positiveIntFromEnv('DB_QUERY_TIMEOUT_MS', POOL_DEFAULTS.queryTimeoutMs);
+
       const url = new URL(process.env.DATABASE_URL!);
       const poolConfig: PoolOptions = {
         host: url.hostname,
@@ -48,9 +155,18 @@ export class DatabaseService {
         user: url.username,
         password: url.password,
         database: url.pathname.slice(1),
-        connectionLimit: 15, // Max 10 concurrent connections
+        connectionLimit: this.connectionLimit,
         waitForConnections: true,
-        queueLimit: 0,
+        // `queueLimit: 0` meant an unbounded acquire queue with no timeout: once
+        // all connections were busy every further request waited forever, so 30
+        // laptops spun while the logs stayed completely clean. A finite queue
+        // makes mysql2 fail the acquire immediately, and dbErrorStatus turns
+        // that into a 503 the frontend can actually surface (API-7).
+        queueLimit: this.queueLimit,
+        // Without this a MySQL host that accepts the TCP connection and then
+        // stalls holds the boot retry loop, and later every acquire, open until
+        // the OS gives up.
+        connectTimeout: this.connectTimeoutMs,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
         ssl: {
@@ -59,10 +175,17 @@ export class DatabaseService {
       };
 
       console.log(
-        `Creating pool: host=${poolConfig.host}, port=${poolConfig.port}, database=${poolConfig.database}, connectionLimit=${poolConfig.connectionLimit}`
+        `Creating pool: host=${poolConfig.host}, port=${poolConfig.port}, database=${poolConfig.database}, connectionLimit=${poolConfig.connectionLimit}, queueLimit=${poolConfig.queueLimit}`
       );
 
       const pool = mysql.createPool(poolConfig);
+
+      // Before the test acquire below, not after. mysql2 emits 'connection'
+      // when a connection is created, so attaching afterwards missed the very
+      // first one entirely: under classroom load that connection is the one
+      // that gets reused, and it would have been the only one in the pool
+      // running without the query timeout set.
+      this.setupErrorHandling(pool);
 
       // Test the pool with a connection
       pool.getConnection((err, connection) => {
@@ -72,7 +195,6 @@ export class DatabaseService {
         } else {
           console.log('✅ Database pool connection test successful!');
           connection.release(); // Release test connection back to pool
-          this.setupErrorHandling(pool);
           resolve(pool);
         }
       });
@@ -82,6 +204,19 @@ export class DatabaseService {
   private setupErrorHandling(pool: Pool): void {
     pool.on('connection', (connection) => {
       console.log('📌 New connection established in pool');
+
+      // A server-side cap is the only query timeout mysql2 exposes. Without it
+      // one pathological SELECT holds a pooled connection, and therefore a slot
+      // in the now-bounded queue, for as long as MySQL is willing to run it.
+      // Text protocol, not execute(), because MySQL rejects a placeholder in a
+      // prepared SET; mysql2 escapes the value into the statement instead.
+      // MySQL applies this to read-only SELECTs only, and a server that does
+      // not know the variable just errors, so failure here is not fatal.
+      connection.query('SET SESSION max_execution_time = ?', [this.queryTimeoutMs], (err) => {
+        if (err) {
+          console.error('⚠️ Could not set max_execution_time on pooled connection:', err.code);
+        }
+      });
     });
 
     pool.on('error', (err) => {
@@ -271,6 +406,30 @@ export class DatabaseService {
       throw new Error('Database pool not established');
     }
     return this.pool;
+  }
+
+  /**
+   * Backs /health/db. `queued` above zero means requests are already waiting on
+   * a connection, which is the state that used to be invisible: the process
+   * looked healthy right up to the point where every student's page hung.
+   */
+  getPoolStats(): PoolStats {
+    if (!this.pool) {
+      throw new Error('Database pool not established');
+    }
+
+    const queues = this.pool as unknown as PoolQueues;
+    const total = queues._allConnections?.length ?? 0;
+    const free = queues._freeConnections?.length ?? 0;
+
+    return {
+      total,
+      free,
+      used: total - free,
+      queued: queues._connectionQueue?.length ?? 0,
+      connectionLimit: this.connectionLimit,
+      queueLimit: this.queueLimit,
+    };
   }
 }
 

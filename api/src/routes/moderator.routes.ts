@@ -16,7 +16,6 @@ export default (db: Pool): Router => {
   router.get('/crns/:crn', requireAuth, moderatorController.getModeratorCRN);
   router.get('/classes/:email', requireAuth, moderatorController.getModeratorClasses);
   router.get('/classes-full/:email', requireAuth, moderatorController.getModeratorClassesFull);
-  router.post('/update-groups', requireAdmin, moderatorController.updateGroups);
   router.post('/add-student', requireAdmin, moderatorController.addStudent);
   router.delete('/del-student', requireAdmin, moderatorController.deleteStudent);
 

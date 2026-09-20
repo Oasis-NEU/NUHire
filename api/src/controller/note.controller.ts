@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../models/types';
 import { Pool } from 'mysql2';
+import { dbErrorStatus } from '../config/database';
 
 export class NoteController {
   constructor(private db: Pool) {}
@@ -18,7 +19,10 @@ export class NoteController {
       [userEmail],
       (err, results) => {
         if (err) {
-          res.status(500).json({ error: err.message });
+          // err.message names the table and column that failed, which handed
+          // any student a map of the schema. Log it, return nothing useful.
+          console.error('Error fetching notes:', err);
+          res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch notes' });
           return;
         }
         res.json(results);
@@ -45,7 +49,8 @@ export class NoteController {
       [user_email, content],
       (err, result: any) => {
         if (err) {
-          res.status(500).json({ error: err.message });
+          console.error('Error creating note:', err);
+          res.status(dbErrorStatus(err)).json({ error: 'Failed to save note' });
           return;
         }
         res.status(200).json({ content, id: result.insertId });

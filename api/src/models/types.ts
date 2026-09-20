@@ -35,6 +35,11 @@ export interface Resume {
   timespent: number;
   resume_number: number;
   vote: string;
+  // `checked` is the GROUP's shortlist, not this student's. The row grain is
+  // per student only because the column lives on this table; every member row
+  // for one (group_id, class, resume_number) carries the same value. Read it
+  // with MAX(checked) GROUP BY resume_number, never off a single row. See the
+  // comment on the column in database-files/Pandployer.sql.
   checked?: boolean;
 }
 
@@ -96,11 +101,13 @@ export interface JobAssignment {
 }
 
 // Group Types
+// No `max_students`. `GroupsInfo` has never had that column in any schema file,
+// migration or live database; the two handlers that selected it 500'd, and both
+// are gone. Groups have no capacity limit — an advisor assigns students.
 export interface GroupInfo {
   class_id: number;
   group_id: number;
   started: number;
-  max_students?: number;
 }
 
 // Offer Types
@@ -114,10 +121,12 @@ export interface Offer {
 }
 
 // Moderator Types
+// No `nom_groups`. Same story as GroupInfo.max_students: never in the schema,
+// never read back. How many groups a class has is the `num_groups` argument to
+// create-groups, and the row count in `GroupsInfo` afterwards.
 export interface Moderator {
   admin_email: string;
   crn: number;
-  nom_groups?: number;
 }
 
 // Note Types

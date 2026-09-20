@@ -306,8 +306,16 @@ export class ResumeController {
   };
 
   deleteResumeFile = (req: AuthRequest, res: Response): void => {
-    const fileName = req.params.fileName;
+    // Express matches the route before decoding, so "..%2F..%2Fconfig" arrives
+    // here as a param containing separators and the fs.unlinkSync below would
+    // follow it out of uploads/resumes. Same containment as getResumeFile.
+    const fileName = path.basename(req.params.fileName ?? '');
     const classId = req.query.class_id;
+
+    if (!fileName || fileName === '.' || fileName === '..') {
+      res.status(400).json({ error: 'Invalid file name' });
+      return;
+    }
 
     if (!classId) {
       res.status(400).json({ error: 'class_id is required' });
