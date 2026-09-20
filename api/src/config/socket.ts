@@ -16,17 +16,9 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
 
     socket.on('studentOnline', ({ studentId }: { studentId: string }) => {
       onlineStudents[studentId] = socket.id;
-
-      db.query(
-        'SELECT group_id, current_page FROM Users WHERE email = ?',
-        [studentId],
-        (err, result: any[]) => {
-          if (!err && result.length > 0) {
-            const { group_id, current_page } = result[0];
-            io.emit('updateOnlineStudents', { studentId, group_id, current_page });
-          }
-        }
-      );
+      // Previously also ran a DB lookup here and broadcast an
+      // 'updateOnlineStudents' event carrying the student's email to EVERY
+      // connected client. Nothing listened for it, in any class.
     });
 
     socket.on('joinGroup', (group_id: string) => {
@@ -77,15 +69,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     socket.on('checkint', ({ group_id, interview_number, checked }: SocketEvents['checkint']) => {
       socket.to(group_id).emit('checkboxUpdated', { interview_number, checked });
     });
-
-    socket.on(
-      'studentPageChanged',
-      ({ studentId, currentPage }: SocketEvents['studentPageChanged']) => {
-        if (onlineStudents[studentId]) {
-          io.emit('studentPageChange', { studentId, currentPage });
-        }
-      }
-    );
 
     socket.on(
       'sendPopupToGroups',

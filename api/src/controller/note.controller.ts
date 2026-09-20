@@ -6,9 +6,11 @@ export class NoteController {
   constructor(private db: Pool) {}
 
   getNotes = (req: AuthRequest, res: Response): void => {
-    const userEmail = req.query.user_email;
+    // Notes are private. Always use the authenticated identity; a client-supplied
+    // user_email let any student read any other student's notes.
+    const userEmail = req.user?.email;
     if (!userEmail) {
-      res.status(400).json({ error: 'user_email query parameter is required' });
+      res.status(401).json({ error: 'Not authenticated' });
       return;
     }
     this.db.query(
@@ -25,10 +27,16 @@ export class NoteController {
   };
 
   createNote = (req: AuthRequest, res: Response): void => {
-    const { user_email, content } = req.body;
+    const { content } = req.body;
+    // Ignore any client-supplied email; notes belong to the caller.
+    const user_email = req.user?.email;
 
-    if (!user_email || !content) {
-      res.status(400).json({ error: 'Email and note content are required' });
+    if (!user_email) {
+      res.status(401).json({ error: 'Not authenticated' });
+      return;
+    }
+    if (!content) {
+      res.status(400).json({ error: 'Note content is required' });
       return;
     }
 

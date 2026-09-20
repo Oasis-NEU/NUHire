@@ -66,7 +66,7 @@ const Dashboard = () => {
     {
       key: 'employer',
       label: 'Employer Panel',
-      path: '/employerPannel',
+      path: '/employerPanel',
       emoji: '🚧',
       desc: 'Coming Soon...',
     },
@@ -133,7 +133,7 @@ const Dashboard = () => {
       });
       if (progressResponse.ok) {
         const progressData = await progressResponse.json();
-        const currentProgress = progressData.progress || 'none';
+        const currentProgress = progressData.step || 'none';
         setProgress(currentProgress);
         localStorage.setItem('progress', currentProgress);
       }

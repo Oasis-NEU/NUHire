@@ -23,9 +23,10 @@ export default function AboutPage() {
             console.log('User has already seen intro, redirecting to dashboard');
             router.push('/dashboard');
             return;
-          } else {
-            localStorage.clear();
           }
+          // Previously localStorage.clear() here, which wiped progress,
+          // resume-review counters and interview ratings for any user whose
+          // `seen` flag was not 1 - including mid-activity.
         }
       } catch (error) {
         console.error('Error checking seen status:', error);
@@ -38,8 +39,7 @@ export default function AboutPage() {
   }, [router]);
 
   const handleContinue = () => {
-    console.log('Continuing to instructions page');
-    window.location.href = `${process.env.NEXT_PUBLIC_FRONT_URL}/instructions`;
+    router.push('/instructions');
   };
 
   if (loading) {

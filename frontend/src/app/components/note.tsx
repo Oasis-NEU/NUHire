@@ -1,10 +1,8 @@
 'use client'; // Declares that this page is a client component
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL; // "https://nuhire-api-cz6c.onrender.com";
 import React, { useState, useCallback, useEffect } from 'react'; // Importing React and hooks for state and effect management
-import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
-
-const socket = io(API_BASE_URL);
+import { useSocket } from './socketContext';
 const NotesPage = () => {
   // State variables to manage notes and their visibility
   const [isOpen, setIsOpen] = useState(false);
@@ -18,6 +16,10 @@ const NotesPage = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [userEmail, setUserEmail] = useState('');
   const { user, loading: userloading } = useAuth();
+  // Use the app-wide socket. This component previously called io() at module
+  // scope, which opened a SECOND connection per browser tab (the navbar renders
+  // it on every page), doubling connection count for the whole class.
+  const socket = useSocket();
 
   useEffect(() => {
     if (user && user.email) {
@@ -48,14 +50,16 @@ const NotesPage = () => {
   }, [fetchNotes]); // ✅ Now depends on the stable callback
 
   useEffect(() => {
-    socket.on('jobUpdated', () => {
+    if (!socket) return;
+    const onJobUpdated = () => {
       setNotes([]);
       setNote('');
-    });
-    return () => {
-      socket.off('jobUpdated');
     };
-  }, []);
+    socket.on('jobUpdated', onJobUpdated);
+    return () => {
+      socket.off('jobUpdated', onJobUpdated);
+    };
+  }, [socket]);
 
   const saveNote = async () => {
     if (!note.trim()) return;
@@ -99,7 +103,6 @@ const NotesPage = () => {
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
-            t
             <button
               onClick={saveNote}
               className="mt-2 w-full bg-northeasternWhite border border-gray-300 text-northeasternBlack py-2 rounded-md hover:bg-sand transition"

@@ -215,7 +215,7 @@ export class ResumeController {
   getCheckedResumes = (req: AuthRequest, res: Response): void => {
     const { group_id } = req.params;
     this.db.query(
-      'SELECT vote, resume_number FROM Resume WHERE group_id = ? AND checked = "True"',
+      'SELECT vote, resume_number FROM Resume WHERE group_id = ? AND checked = 1',
       [group_id],
       (err, results) => {
         if (err) {
@@ -263,11 +263,9 @@ export class ResumeController {
     const { resTitle, filePath, f_name, l_name, vid, class_id } = req.body;
 
     if (!resTitle || !filePath || !f_name || !l_name || !vid || !class_id) {
-      res
-        .status(400)
-        .json({
-          error: 'Missing fields (resTitle, filePath, f_name, l_name, vid, class_id required)',
-        });
+      res.status(400).json({
+        error: 'Missing fields (resTitle, filePath, f_name, l_name, vid, class_id required)',
+      });
       return;
     }
 

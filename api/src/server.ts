@@ -44,15 +44,19 @@ async function bootstrap() {
   }
 }
 
-// Handle uncaught errors
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
-  process.exit(1);
-});
-
+// An unhandled rejection used to call process.exit(1). Several controllers use
+// callback-style db.query inside async methods, where a throw becomes exactly
+// that, so a single bad query could kill the API mid-class: every socket drops
+// and the in-memory group barriers are lost. Log and keep serving instead.
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
+});
+
+// An uncaught exception genuinely leaves the process in an undefined state, so
+// exiting is correct. Drain briefly first so in-flight responses can finish.
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception, shutting down in 5s:', error);
+  setTimeout(() => process.exit(1), 5000).unref();
 });
 
 // Start the application

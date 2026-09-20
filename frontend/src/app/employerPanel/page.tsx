@@ -11,7 +11,7 @@ export default function EmployerPannel() {
   const { updateProgress, fetchProgress } = useProgressManager();
 
   const completeAssignment = () => {
-    localStorage.setItem('progress', 'employerPannel');
+    localStorage.setItem('progress', 'employer');
     window.location.href = '/dashboard';
   };
   return (

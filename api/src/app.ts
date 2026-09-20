@@ -10,6 +10,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import MySQLStore from 'express-mysql-session';
 import { Pool } from 'mysql2';
+import { requireAdmin } from './middleware/auth.middleware';
 
 // Import routes
 import authRoutes from './routes/auth.routes';
@@ -121,7 +122,16 @@ export class App {
         routeCallTimestamps[route] = [];
       }
       routeCallCount[route]++;
-      routeCallTimestamps[route].push(Date.now());
+
+      // Keep only the last hour. This array previously grew without bound, so a
+      // multi-hour class leaked memory and /stats slowed down over time.
+      const now = Date.now();
+      const cutoff = now - 3600_000;
+      const stamps = routeCallTimestamps[route];
+      stamps.push(now);
+      if (stamps.length > 64 && stamps[0] < cutoff) {
+        routeCallTimestamps[route] = stamps.filter((t) => t >= cutoff);
+      }
 
       // Log every request with count
       console.log(`📊 [${new Date().toISOString()}] ${route} - Call #${routeCallCount[route]}`);
@@ -152,7 +162,8 @@ export class App {
     });
 
     // Stats endpoint
-    this.app.get('/stats', (req, res) => {
+    // Admin only: this exposes the full route map and call volumes.
+    this.app.get('/stats', requireAdmin, (req, res) => {
       const stats = Object.entries(routeCallCount)
         .map(([route, count]) => {
           const timestamps = routeCallTimestamps[route];

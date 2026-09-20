@@ -47,7 +47,7 @@ export default function InstructionsPage() {
 
     await updateUserSeeDash();
     const fullName = `${user.f_name} ${user.l_name}`.trim();
-    window.location.href = `${process.env.NEXT_PUBLIC_FRONT_URL}/dashboard?name=${encodeURIComponent(fullName)}`;
+    router.push(`/dashboard?name=${encodeURIComponent(fullName)}`);
   };
 
   if (userLoading) {

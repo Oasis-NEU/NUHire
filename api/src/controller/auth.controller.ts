@@ -219,11 +219,23 @@ export class AuthController {
 
   moderatorLogin = (req: AuthRequest, res: Response): void => {
     const { username, password } = req.body;
+    const expectedUser = process.env.MODERATOR_USERNAME;
+    const expectedPass = process.env.MODERATOR_PASSWORD;
 
-    if (
-      username === process.env.MODERATOR_USERNAME &&
-      password === process.env.MODERATOR_PASSWORD
-    ) {
+    // Without these guards a request with an empty body authenticates whenever
+    // the env vars are unset, because `undefined === undefined` is true.
+    if (!expectedUser || !expectedPass) {
+      console.error('MODERATOR_USERNAME / MODERATOR_PASSWORD are not set; refusing login.');
+      res.status(503).json({ error: 'Moderator login is not configured' });
+      return;
+    }
+
+    if (typeof username !== 'string' || typeof password !== 'string') {
+      res.status(401).json({ error: 'Invalid credentials' });
+      return;
+    }
+
+    if (username === expectedUser && password === expectedPass) {
       req.session.isModerator = true;
       console.log('req.session:', req.session);
 
