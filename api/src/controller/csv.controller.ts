@@ -47,12 +47,20 @@ export class CSVController {
       }
 
       return new Promise((resolve, reject) => {
+        // A student who logs in before the roster is imported already has a row
+        // with affiliation 'none' (the Keycloak callback creates it). Without
+        // the affiliation line below that row stayed 'none' forever, and since
+        // signup only completes for a row that is already on a roster, the
+        // student was stuck on the signup form with no way out. Promote 'none'
+        // to 'student' here, and leave an existing admin alone in case the
+        // professor's own address appears in the file.
         const query = `
-          INSERT INTO Users (email, class, group_id, affiliation) 
+          INSERT INTO Users (email, class, group_id, affiliation)
           VALUES (?, ?, ?, 'student')
-          ON DUPLICATE KEY UPDATE 
+          ON DUPLICATE KEY UPDATE
             class = VALUES(class),
-            group_id = VALUES(group_id)
+            group_id = VALUES(group_id),
+            affiliation = IF(affiliation = 'none', 'student', affiliation)
         `;
 
         this.db.query(query, [email, class_id, group_id], (err, result: any) => {
