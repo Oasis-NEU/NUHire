@@ -32,7 +32,7 @@ export default function ModeratorSignIn() {
       <div className="fixed inset-0 z-0">
         <Slideshow />
       </div>
-      <div className="fixed inset-0 bg-sand/80 z-5" />
+      <div className="fixed inset-0 bg-sand/80 z-[5]" />
       <nav className="navbar w-full relative">
         {/* Top bar */}
         <div className="bg-northeasternBlack text-northeasternWhite justify-center flex px-6 py-4 font-rubik border-b-4 border-northeasternRed w-full">

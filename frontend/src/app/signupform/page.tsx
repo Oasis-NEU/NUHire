@@ -60,8 +60,6 @@ export default function SignupDetails() {
       return;
     }
 
-    console.log('Document cookies:', document.cookie);
-
     if (affiliation === 'student') {
       try {
         const checkRes = await fetch(`${API_BASE_URL}/users/check/${email}`, {
@@ -192,7 +190,7 @@ export default function SignupDetails() {
       <div className="fixed inset-0 z-0">
         <Slideshow />
       </div>
-      <div className="fixed inset-0 bg-sand/80 z-5" />
+      <div className="fixed inset-0 bg-sand/80 z-[5]" />
       <div className="w-full flex justify-center p-4 bg-navy/90 backdrop-blur-sm shadow-md font-rubik text-lg fixed top-0 z-20">
         <h1 className="text-6xl font-extrabold mb-1 text-northeasternRed">NUHire</h1>
       </div>

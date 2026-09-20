@@ -59,13 +59,13 @@ export default function AboutPage() {
         <Slideshow />
       </div>
 
-      <div className="fixed inset-0 bg-sand/80 z-5" />
+      <div className="fixed inset-0 bg-sand/80 z-[5]" />
 
       <div className="w-full flex justify-center p-4 bg-navy/90 backdrop-blur-sm shadow-md font-rubik text-lg z-20">
         <h1 className="text-6xl font-extrabold mb-1 text-northeasternRed">NUHire</h1>
       </div>
 
-      <div className="relative z-100 flex flex-col items-center flex-grow">
+      <div className="relative z-10 flex flex-col items-center flex-grow">
         <div className="flex flex-col items-center text-redHeader text-center space-y-2 mb-2 mt-4">
           <h1 className="text-4xl font-extrabold mb-1">Welcome to NUHire</h1>
           <p className="text-lg text-gray-800 mb-2">

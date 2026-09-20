@@ -5,7 +5,6 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Footer from '../components/footer';
 import Slideshow from '../components/slideshow';
-import { io } from 'socket.io-client';
 import Popup from '../components/popup';
 import { useRouter } from 'next/navigation';
 
@@ -31,8 +30,6 @@ const ModDashboard = () => {
   const [crnToDelete, setCrnToDelete] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
-
-  const socket = io(API_BASE_URL);
 
   useEffect(() => {
     const checkModeratorAuth = async () => {
@@ -159,9 +156,6 @@ const ModDashboard = () => {
         setForm({ admin_email: '', crn: '' });
         console.log('setting success popup');
         setPopup({ headline: 'Success', message: 'Class added!' });
-        socket.emit('moderatorClassAdded', {
-          admin_email: form.admin_email,
-        });
       } else {
         setPopup({ headline: 'Error', message: 'Failed to add class.' });
       }
@@ -199,9 +193,6 @@ const ModDashboard = () => {
 
       if (res.ok) {
         setPopup({ headline: 'Success', message: 'CRN deleted!' });
-        socket.emit('moderatorClassDeleted', {
-          admin_email: form.admin_email,
-        });
       } else {
         setPopup({ headline: 'Error', message: 'Failed to delete CRN.' });
       }
@@ -222,7 +213,7 @@ const ModDashboard = () => {
       <div className="fixed inset-0 z-0">
         <Slideshow />
       </div>
-      <div className="fixed inset-0 bg-sand/80 z-5" />
+      <div className="fixed inset-0 bg-sand/80 z-[5]" />
       <nav className="navbar w-full relative">
         {/* Top bar */}
         <div className="bg-northeasternBlack text-northeasternWhite flex items-center justify-center px-6 py-4 font-rubik border-b-4 border-northeasternRed w-full">

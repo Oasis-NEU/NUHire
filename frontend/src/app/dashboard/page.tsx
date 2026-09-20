@@ -294,7 +294,7 @@ const Dashboard = () => {
         <Slideshow />
       </div>
 
-      <div className="fixed inset-0 bg-sand/80 z-5" />
+      <div className="fixed inset-0 bg-sand/80 z-[5]" />
       <Navbar />
       <div className="flex-1 flex flex-col px-4 py-8 relative z-10">
         <div className="font-extrabold text-3xl font-rubik text-northeasternBlack mb-6 text-center">

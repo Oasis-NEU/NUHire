@@ -22,7 +22,7 @@ export default function Home() {
       <Slideshow />
 
       {/* Semi-transparent overlay for better text readability */}
-      <div className="absolute inset-0 bg-sand/70 z-1" />
+      <div className="absolute inset-0 bg-sand/70 z-[1]" />
 
       {/* Navigation Bar */}
       <div className="w-full flex justify-end p-2 bg-navy shadow-md font-rubik text-2xl fixed top-0">

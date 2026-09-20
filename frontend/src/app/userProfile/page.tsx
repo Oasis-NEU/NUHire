@@ -47,7 +47,7 @@ export default function UserProfile() {
     <div>
       {authUser?.affiliation !== 'admin' ? <Navbar /> : <NavbarAdmin />}
       <div className="bg-sand flex flex-col items-center justify-center p-6 min-h-screen">
-        <div className="bg-norteasternWhite p-8 rounded-2xl shadow-lg w-full max-w-lg border-2 border-black">
+        <div className="bg-northeasternWhite p-8 rounded-2xl shadow-lg w-full max-w-lg border-2 border-black">
           <h1 className="text-4xl font-bold mb-4 text-northeasternRed text-center">User Profile</h1>
 
           {authUser && (

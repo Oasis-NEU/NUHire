@@ -530,7 +530,7 @@ const SendPopups = () => {
             )}
 
             <div className="flex flex-col gap-4 mb-6">
-              <label className="text-lg text-Black font-rubik">Headline:</label>
+              <label className="text-lg text-black font-rubik">Headline:</label>
               <input
                 type="text"
                 placeholder="Enter subject for popup"

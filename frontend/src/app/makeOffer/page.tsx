@@ -118,7 +118,22 @@ export default function MakeOffer() {
       );
 
       if (response.ok) {
-        const offer = await response.json();
+        // This endpoint returns every offer the group has made, as an array.
+        // The check below used to read `.id` straight off that array: an array
+        // is truthy but has no `id`, so the guard was always false and this
+        // whole block never ran. That is why submitting twice created two
+        // offers, and why a refresh mid-review showed no pending state.
+        //
+        // A group should only ever have one offer. Where the data says
+        // otherwise, a decision the professor already made outranks one still
+        // waiting, and the newest outranks an older rejection.
+        const offers = await response.json();
+        const list: Offer[] = Array.isArray(offers) ? offers : [];
+        const byNewest = [...list].sort((a, b) => b.id - a.id);
+        const offer =
+          byNewest.find((o) => o.status === 'accepted') ??
+          byNewest.find((o) => o.status === 'pending') ??
+          byNewest[0];
 
         if (offer && offer.id) {
           setExistingOffer(offer);

@@ -165,7 +165,7 @@ export default function WaitingGroupPage() {
       </div>
 
       {/* Overlay */}
-      <div className="fixed inset-0 bg-sand/80 z-5" />
+      <div className="fixed inset-0 bg-sand/80 z-[5]" />
 
       {/* Main Content */}
       <div className="z-10 flex flex-col items-center justify-center relative flex-grow p-8">

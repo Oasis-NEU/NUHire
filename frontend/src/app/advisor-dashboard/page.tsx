@@ -59,7 +59,7 @@ const Dashboard = () => {
       <div className="fixed inset-0 z-0">
         <Slideshow />
       </div>
-      <div className="fixed inset-0 bg-sand/80 z-5" />
+      <div className="fixed inset-0 bg-sand/80 z-[5]" />
       <NavbarAdmin />
       <div className="mt-6" />
       <div className="flex justify-center items-center py-1 z-10">

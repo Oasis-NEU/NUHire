@@ -87,7 +87,7 @@ const NotesPage = () => {
     <div className="relative p-4">
       {/* Toggle Notes Button */}
       <button
-        className="bg-northeasternRed text-northeasterWhite px-4 py-2 rounded-md hover:bg-sand border-4 border-navy transition"
+        className="bg-northeasternRed text-northeasternWhite px-4 py-2 rounded-md hover:bg-sand border-4 border-navy transition"
         onClick={() => setIsOpen(!isOpen)}
       >
         ☰ Notes

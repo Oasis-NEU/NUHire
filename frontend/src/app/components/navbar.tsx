@@ -69,7 +69,7 @@ const Navbar = () => {
         <div className="flex items-center gap-2 ml-auto">
           {/* Help button - smaller */}
           {showHelpButton && (
-            <div className="bg-northeasternRed text-northeasterWhite px-3 py-1 rounded-md hover:bg-sand border-2 border-navy transition text-sm">
+            <div className="bg-northeasternRed text-northeasternWhite px-3 py-1 rounded-md hover:bg-sand border-2 border-navy transition text-sm">
               <button onClick={handleShowInstructions} className="w-full">
                 Instructions
               </button>

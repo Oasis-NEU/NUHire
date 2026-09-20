@@ -1200,9 +1200,6 @@ export default function Interview() {
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full">
                     <p className="text-gray-500 mb-2">Resume not available</p>
-                    <p className="text-xs text-gray-400">
-                      File path: {currentVid?.file_path || 'undefined'}
-                    </p>
                   </div>
                 )}
               </div>

@@ -67,7 +67,7 @@ export default function InstructionsPage() {
         <Slideshow />
       </div>
 
-      <div className="fixed inset-0 bg-sand/80 z-5" />
+      <div className="fixed inset-0 bg-sand/80 z-[5]" />
 
       <div className="z-10 flex flex-col items-center relative flex-grow p-8 overflow-y-auto">
         <h1 className="text-4xl font-extrabold text-northeasternRed mb-8 text-center">
