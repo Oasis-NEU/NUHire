@@ -59,6 +59,32 @@ Then open http://localhost:3000.
 MySQL and Keycloak run in Docker. The API and frontend run on the host, because
 Keycloak has to be reachable at the same URL from both the browser and the API.
 
+### Test logins
+
+Seeded into the local Keycloak realm and the local database. **Password is
+`nuhire` for all four.**
+
+| Email                       | Role    |
+| --------------------------- | ------- |
+| `advisor@northeastern.edu`  | teacher |
+| `student1@northeastern.edu` | student |
+| `student2@northeastern.edu` | student |
+| `student3@northeastern.edu` | student |
+
+These are fake accounts in a local-only stack. The password is already in
+`.local/realm-export.json`, which is how the realm gets seeded. Nothing here
+touches a real system.
+
+Two things that catch everyone out:
+
+- **One browser holds one login.** Keycloak SSO is shared across tabs, so a new
+  tab silently keeps your first identity. Use a private window for the second role.
+- **A student sees a waiting screen** until a teacher starts their group and
+  assigns it a job. That is not a bug. Log in as the advisor first and do that.
+
+The "Admin" button on the landing page is a separate legacy login (`admin` /
+`admin`) that only gates the page for adding new teachers. You do not need it.
+
 ## Contributing
 
 Read **[AGENTS.md](AGENTS.md)** first. It covers the architecture, the conventions,

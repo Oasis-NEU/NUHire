@@ -37,12 +37,21 @@ no hot-reload for API edits right now: rebuild + restart, or fix the dev script
 
 Seeded into the Keycloak realm and the DB. Password for all: `nuhire`.
 
-| email                     | role    | lands on                |
-| ------------------------- | ------- | ----------------------- |
-| advisor@northeastern.edu  | admin   | /advisor-dashboard      |
-| student1@northeastern.edu | student | /waitingGroup (group 1) |
-| student2@northeastern.edu | student | /waitingGroup (group 1) |
-| student3@northeastern.edu | student | /waitingGroup (group 2) |
+| email                     | role    | group | lands on           |
+| ------------------------- | ------- | ----- | ------------------ |
+| advisor@northeastern.edu  | admin   | —     | /advisor-dashboard |
+| student1@northeastern.edu | student | 1     | /waitingGroup      |
+| student2@northeastern.edu | student | 2     | /waitingGroup      |
+| student3@northeastern.edu | student | 2     | /waitingGroup      |
+
+Group membership is whatever `seed.sql` last set, and it drifts once anyone
+moves students around in Manage Groups. Check the database rather than trusting
+this table:
+
+```bash
+docker exec nuhire-mysql mysql -uroot -pnuhire nuhire \
+  -e "SELECT email, group_id, class FROM Users WHERE affiliation='student';"
+```
 
 Students sit on /waitingGroup until the advisor starts their group from Manage
 Groups. The separate "Admin" button on the landing page is the moderator login,
