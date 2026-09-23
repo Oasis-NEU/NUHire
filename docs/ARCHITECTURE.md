@@ -6,6 +6,13 @@ the product makes sense, then this.
 Line numbers were accurate as of the tooling commit. File and symbol names are
 what to trust.
 
+This was written with AI, against the actual source rather than from memory, so
+feel free to throw it at an AI yourself to summarise, to ask follow-up
+questions, or to explain a section in different terms. Two caveats. It can be
+wrong, so check anything surprising against the file it cites. And the code is
+the source of truth, not this page: if they disagree, the code wins and this
+page is the bug.
+
 ---
 
 ## The shape of it
