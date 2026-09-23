@@ -32,7 +32,7 @@ together:
 The professor runs it live: imports a roster, assigns groups, assigns each group
 a job, starts them, throws curveballs during the interview stage, and accepts or
 rejects each offer. Accepting is roleplay — the professor is playing the
-*candidate* deciding whether to take the job.
+_candidate_ deciding whether to take the job.
 
 ### Where it stands
 
@@ -232,7 +232,7 @@ look up Users by email
 **`Users.affiliation` is the switch.** One column, values `student | admin | none`.
 
 **`Moderator` is the root of trust.** It maps an advisor email to a CRN. Being
-in that table is the *only* thing that qualifies you to become a teacher. When a
+in that table is the _only_ thing that qualifies you to become a teacher. When a
 user picks "Faculty" on the signup form, `createUser`
 (`api/src/controller/user.controller.ts`) checks server-side:
 
@@ -245,12 +245,12 @@ this is the one that counts.
 
 ### The middleware (`api/src/middleware/auth.middleware.ts`)
 
-| Guard              | Checks                                                     |
-| ------------------ | ---------------------------------------------------------- |
-| `requireAuth`      | logged in. Nothing else                                    |
-| `requireAdmin`     | logged in **and** `affiliation === 'admin'`                |
-| `requireStudent`   | logged in **and** `affiliation === 'student'`              |
-| `requireModerator` | the legacy moderator session **or** `requireAdmin`         |
+| Guard              | Checks                                             |
+| ------------------ | -------------------------------------------------- |
+| `requireAuth`      | logged in. Nothing else                            |
+| `requireAdmin`     | logged in **and** `affiliation === 'admin'`        |
+| `requireStudent`   | logged in **and** `affiliation === 'student'`      |
+| `requireModerator` | the legacy moderator session **or** `requireAdmin` |
 
 ### The second login
 
@@ -339,9 +339,8 @@ Two escape hatches now exist:
   `requireAdmin`) — the professor can push a deadlocked group forward without a
   DBA
 
-> **`docs/ARCHITECTURE.md` is stale on this.** It still describes the in-memory
-> barrier, no teacher override, and `requireAdmin` applied to nothing. All three
-> are fixed. Trust this file and the code over that one. Fixing it is a ticket.
+> `docs/ARCHITECTURE.md` covers the same ground in more depth and is current
+> as of this file.
 
 ### Single replica only
 
@@ -389,33 +388,33 @@ curl http://localhost:5001/health
 
 **`api/.env`** — copy from `api/.env.example`, the defaults work as-is.
 
-| Var | Local value | What it does |
-| --- | --- | --- |
-| `DATABASE_URL` | `mysql://root:nuhire@127.0.0.1:3307/nuhire` | **Port 3307 on the host**, 3306 inside Docker |
-| `BACKEND_PORT` | `5001` | API port |
-| `SESSION_SECRET` | any 32+ char string | **API refuses to boot if unset or under 32 chars.** Unset signed every cookie with `undefined`, making them forgeable |
-| `REACT_APP_FRONT_URL` | `http://localhost:3000` | CORS origin and post-login redirect target |
-| `KEYCLOAK_URL` | `http://localhost:8080` | Must resolve to the same URL from **both** the browser and the API process |
-| `KEYCLOAK_REALM` | `NUHire-Realm` | |
-| `KEYCLOAK_CLIENT_ID` | `NUHire-Client` | |
-| `KEYCLOAK_CLIENT_SECRET` | in the example file | Local dev value |
-| `KEYCLOAK_CALLBACK_URL` | `http://localhost:5001/auth/keycloak/callback` | Must be in the realm's redirect URIs |
-| `MODERATOR_USERNAME` | `admin` | Legacy second login |
-| `MODERATOR_PASSWORD` | `admin` | Legacy second login |
-| `COOKIE_SECURE` | `false` | **Must be false locally.** Browsers drop `Secure` cookies over plain http, so the session never persists. Leave UNSET in deploys |
-| `DB_POOL_SIZE` | `25` | Per process, so also the ceiling on concurrent queries |
-| `DB_POOL_QUEUE_LIMIT` | `30` | **Must stay finite.** At 0, mysql2 queues forever: a saturated pool produced requests that never resolved and never errored, so 30 laptops span while logs looked healthy. Past this, 503 |
-| `DB_CONNECT_TIMEOUT_MS` | `10000` | |
-| `DB_QUERY_TIMEOUT_MS` | `15000` | MySQL `max_execution_time`; caps read-only SELECTs only |
-| `INSTANCE_COUNT` | `1` | Leave at 1. See the barrier section |
-| `SOCKET_AUTH_REQUIRED` | `false` | Drop unauthenticated sockets. Off until someone tests it with two real sessions |
+| Var                      | Local value                                    | What it does                                                                                                                                                                              |
+| ------------------------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`           | `mysql://root:nuhire@127.0.0.1:3307/nuhire`    | **Port 3307 on the host**, 3306 inside Docker                                                                                                                                             |
+| `BACKEND_PORT`           | `5001`                                         | API port                                                                                                                                                                                  |
+| `SESSION_SECRET`         | any 32+ char string                            | **API refuses to boot if unset or under 32 chars.** Unset signed every cookie with `undefined`, making them forgeable                                                                     |
+| `REACT_APP_FRONT_URL`    | `http://localhost:3000`                        | CORS origin and post-login redirect target                                                                                                                                                |
+| `KEYCLOAK_URL`           | `http://localhost:8080`                        | Must resolve to the same URL from **both** the browser and the API process                                                                                                                |
+| `KEYCLOAK_REALM`         | `NUHire-Realm`                                 |                                                                                                                                                                                           |
+| `KEYCLOAK_CLIENT_ID`     | `NUHire-Client`                                |                                                                                                                                                                                           |
+| `KEYCLOAK_CLIENT_SECRET` | in the example file                            | Local dev value                                                                                                                                                                           |
+| `KEYCLOAK_CALLBACK_URL`  | `http://localhost:5001/auth/keycloak/callback` | Must be in the realm's redirect URIs                                                                                                                                                      |
+| `MODERATOR_USERNAME`     | `admin`                                        | Legacy second login                                                                                                                                                                       |
+| `MODERATOR_PASSWORD`     | `admin`                                        | Legacy second login                                                                                                                                                                       |
+| `COOKIE_SECURE`          | `false`                                        | **Must be false locally.** Browsers drop `Secure` cookies over plain http, so the session never persists. Leave UNSET in deploys                                                          |
+| `DB_POOL_SIZE`           | `25`                                           | Per process, so also the ceiling on concurrent queries                                                                                                                                    |
+| `DB_POOL_QUEUE_LIMIT`    | `30`                                           | **Must stay finite.** At 0, mysql2 queues forever: a saturated pool produced requests that never resolved and never errored, so 30 laptops span while logs looked healthy. Past this, 503 |
+| `DB_CONNECT_TIMEOUT_MS`  | `10000`                                        |                                                                                                                                                                                           |
+| `DB_QUERY_TIMEOUT_MS`    | `15000`                                        | MySQL `max_execution_time`; caps read-only SELECTs only                                                                                                                                   |
+| `INSTANCE_COUNT`         | `1`                                            | Leave at 1. See the barrier section                                                                                                                                                       |
+| `SOCKET_AUTH_REQUIRED`   | `false`                                        | Drop unauthenticated sockets. Off until someone tests it with two real sessions                                                                                                           |
 
 **`frontend/.env.local`**
 
-| Var | Local value | What it does |
-| --- | --- | --- |
-| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:5001` | Every frontend fetch uses this |
-| `NEXT_PUBLIC_FRONT_URL` | `http://localhost:3000` | **Stale.** `grep -rn NEXT_PUBLIC_FRONT_URL frontend/src` returns nothing — those pages use `router.push` now. Harmless; the comment in the example file should be deleted |
+| Var                        | Local value             | What it does                                                                                                                                                              |
+| -------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:5001` | Every frontend fetch uses this                                                                                                                                            |
+| `NEXT_PUBLIC_FRONT_URL`    | `http://localhost:3000` | **Stale.** `grep -rn NEXT_PUBLIC_FRONT_URL frontend/src` returns nothing — those pages use `router.push` now. Harmless; the comment in the example file should be deleted |
 
 ### Useful commands
 
@@ -514,9 +513,9 @@ users you add through the Keycloak admin console (`localhost:8080`,
 Password is **`nuhire`** for all four (plaintext in `.local/realm-export.json`,
 non-temporary, email verification off).
 
-| Email | Role | Group |
-| --- | --- | --- |
-| `advisor@northeastern.edu` | admin | — |
+| Email                       | Role    | Group   |
+| --------------------------- | ------- | ------- |
+| `advisor@northeastern.edu`  | admin   | —       |
 | `student1@northeastern.edu` | student | group 1 |
 | `student2@northeastern.edu` | student | group 1 |
 | `student3@northeastern.edu` | student | group 2 |
@@ -562,7 +561,7 @@ Do this once, end to end. It is the fastest way to understand the product.
 14. Walk the steps: **Job Description** → **Resume Review** (10 resumes on a
     timer) → **Group Resume Review** → **Interview Stage** → **Make an Offer**
 15. At **Make an Offer**, pick a candidate and submit. The button then reads
-    *"awaiting advisor approval"*
+    _"awaiting advisor approval"_
 16. Back in the teacher window: **Manage Groups** → CRN 1 → group 1 shows the
     pending offer with accept/reject. Click **accept**
 17. Watch the student window unlock live — that is `makeOfferResponse` arriving
@@ -598,7 +597,7 @@ offer, and require typing `ERASE` or the CRN. Cancel is default-focused.
 
 **3. `TCH-8` — Confirm dialog on per-group "Start Group"** · 2h · GFI
 `frontend/src/app/components/ManageGroupsTab.tsx`. Fires immediately and is
-irreversible, while "Start All" gets a confirm. Also: a group created *after*
+irreversible, while "Start All" gets a confirm. Also: a group created _after_
 "Start All" cannot be started from the toolbar.
 
 **4. `STU-8` — Stop `/jobdes` resetting progress backwards** · 4h · MED
@@ -610,7 +609,7 @@ while their group waits at a barrier. Make progress monotonic server-side.
 
 **5. `STU-15` — Emit before navigating** · 2h · GFI
 `frontend/src/app/res-review/page.tsx`, `frontend/src/app/interview-stage/page.tsx`.
-Both set `window.location.href` and *then* emit `moveGroup`. Navigation can tear
+Both set `window.location.href` and _then_ emit `moveGroup`. Navigation can tear
 down the socket first, so one student advances and their teammates stay behind.
 
 **6. `UI-12` — Build `<Spinner>` / `<PageLoader>`** · 5h · GFI
@@ -666,6 +665,6 @@ beyond imports. Mixing a move with a behaviour change makes review impossible.
 1. **[AGENTS.md](AGENTS.md)** — the rules file. Applies to humans and AI agents
 2. **[docs/WHAT_IS_NUHIRE.md](docs/WHAT_IS_NUHIRE.md)** — the product, no code
 3. **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — deeper on the code.
-   **Stale on the barrier** (see §5); fixing it is a ticket
+   deeper on the code
 4. **[TICKETS.md](TICKETS.md)** — the backlog
 5. **[CLEANUP.md](CLEANUP.md)** — small jobs if you have a spare hour

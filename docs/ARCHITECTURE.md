@@ -91,9 +91,13 @@ This is the single most common mistake in this codebase. Always carry both.
 `Resume_pdfs.id`. Looking up `Candidates` by `id` silently returns the wrong
 person. Join on `resume_id`.
 
-**`Resume` has no unique key.** So the `ON DUPLICATE KEY UPDATE` in `submitVote`
-never fires, and every vote change inserts a new row instead of updating. A
-student who changes their mind ten times looks like ten reviewed resumes.
+**Schema fixes live in `database-files/migrations/`, not the dump.**
+`Pandployer.sql` only ever runs against an empty database, so editing it fixes
+new environments and does nothing to one with real data. `Resume` originally
+had no unique key, so the `ON DUPLICATE KEY UPDATE` in `submitVote` never fired
+and every vote change appended a row — a student who changed their mind ten
+times counted as ten reviewed resumes. Migration `001` added the key. Read that
+directory's README before changing any table.
 
 ---
 
@@ -119,14 +123,25 @@ SQL strings live inside controllers.
 Reading an endpoint: start in `routes/`, which tells you the path, the middleware,
 and the controller method. Then read that method.
 
-### Auth middleware, and what's missing
+### Auth middleware
 
-`requireAuth`, `requireAdmin`, `requireStudent` all exist in
-`middleware/auth.middleware.ts`. `requireAuth` is used widely. **`requireAdmin`
-and `requireStudent` are applied to essentially nothing.**
+Four guards in `middleware/auth.middleware.ts`:
 
-So any logged-in student can call teacher endpoints. And `requireAuth` only
-proves you're logged in, never that the group in the URL is _yours_.
+| Guard              | Checks                                             |
+| ------------------ | -------------------------------------------------- |
+| `requireAuth`      | logged in. Nothing else                            |
+| `requireAdmin`     | logged in **and** `affiliation === 'admin'`        |
+| `requireStudent`   | logged in **and** `affiliation === 'student'`      |
+| `requireModerator` | the legacy moderator session **or** `requireAdmin` |
+
+`requireAdmin` now covers the group, job, csv, facts, delete, upload and offer
+mutations. It used to be applied to nothing, which meant any logged-in student
+could start groups or accept their own offer.
+
+**Still open:** `requireAuth` proves you are logged in, never that the group in
+the URL is _yours_. Several endpoints still take `group_id` and `student_id`
+from the request body without checking them against the session. Do not copy
+that pattern — see rule 1 in `AGENTS.md`.
 
 ---
 
@@ -160,21 +175,35 @@ professor popups, step transitions, and offer approvals.
 **1. The group barrier.** Several steps wait for every group member to finish
 before anyone advances. This is the core of the group mechanic.
 
-**2. That barrier lives in process memory.** Not the database. A plain
-JavaScript object. If the API restarts mid-class, it's gone and **the group is
-stuck forever with no way out**. It also means the API can never run more than
-one replica, because half the group would land on a different process that
-doesn't know about the other half.
+**2. The barrier lives in the database.** `Step_Completion`, one row per
+student per step. `evaluateGroupBarrier` in `socket.ts` answers "has every
+current member finished?" **by query, every time** — on completion, on room
+join, on a roster change, and from `GET /groups/barrier-status`.
 
-**3. There is no teacher override.** The `moveGroup` event is only ever emitted by
-students. No professor UI sends it. When a group deadlocks, her only fix is
-editing the database.
+It used to be a plain object in process memory. An API restart wiped it: the
+students who had already finished never re-announced, so the group restarted at
+0 and could never reach its total again. Rows in MySQL survive a restart, so the
+same question can be asked as often as anyone needs.
+
+Two details worth knowing. Only completions belonging to a **current** member
+count, because a student moved between groups leaves their row behind. And an
+empty roster is treated as unknown, not finished, so `0 >= 0` cannot walk a
+student through a barrier before their group has anyone in it.
+
+**3. The teacher has an override.** `POST /groups/force-advance`, admin only.
+A deadlocked group no longer needs someone editing the database mid-class.
 
 ### Also true of sockets here
 
-- No authentication at all. Any client can emit any event.
-- Several handlers use `io.emit`, which broadcasts to every connected client in
-  every class, instead of emitting to a room.
+- `io.use` reads the login session off the handshake, and a student cannot join
+  another group's room. Dropping unauthenticated sockets entirely is behind
+  `SOCKET_AUTH_REQUIRED`, which is **off** until someone tests it with two real
+  browser sessions.
+- Zero bare `io.emit` calls remain. Everything is room-scoped. The advisor
+  dashboard is not in the group room, so use `emitToClassModerators` to reach a
+  class's teachers.
+- `onlineStudents` is still process memory, which is why `INSTANCE_COUNT` must
+  stay at 1.
 
 ---
 
@@ -202,12 +231,19 @@ Next.js App Router: a folder under `app/` becomes a URL.
 - `socketContext` — the shared Socket.IO connection
 - `useProgress` — the step gate
 
-### How gating works, and why it's weak
+### How gating works, and why it's still weak
 
-`components/useProgress.tsx` reads `localStorage.progress` and redirects if you
-shouldn't be on a page. **Client-side only**, so devtools defeats it. And when it
-blocks you it redirects to `/${progress}`, producing `/res_1`, which isn't a
-route, so the guard itself 404s.
+`components/useProgress.tsx` decides whether you are allowed on a step page. It
+waits for auth to resolve, fetches your step from the server, and takes
+whichever of the server value and the cached value is **further along** — so one
+failed request cannot throw a student back to the dashboard mid-activity.
+
+`STEP_TO_ROUTE` in that file is the one table translating a `Progress.step`
+value to a route. It used to redirect to `/${progress}`, producing `/res_1`,
+which is not a route, so the guard itself 404'd.
+
+**Still client-side**, so devtools defeats it. Server-side step enforcement is
+still an open ticket. Treat this as UX, not security.
 
 ### The professor's cockpit
 
