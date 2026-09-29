@@ -48,16 +48,14 @@ popups, step transitions, and offer approvals.
 See **[.local/README.md](.local/README.md)** for the full runbook, including
 seeded test accounts.
 
+With Docker Desktop running:
+
 ```bash
-docker compose -f .local/compose.yaml up -d   # MySQL + Keycloak
-npm run dev:api
-npm run dev:frontend
+docker compose up --watch OR npm run all
 ```
 
-Then open http://localhost:3000.
-
-MySQL and Keycloak run in Docker. The API and frontend run on the host, because
-Keycloak has to be reachable at the same URL from both the browser and the API.
+That builds and starts MySQL, Keycloak, the API and the frontend, and reloads
+the API and frontend when you save. Open http://localhost:3000 once the logs settle. Ctrl+C stops everything. `npm run all` does the same thing.
 
 ### Test logins
 

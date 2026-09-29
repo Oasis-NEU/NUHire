@@ -355,32 +355,36 @@ the Coolify service has to stay at 1 too.
 
 ### Prerequisites
 
-- **Node 22** (`.nvmrc` pins it — `nvm use`)
 - **Docker Desktop**, running
 - **git**
+- **Node 22** (`.nvmrc` pins it — `nvm use`). Not needed to run the app, which
+  is all in Docker, but your editor needs `npm run install:all` for types, and
+  `typecheck` and `format` run on the host.
 
 ### Steps
 
 ```bash
 git clone git@github.com:Khoury-Co-op/NUHire.git
 cd NUHire
-npm run install:all
-
-cp api/.env.example api/.env
-cp frontend/.env.example frontend/.env.local
-
-npm run dev:services      # MySQL + Keycloak in Docker
-npm run dev:api           # builds, then runs the API
-npm run dev:frontend      # in a second terminal
+npm run all
 ```
 
-Open http://localhost:3000.
+That builds and starts MySQL, Keycloak, the API and the frontend in one
+terminal. The first run downloads images and builds the two app images, about
+two minutes, but later starts take seconds. Open http://localhost:3000 once the API
+logs `Server running`. Ctrl+C stops everything.
 
-First run pulls images and imports the Keycloak realm, so give it a minute.
-Check both containers:
+Saving a file under `api/src` or `frontend/src` reloads that app within a
+couple of seconds. Changing a `package-lock.json` rebuilds its image.
+
+**On Windows, use WSL2** and clone into the Linux side (`~/...`, not
+`/mnt/c/...`), with Docker Desktop's WSL integration turned on for your distro.
+
+To run the API and frontend on the host instead, for a debugger, see
+`.local/README.md`.
 
 ```bash
-docker compose -f .local/compose.yaml ps
+docker compose ps                    # all four up; db and keycloak (healthy)
 curl http://localhost:5001/health
 ```
 
@@ -423,7 +427,7 @@ npm run build        # both packages
 npm run typecheck    # tsc --noEmit in both
 npm run format       # prettier
 
-docker compose -f .local/compose.yaml down -v   # nuke DB + reseed on next up
+docker compose down -v   # nuke DB + reseed on next up
 ```
 
 ---
@@ -433,7 +437,8 @@ docker compose -f .local/compose.yaml down -v   # nuke DB + reseed on next up
 **Do not use `npm run dev` inside `api/`.** The `ts-node` script throws TS2769
 on `auth.routes.ts` — the lockfile pins `@types/express@5` against `express@4`.
 `tsc` itself passes, so `npm run dev:api` (build then start) works. Consequence:
-**no hot reload on the API**, you rebuild. The frontend hot-reloads normally.
+**no API hot reload when you run it on the host**, you rebuild. In Docker it
+hot-reloads through `tsc --watch` instead.
 
 **One browser can only hold one login.** Keycloak SSO is shared across tabs, so
 a second tab silently keeps your first identity. Use a **private/incognito
@@ -449,9 +454,11 @@ app is broken. It isn't. Do the teacher steps first.
 `docker-entrypoint-initdb.d`, which only fires when the data directory is empty.
 Changed the schema? `down -v` and back up.
 
-**Migrations are files, not automatic.** `database-files/migrations/001..005`
-exist but there is no runner. **[UNVERIFIED]** whether they are applied to your
-local DB by anything; read `database-files/migrations/README.md` before assuming.
+**Migrations are files, not automatic, yet.** A fresh database already has every
+file in `database-files/migrations/`, because `Pandployer.sql` includes them.
+One created before a migration was added does not, and nothing applies it for
+you until OAS-93 makes the API run them at start. Until then, apply by hand per
+`database-files/migrations/README.md`, or reset with `docker compose down -v`.
 
 **`candidate_id` is not `Candidates.id`.** Throughout the app it holds a
 `Resume_pdfs.id`. Looking up `Candidates` by `id` silently returns the **wrong

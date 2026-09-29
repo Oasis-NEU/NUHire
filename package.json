@@ -12,7 +12,8 @@
   },
   "scripts": {
     "install:all": "npm install && npm --prefix api install && npm --prefix frontend install",
-    "dev:services": "docker compose -f .local/compose.yaml up -d",
+    "all": "docker compose up --watch",
+    "dev:services": "docker compose -f .local/compose.yaml up -d --wait",
     "dev:api": "npm --prefix api run build && npm --prefix api start",
     "dev:frontend": "npm --prefix frontend run dev",
     "build": "npm --prefix api run build && npm --prefix frontend run build",

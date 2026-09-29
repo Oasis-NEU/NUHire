@@ -41,10 +41,11 @@ fires on push to `main`. Not Render, not Railway, whatever old docs say.
 See `.local/README.md`. Short version:
 
 ```
-docker compose -f .local/compose.yaml up -d
-npm run dev:api
-npm run dev:frontend
+docker compose up --watch
 ```
+
+That runs MySQL, Keycloak, the API and the frontend in Docker, with hot reload for both apps. MySQL and Keycloak are defined in `.local/compose.yaml`,
+and the root `compose.yaml` extends them; change them there, not in both.
 
 Do **not** use `npm run dev` in `api/`. The `ts-node` script throws TS2769 on
 `auth.routes.ts` because the lockfile pins `@types/express@5` against
