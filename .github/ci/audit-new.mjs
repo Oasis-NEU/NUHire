@@ -51,13 +51,19 @@ function baseCopy(dir) {
   return tmp;
 }
 
-const added = [];
+// An advisory counts as new only if no package on the base branch has it. One
+// already in frontend, pulled into the root by a new tool, is the same known
+// problem, and some (braces) have no fixed version to upgrade to.
+const onBase = new Set();
+const after = [];
 for (const dir of PACKAGES) {
   const before = audit(baseCopy(dir));
-  const after = audit(dir);
-  console.log(`${dir}: ${after.size} advisories (${before.size} on the base branch)`);
-  for (const [id, a] of after) if (!before.has(id)) added.push({ dir, ...a });
+  const current = audit(dir);
+  console.log(`${dir}: ${current.size} advisories (${before.size} on the base branch)`);
+  for (const id of before.keys()) onBase.add(id);
+  for (const a of current.values()) after.push({ dir, ...a });
 }
+const added = after.filter((a) => !onBase.has(a.source));
 
 if (added.length) {
   const lines = added.map(
