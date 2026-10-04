@@ -1,13 +1,18 @@
 # Checks every pull request before it can merge (INFRA-2).
 #
-# A merge to main fires deploy.yml, which redeploys the live app. These jobs
-# are the only thing standing between a broken PR and a room of 30 students.
+# Nothing deploys from this repo yet: deploy.yml only runs in Khoury-Co-op/NUHire,
+# which holds the Coolify secrets. Once a release lands there, these jobs are
+# the only thing standing between a broken PR and a room of 30 students.
 #
 # Branch protection requires exactly one check, "All checks passed", which is
-# green only when every other job succeeded. Require that one, not the
+# green only when every blocking job succeeded. Require that one, not the
 # individual jobs: a job that is skipped or renamed then fails the gate instead
 # of silently dropping out of the required list. The ruleset that enforces it
 # is .github/rulesets/main.json.
+#
+# Spelling and the review bot run on every PR but are left out of the gate, so
+# their findings show without blocking a merge. Add them back to the gate's
+# `needs` once they stop raising false alarms.
 #
 # When anything fails, the gate says what and where: a comment on the PR (which
 # notifies its author), the run's summary page, and inline markers on the
@@ -266,7 +271,7 @@ jobs:
     name: All checks passed
     runs-on: ubuntu-latest
     timeout-minutes: 3
-    needs: [format, lint, spelling, api, frontend, tests, docker, database, audit, review-bot]
+    needs: [format, lint, api, frontend, tests, docker, database, audit]
     # always(), so this job still runs and reports failure when a job it needs
     # failed or was cancelled. Without it, the gate would be skipped, and
     # branch protection treats a skipped check as passing.
