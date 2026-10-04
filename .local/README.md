@@ -9,9 +9,9 @@ nothing in here should ever become one.
 
 From the repo root, with Docker Desktop running:
 
-    docker compose up --watch OR npm run all
+    npm run all
 
-The root `compose.yaml` extends MySQL and Keycloak from
+The root `compose.dev.yaml` extends MySQL and Keycloak from
 [`compose.yaml`](compose.yaml) in this folder and adds the API and frontend.
 Keycloak has to be reachable at the _same_ URL from the browser and from the
 API (OAuth redirect, then a server-side token exchange), so the API container
@@ -80,11 +80,11 @@ with the job descriptions and resumes the API seeds for `class_id = 1`.
 
 ## Reset the database
 
-    docker compose -f .local/compose.yaml down -v && docker compose -f .local/compose.yaml up -d
+    npm run reset && npm run all
 
 ## Stop
 
-    docker compose -f .local/compose.yaml down
+    npm run down
 
 ## Source changes this needed
 

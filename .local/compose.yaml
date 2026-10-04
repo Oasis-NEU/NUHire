@@ -1,4 +1,4 @@
-# MySQL and Keycloak, extended by the root compose.yaml. On its own: `npm run dev:services`.
+# MySQL and Keycloak, extended by the root compose.dev.yaml. On its own: `npm run dev:services`.
 name: nuhire-local
 
 services:

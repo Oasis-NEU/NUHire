@@ -1,29 +1,36 @@
-# Local dev only: `docker compose up --watch`. MySQL and Keycloak live in .local/compose.yaml.
-name: nuhire-local
+version: '3.8'
 
 services:
   db:
-    extends:
-      file: .local/compose.yaml
-      service: db
-
-  keycloak:
-    extends:
-      file: .local/compose.yaml
-      service: keycloak
+    image: mysql:latest
+    container_name: panployer-mysql
+    platform: linux/amd64
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
-      - '5001:5001'
+      - '${DB_PORT}:3306'
+    healthcheck:
+      test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database-files:/docker-entrypoint-initdb.d:ro
 
   api:
-    build:
-      context: ./api
-      dockerfile: dockerfile.dev
-    init: true
-    # So localhost:8080 is Keycloak for the API as well as the browser.
-    network_mode: 'service:keycloak'
-    env_file: ./api/.env.example
-    environment:
-      DATABASE_URL: mysql://root:nuhire@db:3306/nuhire
+    platform: linux/amd64
+    build: ./api
+    container_name: api_container
+    # on-failure:5 meant the fifth crash in a class ended the class.
+    restart: unless-stopped
+    ports:
+      - '${API_PORT}:5001'
     healthcheck:
       test:
         [
@@ -32,41 +39,30 @@ services:
           '-e',
           "fetch('http://127.0.0.1:5001/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
         ]
-      interval: 10s
+      interval: 15s
       timeout: 5s
       retries: 3
       start_period: 30s
     depends_on:
       db:
         condition: service_healthy
-      keycloak:
-        condition: service_healthy
-    develop:
-      watch:
-        - action: sync
-          path: ./api/src
-          target: /apicode/src
-        - action: rebuild
-          path: ./api/package-lock.json
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
 
   frontend:
+    platform: linux/amd64
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
-    init: true
-    env_file: ./frontend/.env.example
+      dockerfile: Dockerfile.prod
+    container_name: frontend_container
     ports:
-      - '3000:3000'
-    develop:
-      watch:
-        - action: sync
-          path: ./frontend/src
-          target: /app/src
-        - action: sync
-          path: ./frontend/public
-          target: /app/public
-        - action: rebuild
-          path: ./frontend/package-lock.json
+      - '${FRONTEND_PORT}:3000'
+    depends_on:
+      - api
 
 volumes:
   db_data:
+  apicode:

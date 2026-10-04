@@ -364,7 +364,7 @@ the Coolify service has to stay at 1 too.
 ### Steps
 
 ```bash
-git clone git@github.com:Khoury-Co-op/NUHire.git
+git clone git@github.com:Oasis-NEU/NUHire.git
 cd NUHire
 npm run all
 ```
@@ -384,7 +384,7 @@ To run the API and frontend on the host instead, for a debugger, see
 `.local/README.md`.
 
 ```bash
-docker compose ps                    # all four up; db and keycloak (healthy)
+docker compose -f compose.dev.yaml ps   # all four up; db and keycloak (healthy)
 curl http://localhost:5001/health
 ```
 
@@ -427,7 +427,7 @@ npm run build        # both packages
 npm run typecheck    # tsc --noEmit in both
 npm run format       # prettier
 
-docker compose down -v   # nuke DB + reseed on next up
+npm run reset   # nuke DB + reseed on next npm run all
 ```
 
 ---
@@ -458,7 +458,7 @@ Changed the schema? `down -v` and back up.
 file in `database-files/migrations/`, because `Pandployer.sql` includes them.
 One created before a migration was added does not, and nothing applies it for
 you until OAS-93 makes the API run them at start. Until then, apply by hand per
-`database-files/migrations/README.md`, or reset with `docker compose down -v`.
+`database-files/migrations/README.md`, or reset with `npm run reset`.
 
 **`candidate_id` is not `Candidates.id`.** Throughout the app it holds a
 `Resume_pdfs.id`. Looking up `Candidates` by `id` silently returns the **wrong

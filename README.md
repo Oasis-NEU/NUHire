@@ -51,11 +51,11 @@ seeded test accounts.
 With Docker Desktop running:
 
 ```bash
-docker compose up --watch OR npm run all
+npm run all
 ```
 
 That builds and starts MySQL, Keycloak, the API and the frontend, and reloads
-the API and frontend when you save. Open http://localhost:3000 once the logs settle. Ctrl+C stops everything. `npm run all` does the same thing.
+the API and frontend when you save. Open http://localhost:3000 once the logs settle. Ctrl+C stops everything.
 
 ### Test logins
 
