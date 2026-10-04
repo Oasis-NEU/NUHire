@@ -37,6 +37,7 @@ finish before anyone continues.
 | API      | Express, TypeScript, Socket.IO, Passport                      |
 | Database | MySQL                                                         |
 | Auth     | Keycloak (OIDC), moving to Khoury IT SSO                      |
+| Local    | Docker (every service runs in a container)                    |
 | Deploy   | Coolify on a Khoury self-hosted runner                        |
 
 Real-time behaviour runs over Socket.IO. Groups occupy a room named
@@ -48,9 +49,12 @@ popups, step transitions, and offer approvals.
 See **[.local/README.md](.local/README.md)** for the full runbook, including
 seeded test accounts.
 
-With Docker Desktop running:
+You need **Docker Desktop** and **git**. Node 22 is only for your editor and
+running checks on your machine. On Windows, Docker Desktop needs WSL2.
 
 ```bash
+git clone git@github.com:Oasis-NEU/NUHire.git
+cd NUHire
 npm run all
 ```
 
