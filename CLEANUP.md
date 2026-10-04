@@ -1174,14 +1174,14 @@ at `:351-357`.
 
 23 files each declare `const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL`.
 One reads it as `apiUrl`, one inside a component body, and two carry a comment
-pointing at an old Render URL. If the variable is unset, every page quietly
+pointing at a dead API host. If the variable is unset, every page quietly
 fetches `undefined/...`, which is the bug `AGENTS.md` rule 11 describes.
 
 ### Evidence
 
 ```bash
 grep -rn "NEXT_PUBLIC_API_BASE_URL" frontend/src | wc -l   # 24
-grep -rn "render.com" frontend/src
+grep -rn "https://nuhire-api" frontend/src
 ```
 
 ### For an agent
@@ -1333,7 +1333,7 @@ it. These are wrong today.
   transaction". There is no transaction; it is one multi-row INSERT.
 - `jobdes/page.tsx:145`: `// Update your fetchJob useEffect in jobdes/page.tsx`,
   an instruction pasted from a chat.
-- `app/page.tsx:10` and `adminFacts/page.tsx:5` point at an old Render URL. The
+- `app/page.tsx:10` and `adminFacts/page.tsx:5` point at a dead API host. The
   app deploys on Coolify.
 
 ### For an agent
