@@ -7,6 +7,8 @@ import { AuthRequest } from '../models/types';
 import { Pool, RowDataPacket } from 'mysql2';
 import { emitToClassModerators } from '../config/socket';
 
+const STEP_ORDER = ['none', 'job_description', 'res_1', 'res_2', 'interview', 'offer', 'employer'];
+
 export class ProgressController {
   constructor(
     private db: Pool,
@@ -53,11 +55,21 @@ export class ProgressController {
       return;
     }
 
+    const stepIndex = STEP_ORDER.indexOf(step) + 1;
+    //indexing starts from 1
+    if (stepIndex === 0) {
+      res.status(400).json({ error: `Invalid step: ${step}` });
+      return;
+    }
+
+        // Only move forward. A stored NULL counts as "not started", so it always
+    // takes the incoming step. One statement, so two racing requests can't
+    // both read the old value.
     this.db.query(
       `INSERT INTO Progress (crn, group_id, step, email) 
        VALUES (?, ?, ?, ?) 
-       ON DUPLICATE KEY UPDATE step = VALUES(step)`,
-      [crn, group_id, step, email],
+       ON DUPLICATE KEY UPDATE step = IF(step IS NULL OR step + 0 < ?, VALUES(step), step)`,
+      [crn, group_id, step, email, stepIndex],
       (err) => {
         if (err) {
           console.error('Error updating progress:', err);
@@ -65,28 +77,44 @@ export class ProgressController {
           return;
         }
 
-        this.io.to(`group_${group_id}_class_${crn}`).emit('progressUpdated', {
-          crn,
-          group_id,
-          step,
-          email,
-        });
-        // The advisor dashboard is not in the group room, so tell the class's
-        // moderators directly rather than every connected client.
-        emitToClassModerators(this.io, this.db, crn, 'progressUpdated', {
-          crn,
-          group_id,
-          step,
-          email,
-        });
+        this.db.query(
+          'SELECT step FROM Progress WHERE email = ?',
+          [email],
+          (selectErr, rows) => {
+            if (selectErr) {
+              console.error('Error reading back progress:', selectErr);
+              res.status(500).json({ error: selectErr.message });
+              return;
+            }
 
-        res.json({
-          success: true,
-          message: 'Progress updated successfully',
-        });
+            const storedStep = (rows as RowDataPacket[])[0]?.step;
+
+            // if same step as stored step
+            if (storedStep === step) {
+              this.io.to(`group_${group_id}_class_${crn}`).emit('progressUpdated', {
+                crn,
+                group_id,
+                step,
+                email,
+              });
+              
+              emitToClassModerators(this.io, this.db, crn, 'progressUpdated', {
+                crn,
+                group_id,
+                step,
+                email,
+              });
+            }
+
+            res.json({
+              success: true,
+              message: 'Progress updated successfully',
+            });
+          }
+        );
       }
     );
-  };
+``}
 
   // --- Group-selection confirmations (res-review-group) -------------------
   //
