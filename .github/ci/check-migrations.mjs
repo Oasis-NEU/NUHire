@@ -4,15 +4,18 @@
 //   - a change to Pandployer.sql comes with a new migration in the same PR
 //   - a migration already on the base branch is never edited, renamed or deleted
 //   - new migrations are named NNN-short-name.sql and continue the numbering
+//   - every migration has the `-- migrate:up` and `-- migrate:down` lines
+//     dbmate needs to run it (npm run db:migrate, and on every API start)
 //
 // Whether the migrations actually run, twice, is checked separately in CI
 // against a real MySQL.
 import { execFileSync } from 'node:child_process';
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 
 const DIR = 'database-files/migrations';
 const SCHEMA = 'database-files/Pandployer.sql';
 const NAME = /^(\d{3})-[a-z0-9]+(?:-[a-z0-9]+)*\.sql$/;
+const DBMATE_MARKER = /^-- migrate:(up|down)\b/;
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 const base = process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : 'origin/main';
@@ -24,12 +27,25 @@ const changes = git('diff', '--name-status', '-M', mergeBase, 'HEAD')
   .filter(Boolean)
   .map((line) => line.split('\t'));
 
+// True when an edit only adds or removes dbmate's marker lines (and blank
+// lines). Those are SQL comments to MySQL, so the migration still does exactly
+// what it did when it was applied.
+function onlyDbmateMarkers(path) {
+  return git('diff', '-U0', mergeBase, 'HEAD', '--', path)
+    .split('\n')
+    .filter((line) => /^[+-]/.test(line) && !/^(\+\+\+|---) /.test(line))
+    .map((line) => line.slice(1))
+    .every((line) => line.trim() === '' || DBMATE_MARKER.test(line));
+}
+
 const errors = [];
 const added = [];
 for (const [status, path, renamedTo] of changes) {
   if (!path.startsWith(`${DIR}/`) || !path.endsWith('.sql')) continue;
   if (status === 'A') {
     added.push(path.slice(DIR.length + 1));
+  } else if (status === 'M' && onlyDbmateMarkers(path)) {
+    continue;
   } else {
     const what = { M: 'edited', D: 'deleted' }[status[0]] ?? `renamed to ${renamedTo}`;
     errors.push(
@@ -63,6 +79,19 @@ for (const file of added.sort()) {
     );
   }
   next = Number(match[1]) + 1;
+}
+
+// dbmate refuses a migration without both blocks, and the API runs dbmate
+// before it starts, so a migration missing one would stop the API booting.
+for (const file of readdirSync(DIR).filter((f) => NAME.test(f))) {
+  const lines = readFileSync(`${DIR}/${file}`, 'utf8').split('\n');
+  for (const block of ['up', 'down']) {
+    if (!lines.some((line) => line.startsWith(`-- migrate:${block}`))) {
+      errors.push(
+        `${DIR}/${file} has no \`-- migrate:${block}\` line. dbmate needs one to run it.`
+      );
+    }
+  }
 }
 
 // The directory on disk and the numbering must agree too, so two PRs that both

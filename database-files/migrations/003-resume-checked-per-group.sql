@@ -1,3 +1,4 @@
+-- migrate:up
 -- 003: make `Resume.checked` agree with what writes it.
 --
 -- `checked` is the GROUP's shortlist, not one student's opinion. The only
@@ -50,3 +51,5 @@ JOIN (
   AND g.`resume_number` = r.`resume_number`
 SET r.`checked` = g.group_checked
 WHERE r.`checked` <> g.group_checked;
+
+-- migrate:down
