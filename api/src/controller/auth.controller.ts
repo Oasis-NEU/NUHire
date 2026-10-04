@@ -114,7 +114,7 @@ export class AuthController {
             if (err) {
               console.error('Database error:', err);
               setCookieAndRedirect(`${FRONT_URL}/?error=db_error`);
-              return;
+              return; // test comment
             }
 
             if (results.length > 0) {
