@@ -322,7 +322,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
         if (!groups || groups.length === 0) return;
 
         let query = "SELECT email FROM Users WHERE group_id IN (?) AND affiliation = 'student'";
-        let params: any[] = [groups];
+        const params: (number[] | number)[] = [groups];
 
         if (classId) {
           query += ' AND class = ?';
