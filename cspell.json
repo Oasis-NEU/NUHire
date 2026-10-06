@@ -22,7 +22,6 @@
     "ACMR",
     "Aarav",
     "apicode",
-    "audreynge",
     "Carbonite",
     "checkint",
     "cookieless",
@@ -93,6 +92,14 @@
     "yourinitials",
     "youtu",
     "Zhiyuan"
+  ],
+  // Each SELF-WORK.md entry names its branch, which usually starts with
+  // someone's GitHub handle. Skip those lines instead of listing every handle.
+  "overrides": [
+    {
+      "filename": "SELF-WORK.md",
+      "ignoreRegExpList": ["/^- \\*\\*Branch:\\*\\*.*$/gm"]
+    }
   ],
   // The landing page spells out the acronym one letter per line ("N" +
   // "ortheastern", "U" + "niversity's"...), so the rest of each word stands alone.
