@@ -390,7 +390,10 @@ curl http://localhost:5001/health
 
 ### Every env var
 
-**`api/.env`** — copy from `api/.env.example`, the defaults work as-is.
+**`api/.env`** — copy from `api/.env.example`, the defaults work as-is. Under
+`npm run all` this file is optional: Docker reads the example, then `api/.env`
+on top if it exists, so use it for your own overrides instead of editing the
+example. `DATABASE_URL` is always set by compose there.
 
 | Var                      | Local value                                    | What it does                                                                                                                                                                              |
 | ------------------------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -413,7 +416,7 @@ curl http://localhost:5001/health
 | `INSTANCE_COUNT`         | `1`                                            | Leave at 1. See the barrier section                                                                                                                                                       |
 | `SOCKET_AUTH_REQUIRED`   | `false`                                        | Drop unauthenticated sockets. Off until someone tests it with two real sessions                                                                                                           |
 
-**`frontend/.env.local`**
+**`frontend/.env.local`** — likewise an optional override under `npm run all`.
 
 | Var                        | Local value             | What it does                                                                                                                                                              |
 | -------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
