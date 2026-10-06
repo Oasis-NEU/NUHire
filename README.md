@@ -73,6 +73,10 @@ Seeded into the local Keycloak realm and the local database. **Password is
 | `student2@northeastern.edu` | student |
 | `student3@northeastern.edu` | student |
 
+For a full class of 30, run `npm run seed`: it adds `advisor01@example.test` and
+`student01@example.test` to `student30@example.test` (same password). See
+[`.local/tests/README.md`](.local/tests/README.md).
+
 These are fake accounts in a local-only stack. The password is already in
 `.local/realm-export.json`, which is how the realm gets seeded. Nothing here
 touches a real system.

@@ -78,6 +78,31 @@ a plain env-var check: `admin` / `admin`.
 row with `INSERT IGNORE` and `crn` is UNIQUE, so ours wins and class 1 lines up
 with the job descriptions and resumes the API seeds for `class_id = 1`.
 
+## A full class (30 students)
+
+The four accounts above are enough for one or two people. To see the app at the
+size of the pilot, with the messy cases a real roster has, build the simulated
+class:
+
+    npm run seed          # needs the stack up (npm run all)
+    npm run seed:check    # logs in all 30 students and the teacher
+
+That creates `advisor01@example.test` and `student01@example.test` to
+`student30@example.test` (password `nuhire`) in class 9001, in 8 groups, with a
+student who never logs in, one with no group and a group of one. To start from
+later in the activity, add a scenario, for example
+`npm run seed -- --scenario=waiting-on-group`. Its own README,
+[tests/README.md](tests/README.md), has the roster, the scenarios, how the fake
+students log in and why, and the other commands (`seed:wipe`, `seed:reset`).
+
+The local Keycloak realm now also accepts `@example.test` addresses (it only
+took `@northeastern.edu` before). A Keycloak container created before that needs
+`docker compose -f compose.dev.yaml up -d --force-recreate keycloak api` to pick
+it up; `npm run seed` tells you if it does.
+
+`npm run down` then `npm run all` recreates Keycloak without its users but
+keeps the database, so run `npm run seed` again afterwards.
+
 ## Reset the database
 
     npm run reset && npm run all
