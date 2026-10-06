@@ -47,7 +47,7 @@ start.** Those break in ways you won't see until a full class is on it.
 
 - **Who:** Audrey
 - **What:** Drop `process/lockfile-drift` (CI's `npm ci` already catches real drift), make `process/dependency-added` compare parsed JSON, and narrow `process/deploy-path-changed` to the files Coolify actually uses.
-- **Why it matters:** PR #1 was blocked by a lockfile error for adding scripts, which can't change the lockfile.
+- **Why it matters:** [PR #1](https://github.com/Oasis-NEU/NUHire/pull/1) was blocked by a lockfile error for adding scripts, which can't change the lockfile.
 - **Files:** `.github/review-bot/lib/rules/process.mjs`
 - **Touches auth / sockets / schema / deploy?** CI only
 - **Size:** hours
