@@ -238,6 +238,39 @@ jobs:
             done
           done
 
+  # Seeds the simulated 30-student class (INFRA-3) and checks every scenario. It
+  # logs in through real Keycloak and writes rows by the real API's rules, so it
+  # breaks when the login flow, the realm or a table changes; running it here
+  # stops it rotting.
+  seed:
+    name: Simulated class (seed + check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install (npm ci)
+        run: npm ci
+      - name: Start MySQL, Keycloak and the API
+        run: docker compose -f compose.dev.yaml up -d --wait --wait-timeout 420 db keycloak api
+      - name: Seed and check every scenario
+        run: |
+          for scenario in fresh mid-resume-review waiting-on-group interview-stage offers-pending; do
+            echo "::group::$scenario"
+            npm run seed:reset -- --scenario="$scenario"
+            npm run seed:check -- --scenario="$scenario"
+            echo "::endgroup::"
+          done
+      - name: Wipe leaves nothing behind
+        run: npm run seed:wipe -- --yes
+      - name: Show container logs
+        if: failure()
+        run: docker compose -f compose.dev.yaml logs --no-color --tail=150
+
   audit:
     name: Security audit (new vulnerabilities)
     runs-on: ubuntu-latest
@@ -277,7 +310,7 @@ jobs:
     name: All checks passed
     runs-on: ubuntu-latest
     timeout-minutes: 3
-    needs: [format, lint, api, frontend, tests, docker, database, audit]
+    needs: [format, lint, api, frontend, tests, docker, database, seed, audit]
     # always(), so this job still runs and reports failure when a job it needs
     # failed or was cancelled. Without it, the gate would be skipped, and
     # branch protection treats a skipped check as passing.
