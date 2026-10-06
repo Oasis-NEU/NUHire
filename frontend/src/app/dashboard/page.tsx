@@ -66,7 +66,7 @@ const Dashboard = () => {
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
   const [progress, setProgress] = useState<string>('none');
   const [jobDescription, setJobDescription] = useState<string | null>(null);
-  const [jobLoading, setJobLoading] = useState(true);
+  const [_jobLoading, setJobLoading] = useState(true);
   const [flipped, setFlipped] = useState(Array(steps.length).fill(false));
   const { user, loading: userloading } = useAuth();
 
