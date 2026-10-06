@@ -98,3 +98,17 @@ export interface JobOption {
   id: number;
   title: string;
 }
+
+/** `Progress.step`, an ENUM. */
+export type Step =
+  'none' | 'job_description' | 'res_1' | 'res_2' | 'interview' | 'offer' | 'employer';
+
+/** A roster row from `/groups/live/:classId`. */
+export type LiveStudent = Pick<Student, 'id' | 'email' | 'f_name' | 'l_name'> & {
+  group_id: number;
+  started: number;
+  step: Step | null;
+  review_completed_at: string | null;
+  confirmed_at: string | null;
+  online: boolean;
+};

@@ -26,6 +26,7 @@ export default (db: Pool, io: SocketIOServer): Router => {
   // group's progress, so a student able to call it could drag their own team
   // past a step they have not done.
   router.post('/force-advance', requireAdmin, groupController.forceAdvance);
+  router.get('/live/:classId', requireAdmin, groupController.getLiveClass);
 
   // Students read their own group's state from these.
   router.get('/started/:classId/:groupId', requireAuth, groupController.getGroupStarted);

@@ -9,6 +9,7 @@ import { usePathname } from 'next/navigation';
 import Popup from '../components/popup';
 import Slideshow from '../components/slideshow';
 import { useProgressManager } from '../components/progress';
+import { STEP_LABEL } from '../components/useProgress';
 import { useAuth } from '../components/AuthContext';
 import { useSocket } from '../components/socketContext';
 
@@ -20,42 +21,42 @@ const Dashboard = () => {
   const steps = [
     {
       key: 'job_description',
-      label: 'Job Description',
+      label: STEP_LABEL.job_description,
       path: '/jobdes',
       emoji: '📝',
       desc: 'Review your assigned job description.',
     },
     {
       key: 'res_1',
-      label: 'Resume Review',
+      label: STEP_LABEL.res_1,
       path: '/res-review',
       emoji: '📄',
       desc: 'Individually review candidate resumes.',
     },
     {
       key: 'res_2',
-      label: 'Resume Review Group',
+      label: STEP_LABEL.res_2,
       path: '/res-review-group',
       emoji: '👥',
       desc: 'Discuss resumes with your group.',
     },
     {
       key: 'interview',
-      label: 'Interview Stage',
+      label: STEP_LABEL.interview,
       path: '/interview-stage',
       emoji: '🎤',
       desc: 'Interview selected candidates.',
     },
     {
       key: 'offer',
-      label: 'Make an Offer',
+      label: STEP_LABEL.offer,
       path: '/makeOffer',
       emoji: '💼',
       desc: 'Decide which candidate to hire.',
     },
     {
       key: 'employer',
-      label: 'Employer Panel',
+      label: STEP_LABEL.employer,
       path: '/employerPanel',
       emoji: '🚧',
       desc: 'Coming Soon...',
