@@ -26,6 +26,29 @@ const ARTIFACTS = [
   { re: /\.(tsbuildinfo|pid|swp)$/, what: 'a local tooling artifact' },
 ];
 
+const DEPENDENCY_FIELDS = [
+  'dependencies',
+  'devDependencies',
+  'optionalDependencies',
+  'peerDependencies',
+];
+
+/** Every package name a package.json depends on, or null if it does not parse. */
+function dependencyNames(text) {
+  if (text == null) return null;
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  const names = new Set();
+  for (const field of DEPENDENCY_FIELDS) {
+    for (const name of Object.keys(json?.[field] ?? {})) names.add(name);
+  }
+  return names;
+}
+
 export default [
   {
     id: 'process/moved-and-changed',
@@ -126,18 +149,14 @@ export default [
     run(pr) {
       const out = [];
       for (const f of pr.files) {
-        if (!f.path.endsWith('package.json') || f.status === 'D') continue;
-        const added = (pr.addedText(f.path) || '')
-          .split('\n')
-          .map((l) => /^\s*"([^"]+)"\s*:\s*"([^"]+)"\s*,?\s*$/.exec(l.trim()))
-          .filter(Boolean)
-          .map((m) => m[1])
-          .filter(
-            (name) =>
-              !/^(name|version|private|description|main|license|author|homepage|type|scripts|url|keywords|bugs|repository|engines|node)$/.test(
-                name
-              )
-          );
+        if (!/(^|\/)package\.json$/.test(f.path) || f.status === 'D') continue;
+        // Parsed rather than diffed, so scripts and version bumps are not new
+        // dependencies. A file that does not parse fails `npm ci` in CI anyway.
+        const head = dependencyNames(pr.read(f.path));
+        if (!head) continue;
+        const base = f.status === 'A' ? new Set() : dependencyNames(pr.readBase(f.from ?? f.path));
+        if (!base) continue;
+        const added = [...head].filter((name) => !base.has(name));
         if (added.length === 0) continue;
         out.push({
           file: f.path,
