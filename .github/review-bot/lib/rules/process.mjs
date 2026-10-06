@@ -214,13 +214,14 @@ export default [
     doc: 'AGENTS.md - "Deployed via Coolify on a Khoury self-hosted runner"',
     fix: 'Say what you did to verify it, and who can roll it back if a class is starting.',
     run(pr) {
+      // Only what production runs: deploy.yml calls Coolify, which builds
+      // compose.yaml from these two Dockerfiles. Dev and CI files stay out.
       return pr.files
         .filter((f) =>
-          /^(\.github\/workflows\/|Dockerfile|api\/dockerfile|frontend\/Dockerfile|compose\.yaml)/.test(
+          /^(\.github\/workflows\/deploy\.yml|compose\.yaml|api\/dockerfile|frontend\/Dockerfile\.prod)$/.test(
             f.path
           )
         )
-        .filter((f) => !f.path.startsWith('.github/workflows/review'))
         .map((f) => ({
           file: f.path,
           line: 1,
