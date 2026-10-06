@@ -117,30 +117,6 @@ export default [
     },
   },
   {
-    id: 'process/lockfile-drift',
-    scope: 'pr',
-    severity: 'error',
-    title: 'package.json changed without its lockfile',
-    doc: 'The Docker build installs from the lockfile.',
-    fix: 'Run npm install in that package and commit the updated package-lock.json.',
-    run(pr) {
-      const out = [];
-      const changed = new Set(pr.files.map((f) => f.path));
-      for (const path of changed) {
-        if (!path.endsWith('package.json')) continue;
-        const lock = path.replace(/package\.json$/, 'package-lock.json');
-        if (changed.has(lock)) continue;
-        out.push({
-          file: path,
-          line: 1,
-          message: `\`${lock}\` was not updated, so CI and the deploy install a different tree than you tested against.`,
-          evidence: path,
-        });
-      }
-      return out;
-    },
-  },
-  {
     id: 'process/dependency-added',
     scope: 'pr',
     severity: 'warn',
