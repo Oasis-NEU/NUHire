@@ -46,6 +46,23 @@ export async function assertClassIsOurs(conn) {
         `${strangers.map((row) => row.email).join(', ')}. Refusing to continue.`
     );
   }
+
+  // The other direction: our accounts must only live in our class.
+  // clearStudentWork deletes by student id with no class filter (Resumepage has
+  // no class column), so a simulated account someone moved into a real class
+  // would take that class's work with it.
+  const [misplaced] = await conn.query(
+    `SELECT email, class FROM Users WHERE email IN (${placeholders(SIM_EMAILS)})
+       AND (class IS NULL OR class <> ?)`,
+    [...SIM_EMAILS, SIM.crn]
+  );
+  if (misplaced.length > 0) {
+    throw new SeedError(
+      `Simulated accounts outside class ${SIM.crn}: ` +
+        `${misplaced.map((row) => `${row.email} (class ${row.class})`).join(', ')}. ` +
+        `Move them back or delete them first. Refusing to continue.`
+    );
+  }
   return moderators.length > 0;
 }
 

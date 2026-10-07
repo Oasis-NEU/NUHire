@@ -170,7 +170,7 @@ or a barrier deadlock at n=3. Blocks most backend work.
 - [x] Include the messy cases: a student who never signs in, one with NULL group, a group of one, one whose `Progress` points at an old group. (A duplicate pending offer can no longer exist: migration 002 made offers unique per group, so `offers-pending` seeds one pending offer per group.)
 - [x] Fake emails only (`student01@example.test`), never real Northeastern addresses (the local realm's email validator was widened to allow `example.test`)
 - [x] `npm run seed:reset` under 60s
-- [x] Runs in CI so it cannot rot (the `seed` job is in `ci.yml` and the gate; tick this after its first green run)
+- [x] Runs in CI so it cannot rot (the `seed` job is in `ci.yml` and the gate)
 
 Lives in `.local/tests/` (see its README); `seed:check` logs in through the real Keycloak page and asks the real API about each scenario.
 

@@ -14,7 +14,6 @@ override that.
 .local/tests/
   lib/          shared code: env, roster, db, keycloak admin, login, cleanup
   seed/         seed.mjs, wipe.mjs, check.mjs, scenarios.mjs
-  load-tests/   load tests that run against the seeded class
 ```
 
 ## Commands

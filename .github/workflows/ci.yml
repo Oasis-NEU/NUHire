@@ -265,7 +265,7 @@ jobs:
             npm run seed:check -- --scenario="$scenario"
             echo "::endgroup::"
           done
-      - name: Wipe leaves nothing behind
+      - name: Wipe the simulated class
         run: npm run seed:wipe -- --yes
       - name: Show container logs
         if: failure()
