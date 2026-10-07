@@ -98,6 +98,40 @@ export class OfferController {
     });
   };
 
+  getOfferVotes = (req: AuthRequest, res: Response): void => {
+    const { group_id, class_id, candidate_id } = req.params;
+
+    // candidate_id is a Resume_pdfs id, which is what resume_number and InterviewPage.candidate_id hold.
+    const query = `
+      SELECT
+        u.id,
+        u.f_name,
+        u.l_name,
+        r.vote,
+        i.question1,
+        i.question2,
+        i.question3,
+        i.question4
+      FROM Users u
+      LEFT JOIN Resume r
+        ON r.student_id = u.id AND r.group_id = u.group_id AND r.class = u.class AND r.resume_number = ?
+      LEFT JOIN InterviewPage i
+        ON i.student_id = u.id AND i.group_id = u.group_id AND i.class = u.class AND i.candidate_id = ?
+      WHERE u.group_id = ? AND u.class = ? AND u.affiliation = 'student'
+      ORDER BY u.l_name, u.f_name
+    `;
+
+    this.db.query(query, [candidate_id, candidate_id, group_id, class_id], (err, results) => {
+      if (err) {
+        console.error('Error fetching offer votes:', err);
+        res.status(500).json({ error: 'Failed to load offer votes' });
+        return;
+      }
+
+      res.json(results);
+    });
+  };
+
   updateOffer = (req: AuthRequest, res: Response): void => {
     const { offer_id } = req.params;
     const { status } = req.body;

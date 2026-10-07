@@ -84,6 +84,18 @@ export interface Resume {
   checked: DbBool;
 }
 
+/** A row of `InterviewPage`: one student's ratings of one candidate. */
+export interface InterviewRating {
+  student_id: number;
+  group_id: number;
+  class: number;
+  candidate_id: number;
+  question1: number;
+  question2: number;
+  question3: number;
+  question4: number;
+}
+
 /** A row of `Candidates`. */
 export interface Candidate {
   id: number;
