@@ -113,7 +113,7 @@ jobs:
       # The images are what a host actually runs. A Dockerfile can break while
       # both npm builds above still pass.
       - name: Build API image
-        run: docker build -f api/dockerfile -t nuhire-api:ci api
+        run: docker build -f api/dockerfile -t nuhire-api:ci .
       - name: Build frontend image
         run: docker build -f frontend/Dockerfile.prod -t nuhire-frontend:ci frontend
 

@@ -1,3 +1,12 @@
+# Build from the repo root, not from api/:
+#
+#   docker build -f api/dockerfile .
+#
+# `npm start` runs the database migrations before the API starts, and those live
+# in database-files/migrations, outside api/. A build whose context is api/
+# cannot copy them, and the API then refuses to start. What the build may read
+# is limited to api/ and the migrations by api/dockerfile.dockerignore.
+
 # node:18 went EOL in April 2025 and package.json `engines` already says >=22,
 # so the image was running the API on a runtime nothing else in the repo tests
 # against. 22 matches .nvmrc and the engines field.
@@ -9,7 +18,7 @@ WORKDIR /apicode
 
 # `package*.json` deliberately pulls in package-lock.json as well: `npm ci`
 # fails loudly if the lock is missing or out of sync, which is the point.
-COPY package*.json tsconfig.json ./
+COPY api/package*.json api/tsconfig.json ./
 
 # `npm install` re-resolved every semver range at build time, so the image could
 # ship dependency versions that are in no lockfile and that `npm audit` never
@@ -17,19 +26,24 @@ COPY package*.json tsconfig.json ./
 RUN npm ci
 
 # Copy source code
-COPY src/ ./src/
+COPY api/src/ ./src/
 
-COPY uploads/ ./uploads/
+COPY api/uploads/ ./uploads/
+
+# Where `npm run db:migrate` looks for them: ../database-files/migrations,
+# relative to this WORKDIR.
+COPY database-files/migrations/ /database-files/migrations/
 
 # Compile TypeScript
 RUN npm run build
 
 # tsc and its @types are build-only. Dropping them after the build keeps the
-# devDependency tree out of the running image.
+# devDependency tree out of the running image. dbmate is a regular dependency,
+# so it stays: `npm start` needs it.
 RUN npm prune --omit=dev
 
 # Expose backend port
 EXPOSE 5001
 
-# Start the application
+# Runs the migrations, then the API (see the `start` script in package.json).
 CMD ["npm", "start"]

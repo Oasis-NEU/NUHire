@@ -25,7 +25,11 @@ services:
 
   api:
     platform: linux/amd64
-    build: ./api
+    # Repo root, so the image can include database-files/migrations, which the
+    # API runs at startup. See the header of api/dockerfile.
+    build:
+      context: .
+      dockerfile: api/dockerfile
     container_name: api_container
     # on-failure:5 meant the fifth crash in a class ended the class.
     restart: unless-stopped
