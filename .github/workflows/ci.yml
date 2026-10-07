@@ -223,12 +223,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: api/package-lock.json
       - name: Check migration rules
         run: node .github/ci/check-migrations.mjs
       - name: Load schema and seed
         run: |
           mysql -h 127.0.0.1 -uroot -pci nuhire < database-files/Pandployer.sql
           mysql -h 127.0.0.1 -uroot -pci nuhire < .local/seed.sql
+      # The API starts by running dbmate, which runs only each file's up block
+      # and refuses a file whose markers it cannot parse. The mysql loop below
+      # runs whole files, so it would pass a migration the API cannot start
+      # with. No schema_migrations yet, as on an existing database's first start.
+      - name: Install dbmate (npm ci)
+        run: npm ci --prefix api
+      - name: Apply migrations with dbmate
+        run: npm run db:migrate --prefix api
+        env:
+          DATABASE_URL: mysql://root:ci@127.0.0.1:3306/nuhire
       # The README requires every migration to be safe to run twice, so run
       # them all twice, in order.
       - name: Apply migrations twice
