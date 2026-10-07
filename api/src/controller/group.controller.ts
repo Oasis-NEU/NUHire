@@ -718,13 +718,19 @@ export class GroupController {
         sc.completed_at AS review_completed_at,
         gc.confirmed_at
       FROM Users u
-      JOIN GroupsInfo g ON g.class_id = u.class AND g.group_id = u.group_id
-      LEFT JOIN Progress p ON p.email = u.email
+      -- Nothing makes (class_id, group_id) unique, so collapse duplicates rather
+      -- than doubling every member of a duplicated group.
+      LEFT JOIN (
+        SELECT class_id, group_id, MAX(started) AS started
+        FROM GroupsInfo
+        GROUP BY class_id, group_id
+      ) g ON g.class_id = u.class AND g.group_id = u.group_id
+      LEFT JOIN Progress p ON p.email = u.email AND p.crn = u.class AND p.group_id = u.group_id
       LEFT JOIN Step_Completion sc
         ON sc.student_id = u.id AND sc.class = u.class AND sc.group_id = u.group_id AND sc.step = ?
       LEFT JOIN GroupConfirmations gc
         ON gc.student_id = u.id AND gc.class = u.class AND gc.group_id = u.group_id
-      WHERE u.class = ? AND u.affiliation = 'student'
+      WHERE u.class = ? AND u.affiliation = 'student' AND u.group_id IS NOT NULL
       ORDER BY u.group_id, u.l_name, u.f_name
     `;
 

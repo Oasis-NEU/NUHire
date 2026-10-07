@@ -106,7 +106,7 @@ export type Step =
 /** A roster row from `/groups/live/:classId`. */
 export type LiveStudent = Pick<Student, 'id' | 'email' | 'f_name' | 'l_name'> & {
   group_id: number;
-  started: number;
+  started: DbBool | null;
   step: Step | null;
   review_completed_at: string | null;
   confirmed_at: string | null;

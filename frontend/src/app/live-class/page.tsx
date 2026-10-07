@@ -15,6 +15,10 @@ const GATE_FIELD: Partial<Record<Step, 'review_completed_at' | 'confirmed_at'>> 
   res_2: 'confirmed_at',
 };
 
+// Only these pages listen for moveGroup. Anywhere else force-advance writes the
+// rows but nobody's screen moves, so the button would report a fake success.
+const UNSTICKABLE: Step[] = ['res_1', 'res_2', 'interview'];
+
 const LiveClass = () => {
   const { user, loading: userloading } = useAuth();
   const socket = useSocket();
@@ -23,7 +27,9 @@ const LiveClass = () => {
   const [students, setStudents] = useState<LiveStudent[]>([]);
   const [groupSteps, setGroupSteps] = useState<Record<number, Step>>({});
   const [refreshKey, setRefreshKey] = useState(0);
-  const [unstickGroup, setUnstickGroup] = useState<number | null>(null);
+  // The target is fixed when the dialog opens. Recomputing it on Confirm could
+  // skip a step if the group moved on while the dialog was open.
+  const [unstick, setUnstick] = useState<{ groupId: number; from: Step; to: Step } | null>(null);
   const [unsticking, setUnsticking] = useState(false);
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
 
@@ -66,6 +72,7 @@ const LiveClass = () => {
               `${API_BASE_URL}/groups/getProgress/${selectedClass}/${groupId}`,
               { credentials: 'include' }
             );
+            if (!progressResponse.ok) throw new Error(`getProgress ${progressResponse.status}`);
             const { progress }: { progress: Step } = await progressResponse.json();
             return [groupId, progress] as const;
           })
@@ -93,17 +100,26 @@ const LiveClass = () => {
     if (!socket || !user?.email) return;
 
     const joinAdminRoom = () => socket.emit('adminOnline', { adminEmail: user.email });
-    const handleProgressUpdated = () => setRefreshKey((key) => key + 1);
+
+    // A class-wide step change sends ~30 events. Refresh once after they settle,
+    // and only for the class on screen.
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    const handleProgressUpdated = (data?: { crn?: number | string }) => {
+      if (data?.crn !== undefined && String(data.crn) !== selectedClass) return;
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => setRefreshKey((key) => key + 1), 1000);
+    };
 
     if (socket.connected) joinAdminRoom();
     socket.on('connect', joinAdminRoom);
     socket.on('progressUpdated', handleProgressUpdated);
 
     return () => {
+      clearTimeout(refreshTimer);
       socket.off('connect', joinAdminRoom);
       socket.off('progressUpdated', handleProgressUpdated);
     };
-  }, [socket, user?.email]);
+  }, [socket, user?.email, selectedClass]);
 
   const studentName = (student: LiveStudent) =>
     [student.f_name, student.l_name].filter(Boolean).join(' ') || student.email;
@@ -119,8 +135,8 @@ const LiveClass = () => {
   };
 
   const handleUnstick = async () => {
-    const targetStep = unstickGroup === null ? undefined : nextStep(unstickGroup);
-    if (unstickGroup === null || !targetStep) return;
+    if (!unstick) return;
+    const { groupId, to: targetStep } = unstick;
 
     setUnsticking(true);
     try {
@@ -130,7 +146,7 @@ const LiveClass = () => {
         credentials: 'include',
         body: JSON.stringify({
           class_id: selectedClass,
-          group_id: unstickGroup,
+          group_id: groupId,
           target_step: targetStep,
         }),
       });
@@ -138,7 +154,7 @@ const LiveClass = () => {
       if (response.ok) {
         setPopup({
           headline: 'Success',
-          message: `Group ${unstickGroup} moved to ${STEP_LABEL[targetStep]}.`,
+          message: `Group ${groupId} moved to ${STEP_LABEL[targetStep]}.`,
         });
       } else {
         setPopup({ headline: 'Error', message: data.error || 'Failed to unstick group.' });
@@ -148,7 +164,7 @@ const LiveClass = () => {
       setPopup({ headline: 'Error', message: 'Failed to unstick group.' });
     } finally {
       setUnsticking(false);
-      setUnstickGroup(null);
+      setUnstick(null);
       setRefreshKey((key) => key + 1);
     }
   };
@@ -205,20 +221,25 @@ const LiveClass = () => {
             const members = students.filter((student) => student.group_id === groupId);
             const waiting = waitingOn(groupId);
             const next = nextStep(groupId);
+            const step = groupSteps[groupId];
+            const canUnstick = members[0].started === 1 && !!next && UNSTICKABLE.includes(step);
+            // Only flag a group that is partly done; at the start of a step everyone is waiting.
+            const stuck = waiting.length > 0 && waiting.length < members.length;
 
             return (
               <div
                 key={groupId}
-                className={`bg-white rounded-lg shadow-sm p-6 flex flex-col ${waiting.length > 0 ? 'border-4 border-yellow-500' : 'border border-gray-200'}`}
+                className={`bg-white rounded-lg shadow-sm p-6 flex flex-col ${stuck ? 'border-4 border-yellow-500' : 'border border-gray-200'}`}
               >
                 <h3 className="text-lg font-semibold text-gray-900">Group {groupId}</h3>
                 <p className="text-sm text-gray-600 mb-4">
                   {STEP_LABEL[groupSteps[groupId] ?? 'none']}
                 </p>
 
-                {waiting.length > 0 && (
+                {stuck && (
                   <p className="text-sm text-yellow-800 mb-4">
-                    Waiting on: {waiting.map(studentName).join(', ')}
+                    {members.length - waiting.length} of {members.length} done. Waiting on:{' '}
+                    {waiting.map(studentName).join(', ')}
                   </p>
                 )}
 
@@ -238,8 +259,8 @@ const LiveClass = () => {
                 </ul>
 
                 <button
-                  onClick={() => setUnstickGroup(groupId)}
-                  disabled={members[0].started !== 1 || !next}
+                  onClick={() => next && setUnstick({ groupId, from: step, to: next })}
+                  disabled={!canUnstick}
                   className="px-4 py-2 rounded-lg font-medium transition-colors bg-red-600 text-white hover:bg-white hover:text-red-600 border-2 border-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {next ? `Unstick → ${STEP_LABEL[next]}` : 'At the last step'}
@@ -250,15 +271,15 @@ const LiveClass = () => {
         </div>
       </div>
 
-      {unstickGroup !== null && (
+      {unstick && (
         <Popup
-          headline={`Unstick Group ${unstickGroup}?`}
-          message={`Everyone in the group is marked done with ${STEP_LABEL[groupSteps[unstickGroup] ?? 'none']} and moved on. No work is deleted.${
-            waitingOn(unstickGroup).length > 0
-              ? ` Not finished yet: ${waitingOn(unstickGroup).map(studentName).join(', ')}.`
+          headline={`Unstick Group ${unstick.groupId}?`}
+          message={`Everyone in the group is marked done with ${STEP_LABEL[unstick.from]} and moved on to ${STEP_LABEL[unstick.to]}. No work is deleted.${
+            waitingOn(unstick.groupId).length > 0
+              ? ` Not finished yet: ${waitingOn(unstick.groupId).map(studentName).join(', ')}.`
               : ''
           }`}
-          onDismiss={() => setUnstickGroup(null)}
+          onDismiss={() => setUnstick(null)}
           onConfirm={handleUnstick}
           confirmLabel={unsticking ? 'Moving...' : 'Unstick'}
           busy={unsticking}
