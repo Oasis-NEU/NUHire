@@ -2,7 +2,8 @@
 // Enforces database-files/migrations/README.md on a PR's diff (AGENTS.md rule 12):
 //
 //   - a change to Pandployer.sql comes with a new migration in the same PR
-//   - a migration already on the base branch is never edited, renamed or deleted
+//   - a migration already on the base branch is never edited, renamed or deleted,
+//     except to wrap a file from before dbmate in its two marker lines, once
 //   - new migrations are named NNN-short-name.sql and continue the numbering
 //   - every migration has the `-- migrate:up` and `-- migrate:down` lines
 //     dbmate needs to run it (npm run db:migrate, and on every API start)
@@ -15,7 +16,9 @@ import { readdirSync, readFileSync } from 'node:fs';
 const DIR = 'database-files/migrations';
 const SCHEMA = 'database-files/Pandployer.sql';
 const NAME = /^(\d{3})-[a-z0-9]+(?:-[a-z0-9]+)*\.sql$/;
-const DBMATE_MARKER = /^-- migrate:(up|down)\b/;
+// The whole line, so `-- migrate:upper` does not pass for `-- migrate:up`.
+// Anything after a space is a dbmate option, such as `transaction:false`.
+const MARKER = { up: /^-- migrate:up(\s.*)?$/, down: /^-- migrate:down(\s.*)?$/ };
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 const base = process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : 'origin/main';
@@ -27,15 +30,18 @@ const changes = git('diff', '--name-status', '-M', mergeBase, 'HEAD')
   .filter(Boolean)
   .map((line) => line.split('\t'));
 
-// True when an edit only adds or removes dbmate's marker lines (and blank
-// lines). Those are SQL comments to MySQL, so the migration still does exactly
-// what it did when it was applied.
-function onlyDbmateMarkers(path) {
-  return git('diff', '-U0', mergeBase, 'HEAD', '--', path)
-    .split('\n')
-    .filter((line) => /^[+-]/.test(line) && !/^(\+\+\+|---) /.test(line))
-    .map((line) => line.slice(1))
-    .every((line) => line.trim() === '' || DBMATE_MARKER.test(line));
+// True when the edit is exactly the one-time wrap: a file with no dbmate markers
+// gains `-- migrate:up` as its first line and `-- migrate:down` as its last, and
+// nothing else changes. A marker anywhere else, or with an option, changes what
+// dbmate runs, so it is an edit like any other. Once a file has its markers this
+// no longer matches, so it cannot be edited again.
+function isDbmateWrap(path) {
+  const show = (rev) => execFileSync('git', ['show', `${rev}:${path}`], { encoding: 'utf8' });
+  const before = show(mergeBase);
+  return (
+    !/^--\s*migrate:/m.test(before) &&
+    show('HEAD') === `-- migrate:up\n${before}\n-- migrate:down\n`
+  );
 }
 
 const errors = [];
@@ -44,7 +50,7 @@ for (const [status, path, renamedTo] of changes) {
   if (!path.startsWith(`${DIR}/`) || !path.endsWith('.sql')) continue;
   if (status === 'A') {
     added.push(path.slice(DIR.length + 1));
-  } else if (status === 'M' && onlyDbmateMarkers(path)) {
+  } else if (status === 'M' && isDbmateWrap(path)) {
     continue;
   } else {
     const what = { M: 'edited', D: 'deleted' }[status[0]] ?? `renamed to ${renamedTo}`;
@@ -86,7 +92,7 @@ for (const file of added.sort()) {
 for (const file of readdirSync(DIR).filter((f) => NAME.test(f))) {
   const lines = readFileSync(`${DIR}/${file}`, 'utf8').split('\n');
   for (const block of ['up', 'down']) {
-    if (!lines.some((line) => line.startsWith(`-- migrate:${block}`))) {
+    if (!lines.some((line) => MARKER[block].test(line))) {
       errors.push(
         `${DIR}/${file} has no \`-- migrate:${block}\` line. dbmate needs one to run it.`
       );
