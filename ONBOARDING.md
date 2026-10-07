@@ -457,11 +457,10 @@ app is broken. It isn't. Do the teacher steps first.
 `docker-entrypoint-initdb.d`, which only fires when the data directory is empty.
 Changed the schema? `down -v` and back up.
 
-**Migrations are files, not automatic, yet.** A fresh database already has every
-file in `database-files/migrations/`, because `Pandployer.sql` includes them.
-One created before a migration was added does not, and nothing applies it for
-you until OAS-93 makes the API run them at start. Until then, apply by hand per
-`database-files/migrations/README.md`, or reset with `npm run reset`.
+**Migrations run when the API starts.** `npm run all` and `npm run dev:api` both
+run dbmate first, which applies any file in `database-files/migrations/` the
+database has not recorded in `schema_migrations`. If one fails, the API does not
+start and its log says which. See `database-files/migrations/README.md`.
 
 **`candidate_id` is not `Candidates.id`.** Throughout the app it holds a
 `Resume_pdfs.id`. Looking up `Candidates` by `id` silently returns the **wrong
