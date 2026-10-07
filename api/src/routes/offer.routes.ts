@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { Pool } from 'mysql2';
 import { OfferController } from '../controller/offer.controller';
-import { requireAuth, requireAdmin } from '../middleware/auth.middleware';
+import { requireAuth, requireAdmin, requireClassModerator } from '../middleware/auth.middleware';
 
 export default (db: Pool): Router => {
   const router = Router();
@@ -16,7 +16,7 @@ export default (db: Pool): Router => {
   router.get('/class/:class_id', requireAuth, offerController.getOffersByClass);
   router.get(
     '/group/:group_id/class/:class_id/candidate/:candidate_id',
-    requireAdmin,
+    requireClassModerator(db),
     offerController.getOfferVotes
   );
   // Accept or reject. A student could previously accept their own group's offer.

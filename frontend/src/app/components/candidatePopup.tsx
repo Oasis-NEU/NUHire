@@ -95,9 +95,13 @@ const CandidatePopup = ({ classId, groupId, candidateId, onDismiss }: CandidateP
   // Every teammate on interview-stage adds the curveball once, so the stored
   // value is a group total. makeOffer divides by group size; do the same here
   // so the teacher sees the per-student effect the students saw.
-  const groupSize = Math.max(votes.length, 1);
+  // Without the roster there's no group size to divide by, so show nothing
+  // rather than an inflated total.
+  const groupSize = votes.length;
   const hasCurveball =
-    !!curveballs && RATINGS.some((rating) => curveballs[CURVEBALL_COLUMN[rating]] !== 0);
+    groupSize > 0 &&
+    !!curveballs &&
+    RATINGS.some((rating) => curveballs[CURVEBALL_COLUMN[rating]] !== 0);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
