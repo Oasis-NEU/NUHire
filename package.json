@@ -12,7 +12,10 @@
   },
   "scripts": {
     "install:all": "npm install && npm --prefix api install && npm --prefix frontend install",
-    "dev:services": "docker compose -f .local/compose.yaml up -d",
+    "all": "docker compose -f compose.dev.yaml up --watch",
+    "down": "docker compose -f compose.dev.yaml down",
+    "reset": "docker compose -f compose.dev.yaml down -v",
+    "dev:services": "docker compose -f .local/compose.yaml up -d --wait",
     "db:migrate": "npm --prefix api run db:migrate",
     "dev:api": "npm --prefix api run build && npm --prefix api start",
     "dev:frontend": "npm --prefix frontend run dev",
