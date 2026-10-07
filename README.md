@@ -1,6 +1,6 @@
 # NUHire
 
-![NUHire](/project-screenshots/nuhire_vector.png)
+![NUHire](frontend/public/nuhire_vector.png)
 
 A hiring simulation used as a live, instructor-led activity in Khoury CS1210
 (Intro to Co-op). Students play the employer: read a job description, review
@@ -37,6 +37,7 @@ finish before anyone continues.
 | API      | Express, TypeScript, Socket.IO, Passport                      |
 | Database | MySQL                                                         |
 | Auth     | Keycloak (OIDC), moving to Khoury IT SSO                      |
+| Local    | Docker (every service runs in a container)                    |
 | Deploy   | Coolify on a Khoury self-hosted runner                        |
 
 Real-time behaviour runs over Socket.IO. Groups occupy a room named
@@ -48,16 +49,18 @@ popups, step transitions, and offer approvals.
 See **[.local/README.md](.local/README.md)** for the full runbook, including
 seeded test accounts.
 
+You need **Docker Desktop**, **git**, and **Node 22** (`nvm use`). The app
+runs in Docker; Node runs `npm run all` and the checks on your machine. On
+Windows, Docker Desktop needs WSL2.
+
 ```bash
-docker compose -f .local/compose.yaml up -d   # MySQL + Keycloak
-npm run dev:api
-npm run dev:frontend
+git clone git@github.com:Oasis-NEU/NUHire.git
+cd NUHire
+npm run all
 ```
 
-Then open http://localhost:3000.
-
-MySQL and Keycloak run in Docker. The API and frontend run on the host, because
-Keycloak has to be reachable at the same URL from both the browser and the API.
+That builds and starts MySQL, Keycloak, the API and the frontend, and reloads
+the API and frontend when you save. Open http://localhost:3000 once the logs settle. Ctrl+C stops everything.
 
 ### Test logins
 
