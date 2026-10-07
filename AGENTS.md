@@ -258,14 +258,52 @@ planned refactor, do it consistently across a whole area.
 
 ## Conventions
 
-- TypeScript, `strict: true`. Do not add `any` to silence an error. There are 111
-  existing `: any` annotations; do not add the 112th.
+- TypeScript, `strict: true`. Do not add `any` to silence an error. There are
+  about 90 existing `: any` annotations; do not add another.
 - Prettier is configured at the root. Run `npm run format` before committing.
 - Filenames follow whatever the surrounding folder does. Controllers are
   `<thing>.controller.ts`, routes are `<thing>.routes.ts`.
-- Do not add `console.log`. There are ~440 already and they bury real errors
-  during a live class. If you need diagnostics, make them conditional.
+- Do not add `console.log`. Tracing logs bury real errors during a live class.
+  Log real failures with `console.error` or `console.warn`; if you need
+  diagnostics, make them conditional.
 - Do not commit `.env`, `*.log`, or build output.
+
+## How code should look here
+
+The target for new code and for the tidying in [CLEANUP.md](CLEANUP.md). Most
+of the existing code does not look like this yet; do not copy it.
+
+- **`async`/`await`, never callbacks.** Use `db.promise().query<RowDataPacket[]>(...)`,
+  or a checked-out connection for a transaction (rule 6). No new
+  `db.query(sql, params, (err, rows) => ...)`, and no `async` function without
+  an `await` in it.
+- **One handler shape.** Validate input and answer 400, run the queries in one
+  `try`, respond once. In the `catch`, `console.error` the real error with
+  context and answer with a fixed message.
+- **Errors are `{ error: string }`.** Never send `err.message` or any MySQL text
+  to the browser. Use `dbErrorStatus` for the status when the pool may be busy.
+- **Scope by `group_id` and `class`.** Every query, every room. Room names are
+  `group_<group_id>_class_<class>`; build them the same way every time.
+- **One type per concept.** Shapes live in `frontend/src/types/index.ts` and
+  `api/src/models/types.ts`. Type `tinyint(1)` columns as `DbBool`, never
+  `boolean`. No interfaces inside a component body.
+- **Comments say why, in a sentence or two.** What the code used to do goes in
+  the commit message. No comments that restate the next line, label imports, or
+  carry emoji markers.
+- **The frontend talks to the API with `fetch`** and `credentials: 'include'`.
+  No axios. Read the base URL from one module, not a new `const` per file.
+- **The second copy becomes a hook.** If you are about to paste an effect from
+  another page, move it to `frontend/src/app/components/` and use it from both.
+- **A failure the user depends on shows up on screen.** A `catch` that only
+  logs leaves a student staring at an empty page. Use the existing `Popup`.
+- **Keep files small.** Aim for under 300 lines. Do not grow a file that is
+  already over 800; extract first.
+- **Use the existing names.** Steps come from `STEP_ORDER` and `STEP_TO_ROUTE`
+  (`useProgress.tsx`, `group.controller.ts`), the barrier step from
+  `RES_REVIEW_BARRIER_STEP`. Export them where you need them; do not retype the
+  strings.
+- **Delete dead code.** Do not comment it out or leave it "in case". Check both
+  sides first (rule 9).
 
 ## Verifying a change
 
