@@ -67,7 +67,7 @@ export function SendPopupModal({
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
               <option value="">-- Select a Candidate --</option>
-              {candidates
+              {[...candidates]
                 .sort((a, b) => (a.id || 0) - (b.id || 0))
                 .map((candidate) => (
                   <option key={candidate.id} value={candidate.id}>
