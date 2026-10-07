@@ -227,6 +227,23 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       return false;
     };
 
+    // Whether this socket may send a teacher-only event.
+    //
+    // These handlers used to relay whatever arrived, so a student could type
+    // socket.emit('makeOfferResponse', { accepted: true, ... }) into devtools
+    // and their whole group would see their offer accepted. A socket with no
+    // session is refused too, unlike mayJoin above: a student can open one on
+    // purpose, and letting it through would leave the hole exactly as it was.
+    const fromTeacher = (event: string): boolean => {
+      const user = socket.data.user as SocketUser | undefined;
+      if (user?.affiliation === 'admin') return true;
+
+      console.warn(
+        `Refusing teacher-only "${event}" from socket ${socket.id} (${user?.email ?? 'no session'}).`
+      );
+      return false;
+    };
+
     on('adminOnline', ({ adminEmail }: { adminEmail: string }) => {
       const user = socket.data.user as SocketUser | undefined;
 
@@ -326,7 +343,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
         if (!groups || groups.length === 0) return;
 
         let query = "SELECT email FROM Users WHERE group_id IN (?) AND affiliation = 'student'";
-        const params: any[] = [groups];
+        const params: (number[] | number)[] = [groups];
 
         if (classId) {
           query += ' AND class = ?';
@@ -432,6 +449,8 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     on(
       'makeOfferResponse',
       ({ classId, groupId, candidateId, accepted }: SocketEvents['makeOfferResponse']) => {
+        if (!fromTeacher('makeOfferResponse')) return;
+
         // The group hears the decision; the class's advisors hear it so their
         // own pending-offer views update. Nobody else.
         const payload = { classId, groupId, candidateId, accepted };
