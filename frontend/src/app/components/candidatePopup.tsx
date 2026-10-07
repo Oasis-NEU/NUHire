@@ -92,6 +92,13 @@ const CandidatePopup = ({ classId, groupId, candidateId, onDismiss }: CandidateP
     !!curveballs &&
     RATINGS.some((rating) => curveballs[CURVEBALL_COLUMN[rating]] <= NO_SHOW_THRESHOLD);
 
+  // Every teammate on interview-stage adds the curveball once, so the stored
+  // value is a group total. makeOffer divides by group size; do the same here
+  // so the teacher sees the per-student effect the students saw.
+  const groupSize = Math.max(votes.length, 1);
+  const hasCurveball =
+    !!curveballs && RATINGS.some((rating) => curveballs[CURVEBALL_COLUMN[rating]] !== 0);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-[700px] max-h-[90vh] overflow-y-auto">
@@ -147,7 +154,7 @@ const CandidatePopup = ({ classId, groupId, candidateId, onDismiss }: CandidateP
           ))}
         </div>
 
-        {curveballs && (
+        {curveballs && hasCurveball && (
           <div className="mb-4 text-navy text-sm">
             <p className="font-semibold mb-1">Curveball adjustments</p>
             {isNoShow ? (
@@ -157,7 +164,7 @@ const CandidatePopup = ({ classId, groupId, candidateId, onDismiss }: CandidateP
                 {RATINGS.map((rating) => (
                   <p key={rating}>
                     <span className="font-medium">{RATING_LABEL[rating]}:</span>{' '}
-                    {curveballs[CURVEBALL_COLUMN[rating]]}
+                    {Number((curveballs[CURVEBALL_COLUMN[rating]] / groupSize).toFixed(1))}
                   </p>
                 ))}
               </div>

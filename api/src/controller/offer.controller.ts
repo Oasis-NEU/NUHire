@@ -124,7 +124,7 @@ export class OfferController {
     this.db.query(query, [candidate_id, candidate_id, group_id, class_id], (err, results) => {
       if (err) {
         console.error('Error fetching offer votes:', err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to load offer votes' });
         return;
       }
 
