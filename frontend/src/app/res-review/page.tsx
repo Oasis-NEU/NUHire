@@ -16,6 +16,7 @@ import { useProgressManager } from '../components/progress';
 import { useSocket } from '../components/socketContext';
 import Facts from '../components/facts';
 import { useAuth } from '../components/AuthContext';
+import { PageLoader, Spinner } from '../components/spinner';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -889,14 +890,7 @@ export default function ResumesPage() {
   }, [jobDescPath]);
 
   if (userloading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-sand">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Loading...</h2>
-          <div className="w-16 h-16 border-t-4 border-navy border-solid rounded-full animate-spin mx-auto"></div>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -1156,7 +1150,7 @@ export default function ResumesPage() {
                   <br />
                   Waiting for other group members to finish...
                 </p>
-                <div className="w-16 h-16 border-t-4 border-navy border-solid rounded-full animate-spin mx-auto mb-4"></div>
+                <Spinner className="mb-4" />
                 <Facts />
               </div>
             )}

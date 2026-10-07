@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Slideshow from '../components/slideshow';
 import { useAuth } from '../components/AuthContext';
+import { PageLoader } from '../components/spinner';
 
 export default function InstructionsPage() {
   const { user, loading: userLoading } = useAuth();
@@ -45,14 +46,7 @@ export default function InstructionsPage() {
   };
 
   if (userLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-sand">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Loading...</h2>
-          <div className="w-16 h-16 border-t-4 border-navy border-solid rounded-full animate-spin mx-auto"></div>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (

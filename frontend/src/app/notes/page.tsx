@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../components/navbar';
 import { useSocket } from '../components/socketContext';
 import { useAuth } from '../components/AuthContext';
+import { PageLoader } from '../components/spinner';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const NotesPage: React.FC = () => {
@@ -77,14 +78,7 @@ const NotesPage: React.FC = () => {
   }, [user?.email]);
 
   if (userloading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-sand">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Loading...</h2>
-          <div className="w-16 h-16 border-t-4 border-northeasternBlack border-solid rounded-full animate-spin mx-auto"></div>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
