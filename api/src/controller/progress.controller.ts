@@ -62,13 +62,20 @@ export class ProgressController {
       return;
     }
 
-    // Only move forward. A stored NULL counts as "not started", so it always
-    // takes the incoming step. One statement, so two racing requests can't
-    // both read the old value.
+    // Only move forward, unless the student changed group or section.
+    // `step` must come before crn/group_id so the IF sees the old values.
     this.db.query(
-      `INSERT INTO Progress (crn, group_id, step, email) 
-       VALUES (?, ?, ?, ?) 
-       ON DUPLICATE KEY UPDATE step = IF(step IS NULL OR step + 0 < ?, VALUES(step), step)`,
+      `INSERT INTO Progress (crn, group_id, step, email)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         step = IF(
+           crn = VALUES(crn) AND group_id = VALUES(group_id)
+             AND step IS NOT NULL AND step + 0 >= ?,
+           step,
+           VALUES(step)
+         ),
+         crn = VALUES(crn),
+         group_id = VALUES(group_id)`,
       [crn, group_id, step, email, stepIndex],
       (err) => {
         if (err) {
