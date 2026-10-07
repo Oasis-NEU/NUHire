@@ -10,9 +10,11 @@
 # of silently dropping out of the required list. The ruleset that enforces it
 # is .github/rulesets/main.json.
 #
-# Spelling and the review bot run on every PR but are left out of the gate, so
-# their findings show without blocking a merge. Add them back to the gate's
-# `needs` once they stop raising false alarms.
+# Spelling runs on every PR but is left out of the gate, so its findings show
+# without blocking a merge.
+#
+# Code review against AGENTS.md is CodeRabbit's job (.coderabbit.yaml). It
+# comments on every PR and never blocks; a lead's approval is the gate.
 #
 # When anything fails, the gate says what and where: a comment on the PR (which
 # notifies its author), the run's summary page, and inline markers on the
@@ -253,26 +255,6 @@ jobs:
       - name: Compare against the base branch
         run: node .github/ci/audit-new.mjs
 
-  review-bot:
-    name: Review bot (AGENTS.md rules)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      # Full history, so the bot can find the merge base with the PR's target.
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-      # Only node built-ins, so no install step. Picks the base from
-      # GITHUB_BASE_REF, fails on any error-level finding (any, console.log,
-      # SQL interpolation, unscoped emits, secrets, conflict markers...) and
-      # writes each finding to the job summary. Warn-level rules are judgement
-      # calls such as "file too long" and are reported without failing the run.
-      - name: Check AGENTS.md rules
-        run: node .github/review-bot/run.mjs
-
   gate:
     name: All checks passed
     runs-on: ubuntu-latest
@@ -328,7 +310,7 @@ jobs:
                   '',
                   ...failedJobs,
                   '',
-                  'Type errors, lint errors, unformatted files and failed migrations are also marked on the exact lines in **Files changed**. Failed tests, spelling mistakes, new vulnerabilities and review bot findings are listed in each job\'s log and summary. Push a fix and this comment updates itself.',
+                  'Type errors, lint errors, unformatted files and failed migrations are also marked on the exact lines in **Files changed**. Failed tests, spelling mistakes and new vulnerabilities are listed in each job\'s log and summary. Push a fix and this comment updates itself.',
                 ].join('\n')
               : [marker, '### ✅ All checks passed', '', `[View the run](${runUrl})`].join('\n');
 

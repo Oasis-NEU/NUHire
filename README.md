@@ -1,6 +1,6 @@
 # NUHire
 
-![NUHire](/project-screenshots/nuhire_vector.png)
+![NUHire](frontend/public/nuhire_vector.png)
 
 A hiring simulation used as a live, instructor-led activity in Khoury CS1210
 (Intro to Co-op). Students play the employer: read a job description, review
