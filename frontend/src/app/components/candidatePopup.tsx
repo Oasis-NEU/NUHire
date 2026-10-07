@@ -42,6 +42,12 @@ const CandidatePopup = ({ classId, groupId, candidateId, onDismiss }: CandidateP
   > | null>(null);
 
   useEffect(() => {
+    // Clear the last candidate and drop any response that lands after the ids change.
+    let cancelled = false;
+    setCandidate(null);
+    setVotes([]);
+    setCurveballs(null);
+
     const fetchCandidateDetails = async () => {
       try {
         const candidateRes = await fetch(
@@ -49,7 +55,8 @@ const CandidatePopup = ({ classId, groupId, candidateId, onDismiss }: CandidateP
           { credentials: 'include' }
         );
         if (candidateRes.ok) {
-          setCandidate(await candidateRes.json());
+          const data = await candidateRes.json();
+          if (!cancelled) setCandidate(data);
         }
 
         const votesRes = await fetch(
@@ -57,7 +64,8 @@ const CandidatePopup = ({ classId, groupId, candidateId, onDismiss }: CandidateP
           { credentials: 'include' }
         );
         if (votesRes.ok) {
-          setVotes(await votesRes.json());
+          const data = await votesRes.json();
+          if (!cancelled) setVotes(data);
         }
 
         const curveballsRes = await fetch(
@@ -65,7 +73,8 @@ const CandidatePopup = ({ classId, groupId, candidateId, onDismiss }: CandidateP
           { credentials: 'include' }
         );
         if (curveballsRes.ok) {
-          setCurveballs(await curveballsRes.json());
+          const data = await curveballsRes.json();
+          if (!cancelled) setCurveballs(data);
         }
       } catch (error) {
         console.error('Error fetching candidate details:', error);
@@ -73,6 +82,10 @@ const CandidatePopup = ({ classId, groupId, candidateId, onDismiss }: CandidateP
     };
 
     fetchCandidateDetails();
+
+    return () => {
+      cancelled = true;
+    };
   }, [classId, groupId, candidateId]);
 
   const isNoShow =
