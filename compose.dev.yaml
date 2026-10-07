@@ -12,8 +12,9 @@ services:
     extends:
       file: .local/compose.yaml
       service: keycloak
+    # Localhost only, so nobody else on the network can reach a dev stack.
     ports:
-      - '5001:5001'
+      - '127.0.0.1:5001:5001'
 
   api:
     build:
@@ -22,7 +23,10 @@ services:
     init: true
     # So localhost:8080 is Keycloak for the API as well as the browser.
     network_mode: 'service:keycloak'
-    env_file: ./api/.env.example
+    env_file:
+      - ./api/.env.example
+      - path: ./api/.env
+        required: false
     environment:
       DATABASE_URL: mysql://root:nuhire@db:3306/nuhire
     healthcheck:
@@ -55,9 +59,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.dev
     init: true
-    env_file: ./frontend/.env.example
+    env_file:
+      - ./frontend/.env.example
+      - path: ./frontend/.env.local
+        required: false
     ports:
-      - '3000:3000'
+      - '127.0.0.1:3000:3000'
     develop:
       watch:
         - action: sync

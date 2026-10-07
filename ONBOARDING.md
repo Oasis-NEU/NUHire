@@ -357,9 +357,9 @@ the Coolify service has to stay at 1 too.
 
 - **Docker Desktop**, running
 - **git**
-- **Node 22** (`.nvmrc` pins it — `nvm use`). Not needed to run the app, which
-  is all in Docker, but your editor needs `npm run install:all` for types, and
-  `typecheck` and `format` run on the host.
+- **Node 22** (`.nvmrc` pins it — `nvm use`). npm starts the stack
+  (`npm run all`) and runs `typecheck` and `format` on your machine. The app
+  itself runs in Docker. Your editor also needs `npm run install:all` for types.
 
 ### Steps
 
@@ -390,7 +390,10 @@ curl http://localhost:5001/health
 
 ### Every env var
 
-**`api/.env`** — copy from `api/.env.example`, the defaults work as-is.
+**`api/.env`** — copy from `api/.env.example`, the defaults work as-is. Under
+`npm run all` this file is optional: Docker reads the example, then `api/.env`
+on top if it exists, so use it for your own overrides instead of editing the
+example. `DATABASE_URL` is always set by compose there.
 
 | Var                      | Local value                                    | What it does                                                                                                                                                                              |
 | ------------------------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -413,7 +416,7 @@ curl http://localhost:5001/health
 | `INSTANCE_COUNT`         | `1`                                            | Leave at 1. See the barrier section                                                                                                                                                       |
 | `SOCKET_AUTH_REQUIRED`   | `false`                                        | Drop unauthenticated sockets. Off until someone tests it with two real sessions                                                                                                           |
 
-**`frontend/.env.local`**
+**`frontend/.env.local`** — likewise an optional override under `npm run all`.
 
 | Var                        | Local value             | What it does                                                                                                                                                              |
 | -------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

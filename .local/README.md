@@ -22,6 +22,12 @@ and rebuilds an image when its lockfile changes. Ctrl+C stops everything.
 In Docker the apps read the `.env.example` files directly, with
 `DATABASE_URL` pointed at `db:3306`, so there is nothing to copy first.
 
+To change a value for yourself, put it in `api/.env` or `frontend/.env.local`
+(the same files the host setup below uses). If they exist, Docker loads them
+after the examples, so they win, and git ignores them. `DATABASE_URL` is the
+exception: compose always sets it, so a host-style value in `api/.env` cannot
+break the containers. Don't edit the `.env.example` files for local tweaks.
+
 ### Running the apps on the host instead
 
 Useful for attaching a debugger. Copy the env files once, then:
