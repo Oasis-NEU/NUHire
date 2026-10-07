@@ -49,8 +49,9 @@ popups, step transitions, and offer approvals.
 See **[.local/README.md](.local/README.md)** for the full runbook, including
 seeded test accounts.
 
-You need **Docker Desktop** and **git**. Node 22 is only for your editor and
-running checks on your machine. On Windows, Docker Desktop needs WSL2.
+You need **Docker Desktop**, **git**, and **Node 22** (`nvm use`). The app
+runs in Docker; Node runs `npm run all` and the checks on your machine. On
+Windows, Docker Desktop needs WSL2.
 
 ```bash
 git clone git@github.com:Oasis-NEU/NUHire.git

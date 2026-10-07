@@ -357,9 +357,9 @@ the Coolify service has to stay at 1 too.
 
 - **Docker Desktop**, running
 - **git**
-- **Node 22** (`.nvmrc` pins it — `nvm use`). Not needed to run the app, which
-  is all in Docker, but your editor needs `npm run install:all` for types, and
-  `typecheck` and `format` run on the host.
+- **Node 22** (`.nvmrc` pins it — `nvm use`). npm starts the stack
+  (`npm run all`) and runs `typecheck` and `format` on your machine. The app
+  itself runs in Docker. Your editor also needs `npm run install:all` for types.
 
 ### Steps
 
