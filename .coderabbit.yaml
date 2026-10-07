@@ -21,7 +21,6 @@ reviews:
     - '!docs/archive/**'
     - '!frontend/public/**'
     - '!project-screenshots/**'
-    - '!**/realm-export.json'
   path_instructions:
     - path: 'api/src/**'
       instructions: |
@@ -45,6 +44,10 @@ reviews:
         - Pages that join a socket room must re-join on the socket 'connect' event.
         - Read the API URL from NEXT_PUBLIC_API_BASE_URL, never hardcode it.
         - Destructive actions (Assign Job, delete, reset) need a confirm that names what will be lost.
+    - path: '**/realm-export.json'
+      instructions: |
+        - Flag any client secrets, password, or token committed in plain text.
+        - Flag any changes to redirectUris, webOrigins, token lifespans, or the email domain check, and say what they change for students logging in.
 
 knowledge_base:
   code_guidelines:
