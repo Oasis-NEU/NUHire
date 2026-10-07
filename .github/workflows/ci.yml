@@ -118,6 +118,12 @@ jobs:
         run: docker build -f api/dockerfile -t nuhire-api:ci api
       - name: Build frontend image
         run: docker build -f frontend/Dockerfile.prod -t nuhire-frontend:ci frontend
+      # npm run all is everyone's local setup, so a broken dev stack blocks the
+      # whole team even though production is fine.
+      - name: Check local dev compose
+        run: docker compose -f compose.dev.yaml config -q
+      - name: Build local dev API image
+        run: docker build -f api/dockerfile.dev -t nuhire-api-dev:ci api
 
   # Lint and spelling check only the files a PR adds or changes. Older files
   # still have problems from before these checks existed; a PR that edits one of
