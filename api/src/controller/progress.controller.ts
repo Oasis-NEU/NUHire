@@ -62,7 +62,7 @@ export class ProgressController {
       return;
     }
 
-        // Only move forward. A stored NULL counts as "not started", so it always
+    // Only move forward. A stored NULL counts as "not started", so it always
     // takes the incoming step. One statement, so two racing requests can't
     // both read the old value.
     this.db.query(
@@ -77,44 +77,40 @@ export class ProgressController {
           return;
         }
 
-        this.db.query(
-          'SELECT step FROM Progress WHERE email = ?',
-          [email],
-          (selectErr, rows) => {
-            if (selectErr) {
-              console.error('Error reading back progress:', selectErr);
-              res.status(500).json({ error: selectErr.message });
-              return;
-            }
+        this.db.query('SELECT step FROM Progress WHERE email = ?', [email], (selectErr, rows) => {
+          if (selectErr) {
+            console.error('Error reading back progress:', selectErr);
+            res.status(500).json({ error: selectErr.message });
+            return;
+          }
 
-            const storedStep = (rows as RowDataPacket[])[0]?.step;
+          const storedStep = (rows as RowDataPacket[])[0]?.step;
 
-            // if same step as stored step
-            if (storedStep === step) {
-              this.io.to(`group_${group_id}_class_${crn}`).emit('progressUpdated', {
-                crn,
-                group_id,
-                step,
-                email,
-              });
-              
-              emitToClassModerators(this.io, this.db, crn, 'progressUpdated', {
-                crn,
-                group_id,
-                step,
-                email,
-              });
-            }
+          // if same step as stored step
+          if (storedStep === step) {
+            this.io.to(`group_${group_id}_class_${crn}`).emit('progressUpdated', {
+              crn,
+              group_id,
+              step,
+              email,
+            });
 
-            res.json({
-              success: true,
-              message: 'Progress updated successfully',
+            emitToClassModerators(this.io, this.db, crn, 'progressUpdated', {
+              crn,
+              group_id,
+              step,
+              email,
             });
           }
-        );
+
+          res.json({
+            success: true,
+            message: 'Progress updated successfully',
+          });
+        });
       }
     );
-``}
+  };
 
   // --- Group-selection confirmations (res-review-group) -------------------
   //
