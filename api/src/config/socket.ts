@@ -75,21 +75,31 @@ export async function evaluateGroupBarrier(
     [groupId, classId, step]
   );
 
+  return summarizeBarrier(
+    step,
+    members.map((row) => row.id as number),
+    completions.map((row) => row.student_id as number)
+  );
+}
+
+export function summarizeBarrier(
+  step: string,
+  memberIds: number[],
+  completedIds: number[]
+): BarrierStatus {
   // Count only completions belonging to a CURRENT member. A student moved to
   // another group mid-class leaves their row behind, and counting it would
   // release a group that still has somebody unfinished.
-  const memberIds = new Set(members.map((row) => row.id as number));
-  const completedCount = completions.filter((row) =>
-    memberIds.has(row.student_id as number)
-  ).length;
+  const members = new Set(memberIds);
+  const completedCount = completedIds.filter((id) => members.has(id)).length;
 
   return {
     step,
     completedCount,
-    totalCount: members.length,
+    totalCount: memberIds.length,
     // An empty roster is unknown, not finished. Releasing on 0 >= 0 would walk
     // a student through a barrier before their group has been assigned anyone.
-    released: members.length > 0 && completedCount >= members.length,
+    released: memberIds.length > 0 && completedCount >= memberIds.length,
   };
 }
 
@@ -123,6 +133,17 @@ export function broadcastGroupBarrier(
     }
     return status;
   });
+}
+
+// Read live, not from `onlineStudents`, which misses anyone who reconnected.
+export async function connectedEmails(io: SocketIOServer): Promise<Set<string>> {
+  const sockets = await io.fetchSockets();
+  return new Set(
+    sockets.flatMap((socket) => {
+      const user = socket.data.user as SocketUser | undefined;
+      return user?.email ? [user.email] : [];
+    })
+  );
 }
 
 // Rejecting an unauthenticated socket outright is the right end state, but it
