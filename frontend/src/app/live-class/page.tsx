@@ -1,7 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import NavbarAdmin from '../components/navbar-admin';
 import Popup from '../components/popup';
 import { useAuth } from '../components/AuthContext';
@@ -29,7 +29,16 @@ const LiveClass = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   // The target is fixed when the dialog opens. Recomputing it on Confirm could
   // skip a step if the group moved on while the dialog was open.
-  const [unstick, setUnstick] = useState<{ groupId: number; from: Step; to: Step } | null>(null);
+  const [unstick, setUnstick] = useState<{
+    classId: string;
+    groupId: number;
+    from: Step;
+    to: Step;
+  } | null>(null);
+  // Set when a refresh fails, so a stale board doesn't look current.
+  const [refreshError, setRefreshError] = useState(false);
+  // Polls and socket refreshes overlap; only the newest response may land.
+  const latestRequest = useRef(0);
   const [unsticking, setUnsticking] = useState(false);
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
 
@@ -58,11 +67,12 @@ const LiveClass = () => {
     let cancelled = false;
 
     const fetchLiveClass = async () => {
+      const requestId = ++latestRequest.current;
       try {
         const response = await fetch(`${API_BASE_URL}/groups/live/${selectedClass}`, {
           credentials: 'include',
         });
-        if (!response.ok) return;
+        if (!response.ok) throw new Error(`live ${response.status}`);
         const data: LiveStudent[] = await response.json();
 
         const groupIds = [...new Set(data.map((student) => student.group_id))];
@@ -78,11 +88,13 @@ const LiveClass = () => {
           })
         );
 
-        if (cancelled) return;
+        if (cancelled || requestId !== latestRequest.current) return;
         setStudents(data);
         setGroupSteps(Object.fromEntries(steps));
+        setRefreshError(false);
       } catch (error) {
         console.error('Error fetching live class:', error);
+        if (!cancelled && requestId === latestRequest.current) setRefreshError(true);
       }
     };
 
@@ -145,7 +157,7 @@ const LiveClass = () => {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          class_id: selectedClass,
+          class_id: unstick.classId,
           group_id: groupId,
           target_step: targetStep,
         }),
@@ -216,6 +228,13 @@ const LiveClass = () => {
           </select>
         </div>
 
+        {refreshError && (
+          <p className="mb-4 p-3 rounded-lg bg-red-100 text-red-800 text-sm">
+            Couldn&apos;t refresh the board. What you see may be out of date; retrying every 10
+            seconds.
+          </p>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {groupIds.map((groupId) => {
             const members = students.filter((student) => student.group_id === groupId);
@@ -259,7 +278,9 @@ const LiveClass = () => {
                 </ul>
 
                 <button
-                  onClick={() => next && setUnstick({ groupId, from: step, to: next })}
+                  onClick={() =>
+                    next && setUnstick({ classId: selectedClass, groupId, from: step, to: next })
+                  }
                   disabled={!canUnstick}
                   className="px-4 py-2 rounded-lg font-medium transition-colors bg-red-600 text-white hover:bg-white hover:text-red-600 border-2 border-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
