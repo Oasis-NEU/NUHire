@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useProgressManager } from './progress';
+import type { Step } from '../../types';
 
 /**
  * Maps a Progress.step enum value to the route that renders it.
@@ -25,10 +26,28 @@ export const STEP_TO_ROUTE: Record<string, string> = {
   employer: '/employerPanel',
 };
 
+export const STEP_LABEL: Record<Step, string> = {
+  none: 'Not started',
+  job_description: 'Job Description',
+  res_1: 'Resume Review',
+  res_2: 'Resume Review Group',
+  interview: 'Interview Stage',
+  offer: 'Make an Offer',
+  employer: 'Employer Panel',
+};
+
 // The order a group walks the steps. Declared rather than derived from the keys
 // above so that reordering that table for readability cannot silently change
 // which step counts as "further along".
-const STEP_ORDER = ['none', 'job_description', 'res_1', 'res_2', 'interview', 'offer', 'employer'];
+export const STEP_ORDER = [
+  'none',
+  'job_description',
+  'res_1',
+  'res_2',
+  'interview',
+  'offer',
+  'employer',
+];
 
 const allowedRoutes: Record<string, string[]> = {
   '/jobdes': ['job_description', 'res_1', 'res_2', 'interview', 'offer', 'employer'],

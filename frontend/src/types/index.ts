@@ -84,6 +84,18 @@ export interface Resume {
   checked: DbBool;
 }
 
+/** A row of `InterviewPage`: one student's ratings of one candidate. */
+export interface InterviewRating {
+  student_id: number;
+  group_id: number;
+  class: number;
+  candidate_id: number;
+  question1: number;
+  question2: number;
+  question3: number;
+  question4: number;
+}
+
 /** A row of `Candidates`. */
 export interface Candidate {
   id: number;
@@ -98,3 +110,17 @@ export interface JobOption {
   id: number;
   title: string;
 }
+
+/** `Progress.step`, an ENUM. */
+export type Step =
+  'none' | 'job_description' | 'res_1' | 'res_2' | 'interview' | 'offer' | 'employer';
+
+/** A roster row from `/groups/live/:classId`. */
+export type LiveStudent = Pick<Student, 'id' | 'email' | 'f_name' | 'l_name'> & {
+  group_id: number;
+  started: DbBool | null;
+  step: Step | null;
+  review_completed_at: string | null;
+  confirmed_at: string | null;
+  online: boolean;
+};
