@@ -431,7 +431,15 @@ npm run typecheck    # tsc --noEmit in both
 npm run format       # prettier
 
 npm run reset   # nuke DB + reseed on next npm run all
+
+npm run seed         # a 30-student class (class 9001), with messy cases
+npm run seed:check   # log in all of them through Keycloak
+npm run seed:reset   # back to a clean simulated class, in seconds
+npm run seed:wipe    # remove it
 ```
+
+The seed needs the stack up. See `.local/tests/README.md` for the roster and how
+the fake students log in.
 
 ---
 
@@ -456,6 +464,13 @@ app is broken. It isn't. Do the teacher steps first.
 **MySQL only seeds on a fresh volume.** `Pandployer.sql` and `seed.sql` run from
 `docker-entrypoint-initdb.d`, which only fires when the data directory is empty.
 Changed the schema? `down -v` and back up.
+
+**Recreating the stack drops the Keycloak users but not the database.** Keycloak
+has no volume and re-imports its realm on every boot, while MySQL keeps its
+volume. After `npm run down` and `npm run all`, the simulated class (if you
+seeded it) is still in MySQL but nobody can log in. Run `npm run seed` to put the
+Keycloak accounts back. The four built-in accounts are in the realm file, so they
+always come back.
 
 **Migrations are files, not automatic, yet.** A fresh database already has every
 file in `database-files/migrations/`, because `Pandployer.sql` includes them.
@@ -530,6 +545,11 @@ non-temporary, email verification off).
 | `student2@northeastern.edu` | student | group 1 |
 | `student3@northeastern.edu` | student | group 2 |
 
+Need more people than that? `npm run seed` builds a full class: `advisor01` and
+`student01` to `student30` at `@example.test`, password `nuhire`, in 8 groups,
+including a student who never logs in, one with no group and a group of one. See
+`.local/tests/README.md`.
+
 ---
 
 ## 9. Full click-through
@@ -586,6 +606,12 @@ see it release.
 
 If you get stuck there, that is `POST /groups/force-advance` existing for a
 reason.
+
+Want to see that at the size of a real class? `npm run seed -- --scenario=waiting-on-group`
+leaves group 1 stuck at 3 of 4 because one student on the roster never logs in,
+as happens in a real class. Log in as `advisor01@example.test` and force it
+through. The other scenarios (`mid-resume-review`, `interview-stage`,
+`offers-pending`) are described in `.local/tests/README.md`.
 
 ---
 
