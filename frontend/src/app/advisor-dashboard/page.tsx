@@ -59,6 +59,13 @@ const Dashboard = () => {
       <main className="flex flex-col items-center justify-center flex-grow z-10">
         <div className="mt-6 gap-6 flex flex-row justify-center items-center">
           <Link
+            href="/live-class"
+            className="px-8 py-8 bg-northeasternWhite text-northeasternRed border-4 border-northeasternRed font-semibold rounded-2xl shadow-xl hover:bg-northeasternRed hover:text-northeasternWhite transition flex flex-col items-center justify-center text-center text-lg w-72 h-72"
+          >
+            <span className="text-4xl mb-2">📡</span>
+            <span>Live Class</span>
+          </Link>
+          <Link
             href="/grouping"
             className="px-8 py-8 bg-northeasternWhite text-northeasternRed border-4 border-northeasternRed font-semibold rounded-2xl shadow-xl hover:bg-northeasternRed hover:text-northeasternWhite transition flex flex-col items-center justify-center text-center text-lg w-72 h-72"
           >

@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { Pool } from 'mysql2';
 import { Server as SocketIOServer } from 'socket.io';
 import { GroupController } from '../controller/group.controller';
-import { requireAuth, requireAdmin } from '../middleware/auth.middleware';
+import { requireAuth, requireAdmin, requireClassModerator } from '../middleware/auth.middleware';
 
 export default (db: Pool, io: SocketIOServer): Router => {
   const router = Router();
@@ -26,6 +26,7 @@ export default (db: Pool, io: SocketIOServer): Router => {
   // group's progress, so a student able to call it could drag their own team
   // past a step they have not done.
   router.post('/force-advance', requireAdmin, groupController.forceAdvance);
+  router.get('/live/:classId', requireClassModerator(db, 'classId'), groupController.getLiveClass);
 
   // Students read their own group's state from these.
   router.get('/started/:classId/:groupId', requireAuth, groupController.getGroupStarted);
