@@ -129,5 +129,10 @@ export async function countClassData(conn) {
       );
     }
   }
+  await count(
+    'Notes',
+    `SELECT COUNT(*) AS n FROM Notes WHERE user_email IN (${placeholders(SIM_EMAILS)})`,
+    SIM_EMAILS
+  );
   return counts;
 }

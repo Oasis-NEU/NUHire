@@ -21,13 +21,13 @@ override that.
 Run from the repo root with the stack up (`npm run all`, or just the database,
 Keycloak and API: `docker compose -f compose.dev.yaml up -d --wait db keycloak api`).
 
-| Command                                   | What it does                                                                                                                                                                           |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run seed`                            | Builds the class in Keycloak and MySQL. Safe to run again.                                                                                                                             |
-| `npm run seed -- --scenario=NAME`         | The same, left in a later state. See [Scenarios](#scenarios).                                                                                                                          |
-| `npm run seed:check [-- --scenario=NAME]` | Logs in every account through Keycloak, checks the database, and asks the real API about the scenario (`fresh` unless you name the one you seeded). Exits non-zero if anything is off. |
-| `npm run seed:wipe`                       | Deletes the class and its accounts. Lists what it will remove and asks you to type the class number.                                                                                   |
-| `npm run seed:reset [-- --scenario=NAME]` | Wipe the database side, keep the Keycloak accounts, seed again. A reset takes a couple of seconds.                                                                                     |
+| Command                                   | What it does                                                                                                                                                                                                      |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run seed`                            | Builds the class in Keycloak and MySQL. Safe to run again.                                                                                                                                                        |
+| `npm run seed -- --scenario=NAME`         | The same, left in a later state. See [Scenarios](#scenarios).                                                                                                                                                     |
+| `npm run seed:check [-- --scenario=NAME]` | Logs in every account except the dormant student through Keycloak, checks the database, and asks the real API about the scenario (`fresh` unless you name the one you seeded). Exits non-zero if anything is off. |
+| `npm run seed:wipe`                       | Deletes the class and its accounts. Lists what it will remove and asks you to type the class number.                                                                                                              |
+| `npm run seed:reset [-- --scenario=NAME]` | Wipe the database side, keep the Keycloak accounts, seed again. A reset takes a couple of seconds.                                                                                                                |
 
 The scripts read `api/.env.example`, the same file the dev stack uses, so there is
 nothing to configure. Three optional overrides (commented out there):
