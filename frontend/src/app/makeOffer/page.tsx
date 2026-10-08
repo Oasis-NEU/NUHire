@@ -11,22 +11,28 @@ import axios from 'axios';
 import Instructions from '../components/instructions';
 import { useProgressManager } from '../components/progress';
 import { useAuth } from '../components/AuthContext';
+import {
+  CURVEBALL_COLUMN,
+  NO_SHOW_THRESHOLD,
+  RATING_COLUMN,
+  RATING_LABEL,
+  RATINGS,
+  Rating,
+} from '../../lib/ratings';
+import type { InterviewRating } from '../../types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-type VoteData = {
-  Overall: number;
-  Profesionality: number;
-  Quality: number;
-  Personality: number;
+type VoteData = Record<Rating, number>;
+
+const NO_VOTES: VoteData = {
+  overall: 0,
+  professionalPresence: 0,
+  qualityOfAnswer: 0,
+  personality: 0,
 };
 
-interface InterviewPopup {
-  question1: number;
-  question2: number;
-  question3: number;
-  question4: number;
-}
+type InterviewPopup = Pick<InterviewRating, 'question1' | 'question2' | 'question3' | 'question4'>;
 
 interface Offer {
   id: number;
@@ -443,18 +449,12 @@ export default function MakeOffer() {
 
     for (const [candidateIdStr, candidateInterviews] of Object.entries(grouped)) {
       const candidateId = parseInt(candidateIdStr);
-      voteData[candidateId] = {
-        Overall: 0,
-        Profesionality: 0,
-        Quality: 0,
-        Personality: 0,
-      };
+      voteData[candidateId] = { ...NO_VOTES };
 
       candidateInterviews.forEach((interview) => {
-        voteData[candidateId].Overall += interview.question1;
-        voteData[candidateId].Profesionality += interview.question2;
-        voteData[candidateId].Quality += interview.question3;
-        voteData[candidateId].Personality += interview.question4;
+        RATINGS.forEach((rating) => {
+          voteData[candidateId][rating] += interview[RATING_COLUMN[rating]];
+        });
 
         checkboxData[candidateId] = checkboxData[candidateId] || interview.checked;
       });
@@ -920,19 +920,12 @@ export default function MakeOffer() {
           <div className="grid grid-cols-2 gap-8 w-full min-h-[60vh] items-stretch">
             {interviewsWithVideos.map((interview) => {
               const interviewNumber = interview.candidate_id;
-              const votes = voteCounts[interviewNumber] || {
-                Overall: 0,
-                Profesionality: 0,
-                Quality: 0,
-                Personality: 0,
-              };
+              const votes = voteCounts[interviewNumber] || NO_VOTES;
+              const total = (rating: Rating) =>
+                (votes[rating] || 0) +
+                (popupVotes[interviewNumber]?.[CURVEBALL_COLUMN[rating]] || 0);
 
-              const isNoShow =
-                (votes.Overall || 0) + (popupVotes[interviewNumber]?.question4 || 0) <= -1000 ||
-                (votes.Profesionality || 0) + (popupVotes[interviewNumber]?.question1 || 0) <=
-                  -1000 ||
-                (votes.Quality || 0) + (popupVotes[interviewNumber]?.question2 || 0) <= -1000 ||
-                (votes.Personality || 0) + (popupVotes[interviewNumber]?.question3 || 0) <= -1000;
+              const isNoShow = RATINGS.some((rating) => total(rating) <= NO_SHOW_THRESHOLD);
               const isAccepted = sentIn[interviewNumber] === true;
               const isRejected = sentIn[interviewNumber] === false;
 
@@ -968,48 +961,12 @@ export default function MakeOffer() {
                   </div>
 
                   <div className="mt-2 space-y-1 text-navy text-sm">
-                    <p>
-                      <span className="font-medium">Overall:</span>{' '}
-                      {groupSize > 0
-                        ? Math.max(
-                            0,
-                            ((votes.Overall || 0) + (popupVotes[interviewNumber]?.question4 || 0)) /
-                              groupSize
-                          ).toFixed(1)
-                        : 'N/A'}
-                    </p>
-                    <p>
-                      <span className="font-medium">Professional Presence:</span>{' '}
-                      {groupSize > 0
-                        ? Math.max(
-                            0,
-                            ((votes.Profesionality || 0) +
-                              (popupVotes[interviewNumber]?.question1 || 0)) /
-                              groupSize
-                          ).toFixed(1)
-                        : 'N/A'}
-                    </p>
-                    <p>
-                      <span className="font-medium">Quality of Answer:</span>{' '}
-                      {groupSize > 0
-                        ? Math.max(
-                            0,
-                            ((votes.Quality || 0) + (popupVotes[interviewNumber]?.question2 || 0)) /
-                              groupSize
-                          ).toFixed(1)
-                        : 'N/A'}
-                    </p>
-                    <p>
-                      <span className="font-medium">Personality:</span>{' '}
-                      {groupSize > 0
-                        ? Math.max(
-                            0,
-                            ((votes.Personality || 0) +
-                              (popupVotes[interviewNumber]?.question3 || 0)) /
-                              groupSize
-                          ).toFixed(1)
-                        : 'N/A'}
-                    </p>
+                    {RATINGS.map((rating) => (
+                      <p key={rating}>
+                        <span className="font-medium">{RATING_LABEL[rating]}:</span>{' '}
+                        {groupSize > 0 ? Math.max(0, total(rating) / groupSize).toFixed(1) : 'N/A'}
+                      </p>
+                    ))}
                   </div>
 
                   <a
