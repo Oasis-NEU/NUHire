@@ -29,6 +29,10 @@ services:
         required: false
     environment:
       DATABASE_URL: mysql://root:nuhire@db:3306/nuhire
+    # The API runs these at start (see api/dockerfile.dev). Mounted rather than
+    # built in, so a new migration needs only a restart of this container.
+    volumes:
+      - ./database-files/migrations:/database-files/migrations:ro
     healthcheck:
       test:
         [

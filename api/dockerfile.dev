@@ -12,4 +12,6 @@ RUN npx tsc
 
 EXPOSE 5001
 
-CMD ["sh", "-c", "npx tsc --watch --preserveWatchOutput & exec node --watch dist/server.js"]
+# Migrations first, as `npm start` does in production: if one fails, the API
+# does not start. compose.dev.yaml mounts them at /database-files/migrations.
+CMD ["sh", "-c", "npm run db:migrate && { npx tsc --watch --preserveWatchOutput & exec node --watch dist/server.js; }"]
