@@ -1153,7 +1153,7 @@ at `:351-357`.
 ### For an agent
 
 - Delete the emits, the `interviewStageFinished` listener and its handler, and
-  `SocketEvents.studentPageChanged` (`types.ts:52`).
+  `SocketEvents.studentPageChanged` (`SocketEvents.ts:23`).
 - In `res-review`, delete only the three emits at `:393-395`. `announce()` also
   runs on reconnect; the second copy does not.
 - Do not add server handlers to make them "work". If someone wants page
