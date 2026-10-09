@@ -8,7 +8,7 @@ import { STUDENTS, activeMembersOf } from '../lib/roster.mjs';
 import { SeedError, http, parseArgs, run, say } from '../lib/util.mjs';
 import { Advisor } from './advisor.mjs';
 import { TEACHER_NOTICE_MS, expectedStep, sleep } from './journey.mjs';
-import { BURST_LIMIT_MS, HANG_MS, Metrics, P95_LIMIT_MS } from './metrics.mjs';
+import { BURST_LIMIT_MS, HANG_MS, Metrics, P95_LIMIT_MS, markdownTable } from './metrics.mjs';
 import { Student } from './student.mjs';
 
 const exec = promisify(execFile);
@@ -175,8 +175,12 @@ run(async () => {
   }
   say(`Errors outside the outage: ${metrics.total(metrics.errors)}.\n`);
   say(metrics.table());
-  say('\n| Criterion | Result | |\n| --- | --- | --- |');
-  for (const [name, result, ok] of criteria) say(`| ${name} | ${result} | ${verdict(ok)} |`);
+  say(
+    `\n${markdownTable(
+      ['Criterion', 'Result', ''],
+      criteria.map(([name, result, ok]) => [name, result, verdict(ok)])
+    )}`
+  );
   for (const [email, reason] of stuck) say(`- ${email} ${reason}`);
   for (const problem of h.problems) say(`- ${problem}`);
 

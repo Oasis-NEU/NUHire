@@ -86,12 +86,30 @@ export class Metrics {
     const rows = names.sort().map((name) => {
       const s = this.stats(name);
       const flag = s.p95 > P95_LIMIT_MS && isHttp(name) ? ' ⚠' : '';
-      return `| ${name}${flag} | ${s.count} | ${ms(s.p50)} | ${ms(s.p95)} | ${ms(s.p99)} | ${ms(s.max)} | ${this.errors.get(name) ?? 0} | ${this.hangs.get(name) ?? 0} |`;
+      return [
+        name + flag,
+        String(s.count),
+        ms(s.p50),
+        ms(s.p95),
+        ms(s.p99),
+        ms(s.max),
+        String(this.errors.get(name) ?? 0),
+        String(this.hangs.get(name) ?? 0),
+      ];
     });
-    return [
-      '| Request or event | Count | p50 ms | p95 ms | p99 ms | Max ms | Errors | Hangs |',
-      '| --- | --: | --: | --: | --: | --: | --: | --: |',
-      ...rows,
-    ].join('\n');
+    return markdownTable(
+      ['Request or event', 'Count', 'p50 ms', 'p95 ms', 'p99 ms', 'Max ms', 'Errors', 'Hangs'],
+      rows,
+      { right: [1, 2, 3, 4, 5, 6, 7] }
+    );
   }
+}
+
+// A markdown table padded so its columns line up in a terminal too.
+export function markdownTable(headers, rows, { right = [] } = {}) {
+  const widths = headers.map((h, i) => Math.max(h.length, 3, ...rows.map((r) => r[i].length)));
+  const pad = (cell, i) => (right.includes(i) ? cell.padStart(widths[i]) : cell.padEnd(widths[i]));
+  const line = (cells) => `| ${cells.map(pad).join(' | ')} |`;
+  const rule = widths.map((w, i) => (right.includes(i) ? `${'-'.repeat(w - 1)}:` : '-'.repeat(w)));
+  return [line(headers), `| ${rule.join(' | ')} |`, ...rows.map(line)].join('\n');
 }
