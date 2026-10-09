@@ -79,6 +79,7 @@ export function ResetWorkConfirmModal({
 
   return (
     <div
+      role="presentation"
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]"
       onKeyDown={(e) => {
         if (e.key === 'Escape' && !isWorking) onCancel();
@@ -86,6 +87,7 @@ export function ResetWorkConfirmModal({
     >
       <div
         role="alertdialog"
+        aria-modal="true"
         aria-labelledby="reset-work-title"
         className="bg-white rounded-lg p-6 w-[28rem] max-h-[90vh] overflow-y-auto"
       >

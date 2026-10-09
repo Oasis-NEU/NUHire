@@ -385,7 +385,7 @@ export class JobController {
         group_ids: groupIds,
         cleared_tables: reset ? CLEARED_TABLES : [],
       });
-    } catch (error: any) {
+    } catch (error) {
       try {
         await conn.rollback();
       } catch (rollbackError) {
@@ -395,7 +395,6 @@ export class JobController {
       console.error('Error assigning job to all groups:', error);
       res.status(500).json({
         error: 'Database error occurred while assigning job to all groups',
-        details: error.message,
       });
     } finally {
       conn.release();
@@ -470,7 +469,7 @@ export class JobController {
         students_affected: studentsAffected,
         job_assignment_updated: true,
       });
-    } catch (error: any) {
+    } catch (error) {
       try {
         await conn.rollback();
       } catch (rollbackError) {
@@ -480,7 +479,6 @@ export class JobController {
       console.error('Error updating job and clearing data:', error);
       res.status(500).json({
         error: 'Database error occurred while updating job and clearing data',
-        details: error.message,
       });
     } finally {
       conn.release();
