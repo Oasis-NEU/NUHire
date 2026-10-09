@@ -110,7 +110,7 @@ api/src/
   routes/            path -> controller, plus the auth middleware per route
   controller/        request handling and raw SQL
   middleware/        requireAuth, requireAdmin, requireModerator, requireStudent
-  models/types.ts    shared types, including socket payloads
+  models/            shared types: User, AuthRequest, SocketEvents (socket payloads)
 
 frontend/src/app/
   page.tsx                    landing

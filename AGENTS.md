@@ -244,7 +244,7 @@ api/src/
   routes/            path -> controller, and the auth middleware per route
   controller/        request handling and raw SQL
   middleware/        requireAuth, requireAdmin, requireStudent
-  models/types.ts    shared types incl. socket event payloads
+  models/            shared types: User, AuthRequest, SocketEvents (socket payloads)
 
 frontend/src/app/
   page.tsx           landing
@@ -287,7 +287,7 @@ of the existing code does not look like this yet; do not copy it.
 - **Scope by `group_id` and `class`.** Every query, every room. Room names are
   `group_<group_id>_class_<class>`; build them the same way every time.
 - **One type per concept.** Shapes live in `frontend/src/types/index.ts` and
-  `api/src/models/types.ts`. Type `tinyint(1)` columns as `DbBool`, never
+  `api/src/models/`, one file per domain. Type `tinyint(1)` columns as `DbBool`, never
   `boolean`. No interfaces inside a component body.
 - **Comments say why, in a sentence or two.** What the code used to do goes in
   the commit message. No comments that restate the next line, label imports, or

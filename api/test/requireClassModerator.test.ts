@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { NextFunction, Response } from 'express';
 import type { Pool } from 'mysql2';
 import { requireClassModerator } from '../src/middleware/auth.middleware';
-import type { AuthRequest } from '../src/models/types';
+import type { AuthRequest } from '../src/models/AuthRequest';
 
 // One professor must not be able to read another section's students.
 
