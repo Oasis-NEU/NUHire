@@ -1,3 +1,4 @@
+-- migrate:up
 -- 001: one vote row per student per resume.
 --
 -- `Resume` had only PRIMARY KEY (id) and a non-unique KEY on student_id. Both
@@ -53,3 +54,5 @@ SET @stmt := IF(
 PREPARE alter_stmt FROM @stmt;
 EXECUTE alter_stmt;
 DEALLOCATE PREPARE alter_stmt;
+
+-- migrate:down
