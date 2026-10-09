@@ -154,8 +154,14 @@ const Dashboard = () => {
     const roomId = `group_${user.group_id}_class_${user.class}`;
     socket.emit('joinGroup', roomId);
 
-    const handleReconnect = () => {
+    const handleReconnect = async () => {
       socket.emit('joinGroup', roomId);
+      // A jobUpdated sent while this socket was down went to a room it was not
+      // in. Re-read the job and progress so the dashboard is not left stale.
+      await fetchJobDescription(user);
+      const currentProgress = await fetchProgress(user);
+      setProgress(currentProgress);
+      localStorage.setItem('progress', currentProgress);
     };
 
     socket.on('connect', handleReconnect);
