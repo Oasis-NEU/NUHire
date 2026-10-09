@@ -436,6 +436,7 @@ npm run seed         # a 30-student class (class 9001), with messy cases
 npm run seed:check   # log in all of them through Keycloak
 npm run seed:reset   # back to a clean simulated class, in seconds
 npm run seed:wipe    # remove it
+npm run load         # load test: all 30 through the activity at once
 ```
 
 The seed needs the stack up. See `.local/tests/README.md` for the roster and how

@@ -322,8 +322,9 @@ Then walk the affected flow against the local stack. Test accounts are in
 `.local/README.md`; password is `nuhire` for all of them. Anything touching
 groups, barriers, or sockets needs **two browser sessions in the same group**, or
 you have not tested it. The built-in accounts only go as far as three students;
-`npm run seed` builds a 30-student class when you need the real size (see
-`.local/tests/README.md`).
+`npm run seed` builds a 30-student class when you need the real size, and
+`npm run load` walks that whole class through the activity at once, which is
+the check for barrier and socket changes (see `.local/tests/README.md`).
 
 ## Before you open a PR
 
