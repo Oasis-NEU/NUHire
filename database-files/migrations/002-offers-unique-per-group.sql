@@ -1,3 +1,4 @@
+-- migrate:up
 -- 002: one offer row per group per class.
 --
 -- `Offers` had only PRIMARY KEY (id). A group submits one offer, but two members
@@ -57,3 +58,5 @@ SET @stmt := IF(
 PREPARE alter_stmt FROM @stmt;
 EXECUTE alter_stmt;
 DEALLOCATE PREPARE alter_stmt;
+
+-- migrate:down

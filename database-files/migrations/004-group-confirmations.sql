@@ -1,3 +1,4 @@
+-- migrate:up
 -- 004: durable group-selection confirmations for res-review-group.
 --
 -- `teamConfirmations` lived only in React state and was never fetched. Any
@@ -38,3 +39,5 @@ FROM information_schema.COLUMNS
 WHERE TABLE_SCHEMA = DATABASE()
   AND TABLE_NAME = 'GroupConfirmations'
 ORDER BY ORDINAL_POSITION;
+
+-- migrate:down
