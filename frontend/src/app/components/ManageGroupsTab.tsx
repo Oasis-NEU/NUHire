@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSocket } from './socketContext';
 import Popup from './popup';
+import { ResetWorkConfirmModal } from './ResetWorkConfirmModal';
 import { useAuth } from './AuthContext';
 import type { ClassInfo, Group, JobOption, Student } from '../../types';
 
@@ -35,6 +36,7 @@ export function ManageGroupsTab() {
   const [availableJobs, setAvailableJobs] = useState<JobOption[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [isAssigningJob, setIsAssigningJob] = useState(false);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: string; data: any } | null>(null);
   const [scrollStates, setScrollStates] = useState<
@@ -714,6 +716,7 @@ export function ManageGroupsTab() {
         body: JSON.stringify({
           class_id: selectedClass,
           job_title: selectedJob.title,
+          reset: true,
         }),
       });
 
@@ -790,6 +793,7 @@ export function ManageGroupsTab() {
           job_group_id: selectedGroupForJob,
           class_id: selectedClass,
           job: selectedJob.title,
+          reset: true,
         }),
       });
 
@@ -1716,7 +1720,7 @@ export function ManageGroupsTab() {
             )}
             <div className="flex space-x-3">
               <button
-                onClick={selectedGroupForJob ? assignJobToGroup : assignJobToAllGroups}
+                onClick={() => setConfirmResetOpen(true)}
                 disabled={isAssigningJob || !selectedJobId}
                 className={`flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 ${isAssigningJob ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
@@ -1735,6 +1739,20 @@ export function ManageGroupsTab() {
             </div>
           </div>
         </div>
+      )}
+
+      {assignJobModalOpen && confirmResetOpen && selectedJobId && (
+        <ResetWorkConfirmModal
+          classId={selectedClass}
+          groupId={selectedGroupForJob}
+          jobTitle={availableJobs.find((job) => job.id === selectedJobId)?.title ?? ''}
+          isWorking={isAssigningJob}
+          onConfirm={async () => {
+            await (selectedGroupForJob ? assignJobToGroup() : assignJobToAllGroups());
+            setConfirmResetOpen(false);
+          }}
+          onCancel={() => setConfirmResetOpen(false)}
+        />
       )}
 
       {sendPopupModalOpen && (

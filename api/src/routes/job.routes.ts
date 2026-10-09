@@ -13,7 +13,8 @@ export default (db: Pool, io: SocketIOServer, onlineStudents: Record<string, str
   router.get('/title', requireAuth, jobController.getJobByTitle);
   router.get('/assignment/:groupId/:classId', requireAuth, jobController.getJobAssignment);
 
-  // Assigning a job deletes the group's work. Advisor only.
+  // Assigning a job with `reset: true` deletes the group's work. Advisor only.
+  router.get('/reset-preview', requireAdmin, jobController.getResetPreview);
   router.post('/', requireAdmin, jobController.createJob);
   router.post('/update-job', requireAdmin, jobController.updateJob);
   router.post('/assign-job-to-all', requireAdmin, jobController.assignJobToAllGroups);

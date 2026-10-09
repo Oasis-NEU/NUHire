@@ -5,8 +5,121 @@
 import { Response } from 'express';
 import { AuthRequest } from '../models/types';
 import { Pool } from 'mysql2';
+import type { Pool as PromisePool, PoolConnection, RowDataPacket } from 'mysql2/promise';
 import fs from 'fs';
 import path from 'path';
+
+// Every group-scoped table a reset wipes. The reset deletes from this list and
+// the reset preview counts from it, so the warning the professor reads cannot
+// drift from what actually gets deleted. Table and column names are constants,
+// never user input, which is why they are interpolated below.
+//
+// Offers, GroupConfirmations and Step_Completion are here for the same reason:
+// each describes work the reset erases. Leaving Offers behind locked a wiped
+// group out of ever submitting again, and a leftover confirmation or completion
+// marks the group as done with an empty table behind it.
+export const GROUP_WORK_TABLES = [
+  { table: 'Resume', classColumn: 'class', label: 'resume votes' },
+  { table: 'InterviewPage', classColumn: 'class', label: 'interview ratings' },
+  { table: 'Interview_Status', classColumn: 'class', label: 'interview progress' },
+  { table: 'InterviewPopup', classColumn: 'class', label: 'curveball interview results' },
+  { table: 'GroupConfirmations', classColumn: 'class', label: 'shortlist confirmations' },
+  { table: 'Step_Completion', classColumn: 'class', label: 'step completions' },
+  { table: 'Offers', classColumn: 'class_id', label: 'offers' },
+] as const;
+
+type Queryable = PromisePool | PoolConnection;
+
+async function groupStudentEmails(
+  db: Queryable,
+  classId: number,
+  groupId: number
+): Promise<string[]> {
+  const [rows] = await db.query<RowDataPacket[]>(
+    "SELECT email FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
+    [groupId, classId]
+  );
+  return rows.map((row) => row.email as string);
+}
+
+export interface GroupResetPreview {
+  group_id: number;
+  students: number;
+  counts: Record<string, number>;
+  offer_status: 'pending' | 'accepted' | 'rejected' | null;
+}
+
+// What a reset of one group would erase, counted from the live tables.
+export async function previewGroupReset(
+  db: Queryable,
+  classId: number,
+  groupId: number
+): Promise<GroupResetPreview> {
+  const counts: Record<string, number> = {};
+  for (const { table, classColumn, label } of GROUP_WORK_TABLES) {
+    const [rows] = await db.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS n FROM \`${table}\` WHERE ${classColumn} = ? AND group_id = ?`,
+      [classId, groupId]
+    );
+    counts[label] = Number(rows[0].n);
+  }
+
+  const emails = await groupStudentEmails(db, classId, groupId);
+  counts.notes = 0;
+  if (emails.length > 0) {
+    const placeholders = emails.map(() => '?').join(',');
+    const [rows] = await db.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS n FROM Notes WHERE user_email IN (${placeholders})`,
+      emails
+    );
+    counts.notes = Number(rows[0].n);
+  }
+
+  const [offers] = await db.query<RowDataPacket[]>(
+    'SELECT status FROM Offers WHERE class_id = ? AND group_id = ? LIMIT 1',
+    [classId, groupId]
+  );
+
+  return {
+    group_id: groupId,
+    students: emails.length,
+    counts,
+    offer_status: offers.length > 0 ? offers[0].status : null,
+  };
+}
+
+// Erases one group's work and sends its students back to the job description.
+// Runs on the caller's connection so it joins the caller's transaction.
+export async function resetGroupWork(
+  conn: PoolConnection,
+  classId: number,
+  groupId: number
+): Promise<number> {
+  await conn.query(
+    "UPDATE Users SET `current_page` = 'jobdes' WHERE group_id = ? AND class = ? AND affiliation = 'student'",
+    [groupId, classId]
+  );
+  await conn.query("UPDATE Progress SET step = 'job_description' WHERE crn = ? AND group_id = ?", [
+    classId,
+    groupId,
+  ]);
+
+  for (const { table, classColumn } of GROUP_WORK_TABLES) {
+    await conn.query(`DELETE FROM \`${table}\` WHERE ${classColumn} = ? AND group_id = ?`, [
+      classId,
+      groupId,
+    ]);
+  }
+
+  const emails = await groupStudentEmails(conn, classId, groupId);
+  if (emails.length > 0) {
+    const placeholders = emails.map(() => '?').join(',');
+    await conn.query(`DELETE FROM Notes WHERE user_email IN (${placeholders})`, emails);
+  }
+  return emails.length;
+}
+
+const CLEARED_TABLES = [...GROUP_WORK_TABLES.map(({ table }) => table), 'Notes'];
 
 export class JobController {
   constructor(
@@ -141,8 +254,50 @@ export class JobController {
     );
   };
 
+  // GET /jobs/reset-preview?class_id=&group_id=  (group_id omitted = every group)
+  // Feeds the confirmation the professor must pass before a reset, so it can say
+  // what will actually be lost instead of a hardcoded list.
+  getResetPreview = async (req: AuthRequest, res: Response): Promise<void> => {
+    const classId = parseInt(String(req.query.class_id));
+    const groupParam = req.query.group_id;
+    const groupId = groupParam === undefined ? null : parseInt(String(groupParam));
+
+    if (isNaN(classId) || classId <= 0 || (groupId !== null && (isNaN(groupId) || groupId <= 0))) {
+      res
+        .status(400)
+        .json({ error: 'class_id (and group_id, if given) must be positive integers' });
+      return;
+    }
+
+    try {
+      const db = this.db.promise();
+      let groupIds: number[];
+      if (groupId !== null) {
+        groupIds = [groupId];
+      } else {
+        const [rows] = await db.query<RowDataPacket[]>(
+          'SELECT DISTINCT group_id FROM `GroupsInfo` WHERE class_id = ? ORDER BY group_id',
+          [classId]
+        );
+        groupIds = rows.map((row) => row.group_id as number);
+      }
+
+      const groups: GroupResetPreview[] = [];
+      for (const id of groupIds) {
+        groups.push(await previewGroupReset(db, classId, id));
+      }
+      res.json({ class_id: classId, groups });
+    } catch (error) {
+      console.error('Error building reset preview:', error);
+      res.status(500).json({ error: 'Could not load what a reset would erase' });
+    }
+  };
+
+  // `reset` must be exactly `true` to erase anything. Without it this only
+  // changes the job, so fixing a typo in a title no longer wipes the class.
   assignJobToAllGroups = async (req: AuthRequest, res: Response): Promise<void> => {
     const { class_id, job_title } = req.body;
+    const reset = req.body.reset === true;
 
     if (!class_id || !job_title) {
       res.status(400).json({
@@ -194,68 +349,17 @@ export class JobController {
 
       await conn.beginTransaction();
 
-      // Process each group
       for (const groupId of groupIds) {
-        // Insert/update job assignment
         await conn.query(
           `INSERT INTO Job_Assignment (\`group\`, \`class\`, job)
           VALUES (?, ?, ?)
           ON DUPLICATE KEY UPDATE job = VALUES(job)`,
-          [groupId, class_id, job_title]
+          [groupId, classIdInt, job_title]
         );
 
-        // Update students' current page
-        await conn.query(
-          "UPDATE Users SET `current_page` = 'jobdes' WHERE group_id = ? AND class = ? AND affiliation = 'student'",
-          [groupId, class_id]
-        );
-
-        // Update progress
-        await conn.query(
-          "UPDATE Progress SET step = 'job_description' WHERE crn = ? AND group_id = ?",
-          [class_id, groupId]
-        );
-
-        // Clear all related data for this group
-        await conn.query('DELETE FROM InterviewPage WHERE class = ? AND group_id = ?', [
-          class_id,
-          groupId,
-        ]);
-        await conn.query('DELETE FROM Resume WHERE class = ? AND group_id = ?', [
-          class_id,
-          groupId,
-        ]);
-        await conn.query('DELETE FROM Interview_Status WHERE class = ? AND group_id = ?', [
-          class_id,
-          groupId,
-        ]);
-        await conn.query('DELETE FROM InterviewPopup WHERE class = ? AND group_id = ?', [
-          class_id,
-          groupId,
-        ]);
-
-        // Get students in this group and clear their data
-        const [students] = (await conn.query(
-          "SELECT email FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
-          [groupId, class_id]
-        )) as any[];
-
-        const emails = students.map(({ email }: any) => email);
-
-        if (emails.length > 0) {
-          const placeholders = emails.map(() => '?').join(',');
-          await conn.query(`DELETE FROM Notes WHERE user_email IN (${placeholders})`, emails);
+        if (reset) {
+          await resetGroupWork(conn, classIdInt, groupId);
         }
-
-        // The barrier now lives in Step_Completion, not in process memory. The
-        // Resume rows above were just wiped, so a completion left behind here
-        // would mark this group as already finished with zero decisions in the
-        // table and the barrier would release into an empty review. Clear it in
-        // the same transaction as the work it describes.
-        await conn.query('DELETE FROM Step_Completion WHERE class = ? AND group_id = ?', [
-          class_id,
-          groupId,
-        ]);
       }
 
       await conn.commit();
@@ -264,18 +368,22 @@ export class JobController {
       // partway through told the earlier groups their job had changed and then
       // rolled the change back underneath them.
       for (const groupId of groupIds) {
-        this.io.to(`group_${groupId}_class_${class_id}`).emit('jobUpdated', {
+        this.io.to(`group_${groupId}_class_${classIdInt}`).emit('jobUpdated', {
           job: job_title,
+          reset,
         });
       }
 
       res.json({
-        message: 'Job assigned to all groups successfully',
+        message: reset
+          ? 'Job assigned to all groups and their work was reset'
+          : 'Job assigned to all groups; no work was erased',
         class_id: classIdInt,
         job_title,
+        reset,
         groups_updated: groupIds.length,
         group_ids: groupIds,
-        cleared_tables: ['InterviewPage', 'Resume', 'Interview_Status', 'InterviewPopup', 'Notes'],
+        cleared_tables: reset ? CLEARED_TABLES : [],
       });
     } catch (error: any) {
       try {
@@ -294,8 +402,10 @@ export class JobController {
     }
   };
 
+  // Same `reset` contract as assignJobToAllGroups, for one group.
   updateJob = async (req: AuthRequest, res: Response): Promise<void> => {
     const { job_group_id, class_id, job } = req.body;
+    const reset = req.body.reset === true;
 
     if (!job_group_id || !class_id || !job || job.length === 0) {
       res.status(400).json({ error: 'Group ID, class ID, and job are required.' });
@@ -315,7 +425,7 @@ export class JobController {
     }
 
     // Same fix as assignJobToAllGroups: one connection, a real transaction, and
-    // a release in `finally`. Through the pool the four DELETEs below each
+    // a release in `finally`. Through the pool the reset's DELETEs each
     // committed on their own and the ROLLBACK did nothing.
     // See assignJobToAllGroups for why the acquire has its own catch.
     let conn;
@@ -335,69 +445,29 @@ export class JobController {
         `INSERT INTO Job_Assignment (\`group\`, \`class\`, job)
          VALUES (?, ?, ?)
          ON DUPLICATE KEY UPDATE job = VALUES(job)`,
-        [job_group_id, class_id, jobTitle]
+        [groupIdInt, classIdInt, jobTitle]
       );
 
-      await conn.query(
-        "UPDATE Users SET `current_page` = 'jobdes' WHERE group_id = ? AND class = ? AND affiliation = 'student'",
-        [job_group_id, class_id]
-      );
-
-      await conn.query(
-        "UPDATE Progress SET step = 'job_description' WHERE crn = ? AND group_id = ?",
-        [class_id, job_group_id]
-      );
-
-      await conn.query('DELETE FROM InterviewPage WHERE class = ? AND group_id = ?', [
-        class_id,
-        job_group_id,
-      ]);
-      await conn.query('DELETE FROM Resume WHERE class = ? AND group_id = ?', [
-        class_id,
-        job_group_id,
-      ]);
-      await conn.query('DELETE FROM Interview_Status WHERE class = ? AND group_id = ?', [
-        class_id,
-        job_group_id,
-      ]);
-      await conn.query('DELETE FROM InterviewPopup WHERE class = ? AND group_id = ?', [
-        class_id,
-        job_group_id,
-      ]);
-
-      const [students] = (await conn.query(
-        "SELECT email FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
-        [job_group_id, class_id]
-      )) as any[];
-
-      const emails = students.map(({ email }: any) => email);
-
-      if (emails.length > 0) {
-        const placeholders = emails.map(() => '?').join(',');
-        await conn.query(`DELETE FROM Notes WHERE user_email IN (${placeholders})`, emails);
-      }
-
-      // Same reason as assignJobToAllGroups: the group's work was just wiped,
-      // so its barrier completions must go with it or the group reads as done.
-      await conn.query('DELETE FROM Step_Completion WHERE class = ? AND group_id = ?', [
-        class_id,
-        job_group_id,
-      ]);
+      const studentsAffected = reset ? await resetGroupWork(conn, classIdInt, groupIdInt) : 0;
 
       await conn.commit();
 
-      const roomID = `group_${job_group_id}_class_${class_id}`;
+      const roomID = `group_${groupIdInt}_class_${classIdInt}`;
       this.io.to(roomID).emit('jobUpdated', {
         job: jobTitle,
+        reset,
       });
 
       res.json({
-        message: 'Group job updated and all related data cleared successfully!',
-        job_group_id,
-        class_id,
+        message: reset
+          ? 'Group job updated and its work was reset'
+          : 'Group job updated; no work was erased',
+        job_group_id: groupIdInt,
+        class_id: classIdInt,
         job: jobTitle,
-        cleared_tables: ['InterviewPage', 'Resume', 'Interview_Status', 'InterviewPopup', 'Notes'],
-        students_affected: emails.length,
+        reset,
+        cleared_tables: reset ? CLEARED_TABLES : [],
+        students_affected: studentsAffected,
         job_assignment_updated: true,
       });
     } catch (error: any) {
