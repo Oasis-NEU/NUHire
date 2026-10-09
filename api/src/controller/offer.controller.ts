@@ -3,7 +3,7 @@
 // ============================================
 
 import { Response } from 'express';
-import { AuthRequest } from '../models/types';
+import { AuthRequest } from '../models/AuthRequest';
 import { Pool } from 'mysql2';
 
 export class OfferController {

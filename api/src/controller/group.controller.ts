@@ -1,7 +1,7 @@
 // src/controllers/group.controller.ts
 
 import { Response } from 'express';
-import { AuthRequest } from '../models/types';
+import { AuthRequest } from '../models/AuthRequest';
 import { Pool, RowDataPacket } from 'mysql2';
 import { PoolConnection } from 'mysql2/promise';
 import {
