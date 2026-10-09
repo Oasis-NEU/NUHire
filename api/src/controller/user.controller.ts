@@ -150,7 +150,7 @@ export class UserController {
       const { class: classId } = req.query;
 
       let query = "SELECT f_name, l_name, email, group_id FROM Users WHERE affiliation = 'student'";
-      let params: any[] = [];
+      const params: any[] = [];
 
       if (classId) {
         query += ' AND class = ?';

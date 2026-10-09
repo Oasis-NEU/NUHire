@@ -180,8 +180,6 @@ export class AuthController {
   };
 
   logout = (req: AuthRequest, res: Response, next: NextFunction): void => {
-    const FRONT_URL = process.env.REACT_APP_FRONT_URL;
-
     req.logout((err) => {
       if (err) {
         next(err);
