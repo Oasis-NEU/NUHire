@@ -1,5 +1,6 @@
 import { Response } from 'express';
-import { AuthRequest, User } from '../models/types';
+import { AuthRequest } from '../models/AuthRequest';
+import { User } from '../models/User';
 import { Pool, RowDataPacket } from 'mysql2';
 import { emitToClassModerators } from '../config/socket';
 

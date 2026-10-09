@@ -4,7 +4,7 @@
 
 import { Response, NextFunction } from 'express';
 import passport from 'passport';
-import { AuthRequest } from '../models/types';
+import { AuthRequest } from '../models/AuthRequest';
 import { Pool } from 'mysql2';
 
 export class AuthController {

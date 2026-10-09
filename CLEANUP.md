@@ -378,7 +378,7 @@ carries a string.
 
 ## CU-7 — The shortlist checkbox is typed boolean but carries 0 or 1
 
-**GFI · 2h · `api/src/models/types.ts`, `frontend/src/app/res-review-group/page.tsx`**
+**GFI · 2h · `api/src/models/SocketEvents.ts`, `frontend/src/app/res-review-group/page.tsx`**
 
 ### What & why
 
@@ -392,18 +392,18 @@ is dead code and the shortlist stops working.
 ### Evidence
 
 ```
-api/src/models/types.ts:43                    checked: boolean;   // SocketEvents['check']
+api/src/models/SocketEvents.ts:14             checked: boolean;   // SocketEvents['check']
 frontend/src/app/res-review-group/page.tsx:36  checked: boolean;   // ResumeData
 frontend/src/app/res-review-group/page.tsx:42  checked: boolean;   // Resume
 frontend/src/app/res-review-group/page.tsx:455 checked: newChecked ? 1 : 0,
 ```
 
-`SocketEvents['checkint'].checked` (`types.ts:48`) really is a boolean;
+`SocketEvents['checkint'].checked` (`SocketEvents.ts:19`) really is a boolean;
 `makeOffer` sends one. Leave it.
 
 ### For an agent
 
-- Add `DbBool` to `api/src/models/types.ts` and use it for `check.checked`.
+- Add `DbBool` to `api/src/models/` and use it for `check.checked`.
 - In `res-review-group`, the interfaces are declared inside the component body.
   Move them to module level, use `DbBool`, and import `Resume` from
   `frontend/src/types` where the shape matches.
@@ -1128,7 +1128,7 @@ Files nothing imports, plus a Next config in a folder Next never reads it from.
 
 ## CU-25 — Stop emitting socket events nothing handles
 
-**GFI · 1h · student pages, `advisor-dashboard/page.tsx`, `api/src/models/types.ts`**
+**GFI · 1h · student pages, `advisor-dashboard/page.tsx`, `api/src/models/SocketEvents.ts`**
 
 ### What & why
 
