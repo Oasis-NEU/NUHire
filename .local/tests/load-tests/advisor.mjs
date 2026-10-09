@@ -40,6 +40,8 @@ export class Advisor {
       `/offers/group/${groupId}/class/${classId}`
     );
     const pending = offers.find((o) => o.candidate_id === candidateId && o.status === 'pending');
+    if (!pending)
+      throw new Error(`no pending offer for group ${groupId}, candidate ${candidateId}`);
     await this.call('PUT', '/offers/:offer_id', `/offers/${pending.id}`, { status: 'accepted' });
     this.h.offerAnswered.set(groupId, performance.now());
     this.socket.emit('makeOfferResponse', { classId, groupId, candidateId, accepted: true });
