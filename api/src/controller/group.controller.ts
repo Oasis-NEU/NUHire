@@ -7,6 +7,7 @@ import { PoolConnection } from 'mysql2/promise';
 import {
   RES_REVIEW_BARRIER_STEP,
   broadcastGroupBarrier,
+  connectedEmails,
   evaluateGroupBarrier,
 } from '../config/socket';
 
@@ -699,6 +700,56 @@ export class GroupController {
       console.error('Error evaluating group barrier:', error);
       res.status(500).json({ error: 'Failed to evaluate group barrier' });
     }
+  };
+
+  getLiveClass = (req: AuthRequest, res: Response): void => {
+    const { classId } = req.params;
+
+    // Joined on the student's current group, so rows left from an old group do not count.
+    const query = `
+      SELECT
+        u.id,
+        u.f_name,
+        u.l_name,
+        u.email,
+        u.group_id,
+        g.started,
+        p.step,
+        sc.completed_at AS review_completed_at,
+        gc.confirmed_at
+      FROM Users u
+      -- Nothing makes (class_id, group_id) unique, so collapse duplicates rather
+      -- than doubling every member of a duplicated group.
+      LEFT JOIN (
+        SELECT class_id, group_id, MAX(started) AS started
+        FROM GroupsInfo
+        GROUP BY class_id, group_id
+      ) g ON g.class_id = u.class AND g.group_id = u.group_id
+      LEFT JOIN Progress p ON p.email = u.email AND p.crn = u.class AND p.group_id = u.group_id
+      LEFT JOIN Step_Completion sc
+        ON sc.student_id = u.id AND sc.class = u.class AND sc.group_id = u.group_id AND sc.step = ?
+      LEFT JOIN GroupConfirmations gc
+        ON gc.student_id = u.id AND gc.class = u.class AND gc.group_id = u.group_id
+      WHERE u.class = ? AND u.affiliation = 'student' AND u.group_id IS NOT NULL
+      ORDER BY u.group_id, u.l_name, u.f_name
+    `;
+
+    this.db.query<RowDataPacket[]>(query, [RES_REVIEW_BARRIER_STEP, classId], (err, students) => {
+      if (err) {
+        console.error('Error fetching live class view:', err);
+        res.status(500).json({ error: 'Failed to fetch live class view' });
+        return;
+      }
+
+      connectedEmails(this.io)
+        .then((online) => {
+          res.json(students.map((student) => ({ ...student, online: online.has(student.email) })));
+        })
+        .catch((error) => {
+          console.error('Error reading connected sockets:', error);
+          res.status(500).json({ error: 'Failed to fetch live class view' });
+        });
+    });
   };
 
   // The professor's way past a stuck group.

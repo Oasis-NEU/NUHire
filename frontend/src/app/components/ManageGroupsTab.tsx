@@ -4,7 +4,12 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSocket } from './socketContext';
 import Popup from './popup';
-import { ResetWorkConfirmModal } from './ResetWorkConfirmModal';
+import { AssignJobModal } from './manageGroups/AssignJobModal';
+import { ResetWorkConfirmModal } from './manageGroups/ResetWorkConfirmModal';
+import { SendPopupModal } from './manageGroups/SendPopupModal';
+import { AddStudentModal } from './manageGroups/AddStudentModal';
+import { ConfirmActionModal } from './manageGroups/ConfirmActionModal';
+import { ReassignStudentModal } from './manageGroups/ReassignStudentModal';
 import { useAuth } from './AuthContext';
 import type { ClassInfo, Group, JobOption, Student } from '../../types';
 
@@ -896,6 +901,41 @@ export function ManageGroupsTab() {
     }
   };
 
+  const addStudentToGroup = async () => {
+    if (!addStudentEmail || !addStudentGroupId) return;
+    setIsAddingStudent(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/groups/add-student`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: addStudentEmail,
+          class_id: selectedClass,
+          group_id: addStudentGroupId,
+        }),
+      });
+      if (response.ok) {
+        await refreshGroupsAndStudents();
+        setPopup({ headline: 'Success', message: 'Student added successfully!' });
+        setAddStudentModalOpen(false);
+      } else {
+        const errorData = await response.json();
+        setPopup({
+          headline: 'Error',
+          message: `Failed to add student: ${errorData.error || 'Unknown error'}`,
+        });
+      }
+    } catch (error) {
+      setPopup({
+        headline: 'Error',
+        message: 'Failed to add student. Please try again.',
+      });
+    } finally {
+      setIsAddingStudent(false);
+    }
+  };
+
   const removeStudentFromGroup = async (email: string) => {
     setConfirmAction({ type: 'removeStudent', data: email });
     setConfirmModalOpen(true);
@@ -1692,53 +1732,20 @@ export function ManageGroupsTab() {
       </div>
 
       {assignJobModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">
-              {selectedGroupForJob
-                ? `Assign Job to Group ${selectedGroupForJob}`
-                : 'Assign Job to All Groups'}
-            </h3>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Job:</label>
-            <select
-              value={selectedJobId || ''}
-              onChange={(e) => setSelectedJobId(parseInt(e.target.value))}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-4"
-            >
-              <option value="">-- Select a Job --</option>
-              {availableJobs.map((job) => (
-                <option key={job.id} value={job.id}>
-                  {job.title}
-                </option>
-              ))}
-            </select>
-            {!selectedGroupForJob && (
-              <p className="text-sm text-gray-600 mb-4">
-                This will assign the selected job to all{' '}
-                {availableGroups.filter((g) => g !== -1).length} groups in this class.
-              </p>
-            )}
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setConfirmResetOpen(true)}
-                disabled={isAssigningJob || !selectedJobId}
-                className={`flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 ${isAssigningJob ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {isAssigningJob ? 'Assigning...' : 'Assign Job'}
-              </button>
-              <button
-                onClick={() => {
-                  setAssignJobModalOpen(false);
-                  setSelectedGroupForJob(null);
-                  setSelectedJobId(null);
-                }}
-                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <AssignJobModal
+          groupId={selectedGroupForJob}
+          jobs={availableJobs}
+          selectedJobId={selectedJobId}
+          onSelectJob={setSelectedJobId}
+          groupCount={availableGroups.filter((g) => g !== -1).length}
+          isAssigning={isAssigningJob}
+          onAssign={() => setConfirmResetOpen(true)}
+          onCancel={() => {
+            setAssignJobModalOpen(false);
+            setSelectedGroupForJob(null);
+            setSelectedJobId(null);
+          }}
+        />
       )}
 
       {assignJobModalOpen && confirmResetOpen && selectedJobId && (
@@ -1756,288 +1763,68 @@ export function ManageGroupsTab() {
       )}
 
       {sendPopupModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-[500px] max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">
-              Send Popup to Group {selectedGroupForPopup}
-            </h3>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Choose a Preset (Optional):
-              </label>
-              <select
-                value={selectedPreset}
-                onChange={(e) => handlePresetSelection(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">-- Select a Preset --</option>
-                {presetPopups.map((preset) => (
-                  <option key={preset.title} value={preset.title}>
-                    {preset.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {selectedPreset && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Candidate for {selectedPreset}:
-                </label>
-                <select
-                  value={selectedCandidateForPopup}
-                  onChange={(e) => handleCandidateSelectionForPopup(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">-- Select a Candidate --</option>
-                  {availableCandidates
-                    .sort((a, b) => (a.id || 0) - (b.id || 0))
-                    .map((candidate) => (
-                      <option key={candidate.id} value={candidate.id}>
-                        {candidate.name} (ID: {candidate.id})
-                      </option>
-                    ))}
-                </select>
-                {availableCandidates.length === 0 && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    This group is not currently interviewing any candidates.
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Headline:</label>
-              <input
-                type="text"
-                placeholder="Enter popup headline"
-                value={popupHeadline}
-                onChange={(e) => setPopupHeadline(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Message:</label>
-              <textarea
-                placeholder="Enter your message here"
-                value={popupMessage}
-                onChange={(e) => setPopupMessage(e.target.value)}
-                className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
-                rows={4}
-              />
-            </div>
-
-            <div className="flex space-x-3">
-              <button
-                onClick={sendPopupToGroup}
-                disabled={isSendingPopup || !popupHeadline || !popupMessage}
-                className={`flex-1 bg-northeasternRed text-white py-2 px-4 rounded-lg hover:bg-red-700 ${
-                  isSendingPopup || !popupHeadline || !popupMessage
-                    ? 'opacity-50 cursor-not-allowed'
-                    : ''
-                }
-                }`}
-              >
-                {isSendingPopup ? 'Sending...' : 'Send Popup'}
-              </button>
-              <button
-                onClick={() => {
-                  setSendPopupModalOpen(false);
-                  setPopupHeadline('');
-                  setPopupMessage('');
-                  setSelectedPreset('');
-                  setSelectedCandidateForPopup('');
-                }}
-                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <SendPopupModal
+          groupId={selectedGroupForPopup}
+          presets={presetPopups}
+          selectedPreset={selectedPreset}
+          onSelectPreset={handlePresetSelection}
+          candidates={availableCandidates}
+          selectedCandidate={selectedCandidateForPopup}
+          onSelectCandidate={handleCandidateSelectionForPopup}
+          headline={popupHeadline}
+          onHeadlineChange={setPopupHeadline}
+          message={popupMessage}
+          onMessageChange={setPopupMessage}
+          isSending={isSendingPopup}
+          onSend={sendPopupToGroup}
+          onCancel={() => {
+            setSendPopupModalOpen(false);
+            setPopupHeadline('');
+            setPopupMessage('');
+            setSelectedPreset('');
+            setSelectedCandidateForPopup('');
+          }}
+        />
       )}
 
       {/* Add Student Modal */}
       {addStudentModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">Add Student to Group {addStudentGroupId}</h3>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Student Email:</label>
-            <input
-              type="email"
-              value={addStudentEmail}
-              onChange={(e) => setAddStudentEmail(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-4"
-              placeholder="Enter student email"
-              autoFocus
-            />
-            <div className="flex space-x-3">
-              <button
-                onClick={async () => {
-                  if (!addStudentEmail || !addStudentGroupId) return;
-                  setIsAddingStudent(true);
-                  try {
-                    const response = await fetch(`${API_BASE_URL}/groups/add-student`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      credentials: 'include',
-                      body: JSON.stringify({
-                        email: addStudentEmail,
-                        class_id: selectedClass,
-                        group_id: addStudentGroupId,
-                      }),
-                    });
-                    if (response.ok) {
-                      await refreshGroupsAndStudents();
-                      setPopup({ headline: 'Success', message: 'Student added successfully!' });
-                      setAddStudentModalOpen(false);
-                    } else {
-                      const errorData = await response.json();
-                      setPopup({
-                        headline: 'Error',
-                        message: `Failed to add student: ${errorData.error || 'Unknown error'}`,
-                      });
-                    }
-                  } catch (error) {
-                    setPopup({
-                      headline: 'Error',
-                      message: 'Failed to add student. Please try again.',
-                    });
-                  } finally {
-                    setIsAddingStudent(false);
-                  }
-                }}
-                disabled={isAddingStudent || !addStudentEmail}
-                className={`flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 ${isAddingStudent ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {isAddingStudent ? 'Adding...' : 'Add Student'}
-              </button>
-              <button
-                onClick={() => setAddStudentModalOpen(false)}
-                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <AddStudentModal
+          groupId={addStudentGroupId}
+          email={addStudentEmail}
+          onEmailChange={setAddStudentEmail}
+          isAdding={isAddingStudent}
+          onAdd={addStudentToGroup}
+          onCancel={() => setAddStudentModalOpen(false)}
+        />
       )}
 
       {/* Confirm Action Modal */}
       {confirmModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">Confirm Action</h3>
-            <p className="text-gray-600 mb-6">
-              {confirmAction?.type === 'removeStudent' &&
-                'Are you sure you want to remove this student from their group?'}
-              {confirmAction?.type === 'deleteStudent' &&
-                'Are you sure you want to permanently delete this student?'}
-              {confirmAction?.type === 'startAllGroups' &&
-                'Are you sure you want to start all groups? This action cannot be undone.'}
-            </p>
-            <div className="flex space-x-3">
-              <button
-                onClick={handleConfirmAction}
-                className="flex-1 bg-northeasternRed text-white py-2 px-4 rounded-lg hover:bg-red-700"
-              >
-                Confirm
-              </button>
-              <button
-                onClick={() => {
-                  setConfirmModalOpen(false);
-                  setConfirmAction(null);
-                }}
-                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmActionModal
+          actionType={confirmAction?.type}
+          onConfirm={handleConfirmAction}
+          onCancel={() => {
+            setConfirmModalOpen(false);
+            setConfirmAction(null);
+          }}
+        />
       )}
 
       {/* Reassign Student Modal */}
       {reassignModalOpen && selectedStudent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">
-              Reassign{' '}
-              {selectedStudent.f_name && selectedStudent.l_name
-                ? `${selectedStudent.f_name} ${selectedStudent.l_name}`
-                : selectedStudent.email}
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Current group: Group {selectedStudent.group_id}
-              {(() => {
-                const currentGroup = groups.find((g) => g.group_id === selectedStudent.group_id);
-                return currentGroup?.isStarted ? (
-                  <span className="ml-2 text-green-600 text-sm">✅ Started</span>
-                ) : (
-                  <span className="ml-2 text-gray-500 text-sm">⏳ Not Started</span>
-                );
-              })()}
-            </p>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select New Group:
-              </label>
-              <select
-                value={newGroupId}
-                onChange={(e) => setNewGroupId(parseInt(e.target.value))}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                {availableGroups.map((groupId) => (
-                  <option key={groupId} value={groupId}>
-                    Group {groupId}
-                  </option>
-                ))}
-              </select>
-              <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
-                <div>
-                  <p className="font-medium">Moving to Group {newGroupId}:</p>
-                  {(() => {
-                    const targetGroup = groups.find((g) => g.group_id === newGroupId);
-                    if (!targetGroup || targetGroup.students.length === 0) {
-                      return <p className="text-gray-500 italic">Empty group</p>;
-                    }
-                    return (
-                      <div className="mt-1">
-                        {targetGroup.students.map((student) => (
-                          <p key={student.id} className="text-gray-600">
-                            •{' '}
-                            {student.f_name && student.l_name
-                              ? `${student.f_name} ${student.l_name}`
-                              : student.f_name || student.l_name || 'No Name'}
-                          </p>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => reassignStudent(selectedStudent.email, newGroupId)}
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
-              >
-                Reassign
-              </button>
-              <button
-                onClick={() => {
-                  setReassignModalOpen(false);
-                  setSelectedStudent(null);
-                }}
-                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <ReassignStudentModal
+          student={selectedStudent}
+          groups={groups}
+          availableGroups={availableGroups}
+          newGroupId={newGroupId}
+          onSelectGroup={setNewGroupId}
+          onReassign={() => reassignStudent(selectedStudent.email, newGroupId)}
+          onCancel={() => {
+            setReassignModalOpen(false);
+            setSelectedStudent(null);
+          }}
+        />
       )}
 
       {/* Popup */}

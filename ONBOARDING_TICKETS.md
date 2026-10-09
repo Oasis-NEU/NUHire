@@ -49,7 +49,7 @@ Windows yet and that is a gap.
 **Est:** 30m · **Everyone** · deps: ONB-01
 
 ```bash
-git clone git@github.com:Khoury-Co-op/NUHire.git
+git clone git@github.com:Oasis-NEU/NUHire.git
 cd NUHire
 nvm use
 npm run install:all
@@ -73,15 +73,10 @@ npm run install:all
 Follow [ONBOARDING.md](ONBOARDING.md) §6. Short version:
 
 ```bash
-cp api/.env.example api/.env
-cp frontend/.env.example frontend/.env.local
-
-npm run dev:services      # MySQL + Keycloak in Docker
-npm run dev:api           # terminal 1
-npm run dev:frontend      # terminal 2
+npm run all      # MySQL, Keycloak, API and frontend in Docker
 ```
 
-- [ ] `docker compose -f .local/compose.yaml ps` shows both containers up
+- [ ] `docker compose -f compose.dev.yaml ps` shows all four containers up
 - [ ] `curl http://localhost:5001/health` returns `{"status":"ok",...}`
 - [ ] http://localhost:3000 loads the NUHire landing page
 - [ ] Screenshot the landing page and post it in the channel

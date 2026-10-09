@@ -355,38 +355,45 @@ the Coolify service has to stay at 1 too.
 
 ### Prerequisites
 
-- **Node 22** (`.nvmrc` pins it — `nvm use`)
 - **Docker Desktop**, running
 - **git**
+- **Node 22** (`.nvmrc` pins it — `nvm use`). npm starts the stack
+  (`npm run all`) and runs `typecheck` and `format` on your machine. The app
+  itself runs in Docker. Your editor also needs `npm run install:all` for types.
 
 ### Steps
 
 ```bash
-git clone git@github.com:Khoury-Co-op/NUHire.git
+git clone git@github.com:Oasis-NEU/NUHire.git
 cd NUHire
-npm run install:all
-
-cp api/.env.example api/.env
-cp frontend/.env.example frontend/.env.local
-
-npm run dev:services      # MySQL + Keycloak in Docker
-npm run dev:api           # builds, then runs the API
-npm run dev:frontend      # in a second terminal
+npm run all
 ```
 
-Open http://localhost:3000.
+That builds and starts MySQL, Keycloak, the API and the frontend in one
+terminal. The first run downloads images and builds the two app images, about
+two minutes, but later starts take seconds. Open http://localhost:3000 once the API
+logs `Server running`. Ctrl+C stops everything.
 
-First run pulls images and imports the Keycloak realm, so give it a minute.
-Check both containers:
+Saving a file under `api/src` or `frontend/src` reloads that app within a
+couple of seconds. Changing a `package-lock.json` rebuilds its image.
+
+**On Windows, use WSL2** and clone into the Linux side (`~/...`, not
+`/mnt/c/...`), with Docker Desktop's WSL integration turned on for your distro.
+
+To run the API and frontend on the host instead, for a debugger, see
+`.local/README.md`.
 
 ```bash
-docker compose -f .local/compose.yaml ps
+docker compose -f compose.dev.yaml ps   # all four up; db and keycloak (healthy)
 curl http://localhost:5001/health
 ```
 
 ### Every env var
 
-**`api/.env`** — copy from `api/.env.example`, the defaults work as-is.
+**`api/.env`** — copy from `api/.env.example`, the defaults work as-is. Under
+`npm run all` this file is optional: Docker reads the example, then `api/.env`
+on top if it exists, so use it for your own overrides instead of editing the
+example. `DATABASE_URL` is always set by compose there.
 
 | Var                      | Local value                                    | What it does                                                                                                                                                                              |
 | ------------------------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -409,7 +416,7 @@ curl http://localhost:5001/health
 | `INSTANCE_COUNT`         | `1`                                            | Leave at 1. See the barrier section                                                                                                                                                       |
 | `SOCKET_AUTH_REQUIRED`   | `false`                                        | Drop unauthenticated sockets. Off until someone tests it with two real sessions                                                                                                           |
 
-**`frontend/.env.local`**
+**`frontend/.env.local`** — likewise an optional override under `npm run all`.
 
 | Var                        | Local value             | What it does                                                                                                                                                              |
 | -------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -423,8 +430,16 @@ npm run build        # both packages
 npm run typecheck    # tsc --noEmit in both
 npm run format       # prettier
 
-docker compose -f .local/compose.yaml down -v   # nuke DB + reseed on next up
+npm run reset   # nuke DB + reseed on next npm run all
+
+npm run seed         # a 30-student class (class 9001), with messy cases
+npm run seed:check   # log in all of them through Keycloak
+npm run seed:reset   # back to a clean simulated class, in seconds
+npm run seed:wipe    # remove it
 ```
+
+The seed needs the stack up. See `.local/tests/README.md` for the roster and how
+the fake students log in.
 
 ---
 
@@ -433,7 +448,8 @@ docker compose -f .local/compose.yaml down -v   # nuke DB + reseed on next up
 **Do not use `npm run dev` inside `api/`.** The `ts-node` script throws TS2769
 on `auth.routes.ts` — the lockfile pins `@types/express@5` against `express@4`.
 `tsc` itself passes, so `npm run dev:api` (build then start) works. Consequence:
-**no hot reload on the API**, you rebuild. The frontend hot-reloads normally.
+**no API hot reload when you run it on the host**, you rebuild. In Docker it
+hot-reloads through `tsc --watch` instead.
 
 **One browser can only hold one login.** Keycloak SSO is shared across tabs, so
 a second tab silently keeps your first identity. Use a **private/incognito
@@ -449,9 +465,18 @@ app is broken. It isn't. Do the teacher steps first.
 `docker-entrypoint-initdb.d`, which only fires when the data directory is empty.
 Changed the schema? `down -v` and back up.
 
-**Migrations are files, not automatic.** `database-files/migrations/001..005`
-exist but there is no runner. **[UNVERIFIED]** whether they are applied to your
-local DB by anything; read `database-files/migrations/README.md` before assuming.
+**Recreating the stack drops the Keycloak users but not the database.** Keycloak
+has no volume and re-imports its realm on every boot, while MySQL keeps its
+volume. After `npm run down` and `npm run all`, the simulated class (if you
+seeded it) is still in MySQL but nobody can log in. Run `npm run seed` to put the
+Keycloak accounts back. The four built-in accounts are in the realm file, so they
+always come back.
+
+**Migrations are files, not automatic, yet.** A fresh database already has every
+file in `database-files/migrations/`, because `Pandployer.sql` includes them.
+One created before a migration was added does not, and nothing applies it for
+you until OAS-93 makes the API run them at start. Until then, apply by hand per
+`database-files/migrations/README.md`, or reset with `npm run reset`.
 
 **`candidate_id` is not `Candidates.id`.** Throughout the app it holds a
 `Resume_pdfs.id`. Looking up `Candidates` by `id` silently returns the **wrong
@@ -520,6 +545,11 @@ non-temporary, email verification off).
 | `student2@northeastern.edu` | student | group 1 |
 | `student3@northeastern.edu` | student | group 2 |
 
+Need more people than that? `npm run seed` builds a full class: `advisor01` and
+`student01` to `student30` at `@example.test`, password `nuhire`, in 8 groups,
+including a student who never logs in, one with no group and a group of one. See
+`.local/tests/README.md`.
+
 ---
 
 ## 9. Full click-through
@@ -576,6 +606,12 @@ see it release.
 
 If you get stuck there, that is `POST /groups/force-advance` existing for a
 reason.
+
+Want to see that at the size of a real class? `npm run seed -- --scenario=waiting-on-group`
+leaves group 1 stuck at 3 of 4 because one student on the roster never logs in,
+as happens in a real class. Log in as `advisor01@example.test` and force it
+through. The other scenarios (`mid-resume-review`, `interview-stage`,
+`offers-pending`) are described in `.local/tests/README.md`.
 
 ---
 

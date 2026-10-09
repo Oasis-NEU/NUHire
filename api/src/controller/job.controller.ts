@@ -254,11 +254,11 @@ export class JobController {
     );
   };
 
-  // GET /jobs/reset-preview?class_id=&group_id=  (group_id omitted = every group)
+  // GET /jobs/reset-preview/:class_id?group_id=  (group_id omitted = every group)
   // Feeds the confirmation the professor must pass before a reset, so it can say
   // what will actually be lost instead of a hardcoded list.
   getResetPreview = async (req: AuthRequest, res: Response): Promise<void> => {
-    const classId = parseInt(String(req.query.class_id));
+    const classId = parseInt(req.params.class_id);
     const groupParam = req.query.group_id;
     const groupId = groupParam === undefined ? null : parseInt(String(groupParam));
 

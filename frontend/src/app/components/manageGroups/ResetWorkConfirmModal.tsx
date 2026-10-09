@@ -39,11 +39,12 @@ export function ResetWorkConfirmModal({
   const [typed, setTyped] = useState('');
 
   useEffect(() => {
-    const params = new URLSearchParams({ class_id: classId });
-    if (groupId !== null) params.set('group_id', String(groupId));
+    const query = groupId !== null ? `?group_id=${groupId}` : '';
 
     let cancelled = false;
-    fetch(`${API_BASE_URL}/jobs/reset-preview?${params}`, { credentials: 'include' })
+    fetch(`${API_BASE_URL}/jobs/reset-preview/${encodeURIComponent(classId)}${query}`, {
+      credentials: 'include',
+    })
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((data: { groups: GroupResetPreview[] }) => {
         if (!cancelled) setPreview(data.groups);

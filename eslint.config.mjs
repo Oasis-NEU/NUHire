@@ -2,10 +2,9 @@
 // files a PR changes and blocks the PR on any error. To check a file before
 // pushing: npx eslint path/to/file.tsx
 //
-// Deliberately not here: no-explicit-any and no-console. The review bot
-// already blocks a *new* `any` or `console.log` on the lines a PR touches,
-// while ignoring the ones already in the tree. Turning them on here would fail
-// every PR over code it did not write.
+// Deliberately not here: no-explicit-any and no-console. Older files still
+// have both, and lint runs on whole changed files, so turning them on would
+// fail every PR over code it did not write. CodeRabbit flags new ones.
 //
 // frontend's build script is `next build --no-lint`: Next.js would otherwise
 // find this config, lint every file during the build, and fail the build over
@@ -51,7 +50,13 @@ export default tseslint.config(
     },
   },
   {
-    files: ['api/**/*.{ts,js}', '.github/**/*.mjs', '*.config.{js,mjs}', 'frontend/*.config.js'],
+    files: [
+      'api/**/*.{ts,js}',
+      '.github/**/*.mjs',
+      '.local/**/*.mjs',
+      '*.config.{js,mjs}',
+      'frontend/*.config.js',
+    ],
     languageOptions: { globals: globals.node },
   },
   {
@@ -62,12 +67,6 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       ...nextPlugin.configs.recommended.rules,
     },
-  },
-  {
-    // globToRe uses a literal NUL as a placeholder for `**`, on purpose: no
-    // glob can contain one.
-    files: ['.github/review-bot/lib/scan.mjs'],
-    rules: { 'no-control-regex': 'off' },
   },
   {
     files: ['**/*.test.ts'],
