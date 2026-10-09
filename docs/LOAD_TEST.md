@@ -74,7 +74,7 @@ half the class has finished resume review.
 
 | Run                | Runs | API p95 | Hung | Stuck | Burst      |
 | ------------------ | ---- | ------- | ---- | ----- | ---------- |
-| Plain              | 4    | 43–84ms | 0    | 0     | 0.54–1.04s |
+| Plain              | 6    | 35–84ms | 0    | 0     | 0.43–1.04s |
 | Restart (5s crash) | 6    | 53–93ms | 0    | 12–21 | 0.41–0.77s |
 
 **Plain runs pass every criterion.** Over about 3,200 requests per run, nothing
