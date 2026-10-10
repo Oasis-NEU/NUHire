@@ -59,7 +59,8 @@ export async function http(url, init = {}) {
   } catch (error) {
     const reason = error?.cause?.code ?? error?.name ?? error?.message;
     throw new SeedError(
-      `Could not reach ${new URL(url).origin} (${reason}). Is the local stack up? Try: npm run all`
+      `Could not reach ${new URL(url).origin} (${reason}). Is the local stack up? Try: npm run all`,
+      { cause: error }
     );
   }
 }
