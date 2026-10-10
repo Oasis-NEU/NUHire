@@ -1,5 +1,6 @@
 import { Response } from 'express';
-import { AuthRequest, User } from '../models/types';
+import { AuthRequest } from '../models/AuthRequest';
+import { User } from '../models/User';
 import { Pool, RowDataPacket } from 'mysql2';
 import { emitToClassModerators } from '../config/socket';
 
@@ -149,7 +150,7 @@ export class UserController {
       const { class: classId } = req.query;
 
       let query = "SELECT f_name, l_name, email, group_id FROM Users WHERE affiliation = 'student'";
-      let params: any[] = [];
+      const params: any[] = [];
 
       if (classId) {
         query += ' AND class = ?';
