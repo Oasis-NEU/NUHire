@@ -118,6 +118,7 @@ api/src/
     database.ts      mysql pool, boot-time seeding
     passport.ts      keycloak strategy
     socket.ts        ALL real-time behaviour
+    steps.ts         step order, step -> route, and writing a step
   routes/            path -> controller, plus auth middleware per route
   controller/        request handling and raw SQL
   middleware/        requireAuth, requireAdmin, requireStudent

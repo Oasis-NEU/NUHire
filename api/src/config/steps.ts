@@ -1,0 +1,92 @@
+// src/config/steps.ts
+
+import { PoolConnection } from 'mysql2/promise';
+import { User } from '../models/User';
+
+// The `Progress`.`step` values, in the order a group walks them. Shared by
+// getProgress (which wants the group's leftmost member) and forceAdvance (which
+// needs to know what comes before the step it is pushing the group to).
+export const STEP_ORDER = [
+  'none',
+  'job_description',
+  'res_1',
+  'res_2',
+  'interview',
+  'offer',
+  'employer',
+] as const;
+
+// Where each step is rendered. This duplicates STEP_TO_ROUTE in
+// frontend/src/app/components/useProgress.tsx because the two live in different
+// processes; they have to be changed together. It exists here only because
+// moveGroup carries a route path, which is what every page's handler compares
+// against — sending a step name instead would be silently ignored by all of
+// them and the group would stay put.
+export const STEP_TO_ROUTE: Record<string, string> = {
+  none: '/dashboard',
+  job_description: '/jobdes',
+  res_1: '/res-review',
+  res_2: '/res-review-group',
+  interview: '/interview-stage',
+  offer: '/makeOffer',
+  employer: '/employerPanel',
+};
+
+// A group is wherever its slowest member is. Rows at 'none' are members who
+// have not started and do not hold the group back; an unknown value sorts
+// first, so a bad row surfaces as the group's step rather than vanishing.
+//
+// One function for both readers on purpose. getProgress is what the advisor
+// dashboard shows the professor, and forceAdvance decides what it will accept
+// from that same number; if the two computed it differently the professor
+// would be refused a move the screen in front of them said was next.
+export function leftmostStep(steps: string[]): string {
+  const order: readonly string[] = STEP_ORDER;
+  const started = steps.filter((step) => step !== 'none');
+  if (started.length === 0) return 'none';
+  return started.reduce((earliest, current) =>
+    order.indexOf(current) < order.indexOf(earliest) ? current : earliest
+  );
+}
+
+// Put `members` of (group_id, class) on `targetStep`.
+//
+// Runs on the caller's connection so it joins the caller's transaction.
+export async function recordStep(
+  conn: PoolConnection,
+  classId: number | string,
+  groupId: number | string,
+  members: Pick<User, 'id' | 'email'>[],
+  targetStep: string
+): Promise<void> {
+  // One multi-row upsert rather than a query per member: this runs while a
+  // class waits, and Progress is keyed on email so the whole group lands in
+  // the same statement.
+  const progressPlaceholders = members.map(() => '(?, ?, ?, ?)').join(', ');
+  const progressValues = members.flatMap((member) => [classId, groupId, targetStep, member.email]);
+  await conn.query(
+    `INSERT INTO Progress (crn, group_id, step, email)
+     VALUES ${progressPlaceholders}
+     ON DUPLICATE KEY UPDATE crn = VALUES(crn), group_id = VALUES(group_id), step = VALUES(step)`,
+    progressValues
+  );
+
+  // Mark every barrier behind the target satisfied, for every member.
+  //
+  // Deleting the completions instead would make those barriers MORE closed:
+  // a client that re-polls barrier-status, or rejoins the room, would read
+  // 0/4 and disable the button the professor just pressed. Recording them
+  // as done is what "past this gate" means, and it holds across a restart.
+  const priorSteps = STEP_ORDER.slice(1, (STEP_ORDER as readonly string[]).indexOf(targetStep));
+  if (priorSteps.length > 0) {
+    const completionRows = members.flatMap((member) =>
+      priorSteps.map((step) => [member.id, classId, groupId, step])
+    );
+    const completionPlaceholders = completionRows.map(() => '(?, ?, ?, ?)').join(', ');
+    await conn.query(
+      `INSERT IGNORE INTO Step_Completion (student_id, class, group_id, step)
+       VALUES ${completionPlaceholders}`,
+      completionRows.flat()
+    );
+  }
+}

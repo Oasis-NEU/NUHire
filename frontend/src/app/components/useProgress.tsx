@@ -13,7 +13,7 @@ import type { Step } from '../../types';
  * Until they are unified, this table is the one place that translates
  * step -> route. Do not inline a fourth version somewhere else.
  *
- * The API has its own copy, in api/src/controller/group.controller.ts, because
+ * The API has its own copy, in api/src/config/steps.ts, because
  * force-advance has to send a route path over the wire. Change both together.
  */
 export const STEP_TO_ROUTE: Record<string, string> = {

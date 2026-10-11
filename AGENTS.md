@@ -243,6 +243,7 @@ api/src/
     database.ts      mysql pool + boot-time seeding
     passport.ts      keycloak oidc strategy
     socket.ts        ALL real-time behaviour
+    steps.ts         step order, step -> route, and writing a step
   routes/            path -> controller, and the auth middleware per route
   controller/        request handling and raw SQL
   middleware/        requireAuth, requireAdmin, requireStudent
@@ -303,7 +304,7 @@ of the existing code does not look like this yet; do not copy it.
 - **Keep files small.** Aim for under 300 lines. Do not grow a file that is
   already over 800; extract first.
 - **Use the existing names.** Steps come from `STEP_ORDER` and `STEP_TO_ROUTE`
-  (`useProgress.tsx`, `group.controller.ts`), the barrier step from
+  (`useProgress.tsx`, `api/src/config/steps.ts`), the barrier step from
   `RES_REVIEW_BARRIER_STEP`. Export them where you need them; do not retype the
   strings.
 - **Delete dead code.** Do not comment it out or leave it "in case". Check both

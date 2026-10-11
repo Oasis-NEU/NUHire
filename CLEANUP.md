@@ -309,13 +309,13 @@ changes still do not:
 ### Evidence
 
 ```
-api/src/controller/group.controller.ts:275   this.recountBarrier(class_id, new_group_id);
+api/src/controller/group.controller.ts:231   this.recountBarrier(class_id, new_group_id);
 ```
 
-The comment just above it (`:270`) says the old group is not recounted because
+The comment just above it (`:226`) says the old group is not recounted because
 the handler never learns which group the student came from. `deleteStudent`
-(`:636`) has no `recountBarrier` call. Compare `removeFromGroup` (`:287`), which
-reads the group first and recounts it at `:351`.
+(`:593`) has no `recountBarrier` call. Compare `removeFromGroup` (`:243`), which
+reads the group first and recounts it at `:307`.
 
 ### For an agent
 
@@ -354,8 +354,8 @@ recounted, and nobody is told.
 ### Evidence
 
 ```
-api/src/controller/group.controller.ts:596   if (existingStudent.class === class_id) {
-api/src/controller/group.controller.ts:602   const updateQuery = 'UPDATE Users SET class = ?, group_id = ? WHERE email = ?';
+api/src/controller/group.controller.ts:553   if (existingStudent.class === class_id) {
+api/src/controller/group.controller.ts:559   const updateQuery = 'UPDATE Users SET class = ?, group_id = ? WHERE email = ?';
 ```
 
 `Users.class` is `int`. The caller sends `class_id: selectedClass`, and
@@ -877,8 +877,8 @@ It is also where the next roster bug will be fixed, so it should be readable.
 
 ```bash
 grep -nE "(this\.)?db\.query\(" api/src/controller/group.controller.ts | wc -l   # 22 callback queries
-grep -n "DELETE gc FROM\|DELETE sc FROM" api/src/controller/group.controller.ts  # pair at :252 and :336
-grep -n "emit('studentAddedToGroup'" api/src/controller/group.controller.ts      # :240, :554, :601
+grep -n "DELETE gc FROM\|DELETE sc FROM" api/src/controller/group.controller.ts  # pair at :209 and :293
+grep -n "emit('studentAddedToGroup'" api/src/controller/group.controller.ts      # :197, :528, :575
 ```
 
 `removeFromGroup` nests at `:299`, `:310`, `:335`, `:340`.
@@ -960,8 +960,8 @@ names for one fact is how they drift.
 ### Evidence
 
 ```
-api/src/controller/group.controller.ts:438   getGroupStarted
-api/src/controller/group.controller.ts:459   getGroupStatus      // same SQL, same response
+api/src/controller/group.controller.ts:395   getGroupStarted
+api/src/controller/group.controller.ts:416   getGroupStatus      // same SQL, same response
 frontend/src/app/components/ManageGroupsTab.tsx:159   /groups/started/...
 frontend/src/app/waitingGroup/page.tsx:23             /groups/status/...
 ```
@@ -1370,7 +1370,7 @@ grep -rn "^// =" api/src | wc -l                                                
 
 Worst offenders: `advisor-dashboard/page.tsx:1-9` labels every import;
 `app.ts:69`, `:84`, `:93` (`// Now this.sessionStore exists!`);
-`group.controller.ts:772-800`, a 29-line header on `forceAdvance`;
+`group.controller.ts:729-757`, a 29-line header on `forceAdvance`;
 `res-review/page.tsx:558-576`.
 
 ### For an agent

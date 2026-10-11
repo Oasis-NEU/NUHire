@@ -107,6 +107,7 @@ api/src/
     database.ts      mysql pool, boot-time seeding
     passport.ts      keycloak strategy
     socket.ts        ALL realtime behaviour, and the group barrier
+    steps.ts         step order, step -> route, and writing a step
   routes/            path -> controller, plus the auth middleware per route
   controller/        request handling and raw SQL
   middleware/        requireAuth, requireAdmin, requireModerator, requireStudent
@@ -494,7 +495,7 @@ person**. Join on `resume_id`.
 the route paths are three vocabularies for the same six steps and they do not
 map to each other. `frontend/src/app/components/useProgress.tsx` has the one
 `STEP_TO_ROUTE` table that translates. The API has its own copy in
-`group.controller.ts` because force-advance sends a route over the wire —
+`config/steps.ts` because force-advance sends a route over the wire —
 **change both together.** Do not add a fourth.
 
 **Group and socket changes need two browser sessions.** Barriers, shared
