@@ -6,8 +6,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool, RowDataPacket } from 'mysql2';
 import { emitToClassModerators } from '../config/socket';
-
-const STEP_ORDER = ['none', 'job_description', 'res_1', 'res_2', 'interview', 'offer', 'employer'];
+import { STEP_ORDER, isStep, decideStep } from '../config/steps';
 
 export class ProgressController {
   constructor(
@@ -46,77 +45,66 @@ export class ProgressController {
   };
 
   updateProgress = (req: AuthRequest, res: Response): void => {
-    const { crn, group_id, step, email } = req.body;
+    const { step } = req.body;
 
-    if (!crn || !group_id || !step || !email) {
-      res.status(400).json({
-        error: 'crn, group_id, step, and email are required',
-      });
+    // Identity comes from the session
+    const email = req.user?.email;
+    const group_id = req.user?.group_id;
+    const crn = req.user?.class;
+
+    if (!email || !group_id || !crn) {
+      res.status(400).json({ error: 'You are not assigned to a group yet' });
       return;
     }
-
-    const stepIndex = STEP_ORDER.indexOf(step) + 1;
-    //indexing starts from 1
-    if (stepIndex === 0) {
+    if (!isStep(step)) {
       res.status(400).json({ error: `Invalid step: ${step}` });
       return;
     }
 
-    // Only move forward, unless the student changed group or section.
-    // `step` must come before crn/group_id so the IF sees the old values.
-    this.db.query(
-      `INSERT INTO Progress (crn, group_id, step, email)
-       VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE
-         step = IF(
-           crn = VALUES(crn) AND group_id = VALUES(group_id)
-             AND step IS NOT NULL AND step + 0 >= ?,
-           step,
-           VALUES(step)
-         ),
-         crn = VALUES(crn),
-         group_id = VALUES(group_id)`,
-      [crn, group_id, step, email, stepIndex],
-      (err) => {
-        if (err) {
-          console.error('Error updating progress:', err);
-          res.status(500).json({ error: err.message });
-          return;
-        }
+    this.db.query('SELECT step FROM Progress WHERE email = ?', [email], (selErr, rows) => {
+      if (selErr) {
+        console.error('Error reading progress:', selErr);
+        res.status(500).json({ error: selErr.message });
+        return;
+      }
 
-        this.db.query('SELECT step FROM Progress WHERE email = ?', [email], (selectErr, rows) => {
-          if (selectErr) {
-            console.error('Error reading back progress:', selectErr);
-            res.status(500).json({ error: selectErr.message });
+      const stored: string | null = (rows as RowDataPacket[])[0]?.step ?? null;
+      const decision = decideStep(stored, step);
+
+      if (decision === 'reject') {
+        res.status(409).json({ error: 'Step not allowed yet', currentStep: stored ?? 'none' });
+        return;
+      }
+
+      if (decision === 'noop') {
+        res.json({ success: true, message: 'Progress unchanged', step: stored ?? 'none' });
+        return;
+      }
+
+      // Two racing requests can't both advance step
+      const fromIndex = STEP_ORDER.indexOf(stored ?? 'none') + 1;
+
+      this.db.query(
+        `INSERT INTO Progress (crn, group_id, step, email)
+          VALUES (?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE step = IF(step IS NULL OR step + 0 = ?, VALUES(step), step)`,
+        [crn, group_id, step, email, fromIndex],
+        (err) => {
+          if (err) {
+            console.error('Error updating progress:', err);
+            res.status(500).json({ error: err.message });
             return;
           }
 
-          const storedStep = (rows as RowDataPacket[])[0]?.step;
+          const payload = { crn, group_id, step, email };
+          this.io.to(`group_${group_id}_class_${crn}`).emit('progressUpdated', payload);
 
-          // if same step as stored step
-          if (storedStep === step) {
-            this.io.to(`group_${group_id}_class_${crn}`).emit('progressUpdated', {
-              crn,
-              group_id,
-              step,
-              email,
-            });
+          emitToClassModerators(this.io, this.db, crn, 'progressUpdated', payload);
 
-            emitToClassModerators(this.io, this.db, crn, 'progressUpdated', {
-              crn,
-              group_id,
-              step,
-              email,
-            });
-          }
-
-          res.json({
-            success: true,
-            message: 'Progress updated successfully',
-          });
-        });
-      }
-    );
+          res.json({ success: true, message: 'Progress updated successfully', step });
+        }
+      );
+    });
   };
 
   // --- Group-selection confirmations (res-review-group) -------------------
