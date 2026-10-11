@@ -36,12 +36,15 @@ export function ResetWorkConfirmModal({
 }: ResetWorkConfirmModalProps) {
   const [preview, setPreview] = useState<GroupResetPreview[] | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
+  const [previewAttempt, setPreviewAttempt] = useState(0);
   const [typed, setTyped] = useState('');
 
   useEffect(() => {
     const query = groupId !== null ? `?group_id=${groupId}` : '';
 
     let cancelled = false;
+    setPreview(null);
+    setPreviewFailed(false);
     fetch(`${API_BASE_URL}/jobs/reset-preview/${encodeURIComponent(classId)}${query}`, {
       credentials: 'include',
     })
@@ -55,7 +58,7 @@ export function ResetWorkConfirmModal({
     return () => {
       cancelled = true;
     };
-  }, [classId, groupId]);
+  }, [classId, groupId, previewAttempt]);
 
   const totals: Record<string, number> = {};
   for (const group of preview ?? []) {
@@ -75,7 +78,9 @@ export function ResetWorkConfirmModal({
       : preview
         ? `all ${preview.length} groups in this class`
         : 'every group in this class';
-  const canConfirm = typed === CONFIRM_WORD && !isWorking;
+  // The professor has to see the real counts before erasing anything, so the
+  // button stays off while the preview loads and after it fails.
+  const canConfirm = typed === CONFIRM_WORD && preview !== null && !isWorking;
 
   return (
     <div
@@ -104,10 +109,17 @@ export function ResetWorkConfirmModal({
         )}
 
         {previewFailed && (
-          <p className="text-sm text-gray-700 mb-3">
-            Could not load the exact counts. Everything the group has saved will be deleted: resume
-            votes, interview ratings, notes, confirmations and any offer.
-          </p>
+          <div className="text-sm text-red-700 mb-3">
+            <p className="mb-2">
+              Could not load what would be erased, so this cannot be confirmed yet.
+            </p>
+            <button
+              onClick={() => setPreviewAttempt((n) => n + 1)}
+              className="px-3 py-1 rounded-lg border border-red-600 hover:bg-red-50"
+            >
+              Retry
+            </button>
+          </div>
         )}
 
         {preview &&
