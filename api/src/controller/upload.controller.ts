@@ -3,7 +3,7 @@
 import { Response } from 'express';
 import path from 'path';
 import fs from 'fs';
-import { AuthRequest } from '../models/types';
+import { AuthRequest } from '../models/AuthRequest';
 import { UPLOADS_ROOT, UPLOAD_SUBDIRS, webPathFor } from '../middleware/upload.middleware';
 
 interface MulterRequest extends AuthRequest {

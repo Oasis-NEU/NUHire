@@ -3,7 +3,7 @@
 // ============================================
 
 import { Response } from 'express';
-import { AuthRequest } from '../models/types';
+import { AuthRequest } from '../models/AuthRequest';
 import { Pool } from 'mysql2';
 import type { Pool as PromisePool, PoolConnection, RowDataPacket } from 'mysql2/promise';
 import fs from 'fs';

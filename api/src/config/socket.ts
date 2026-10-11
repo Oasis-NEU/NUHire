@@ -2,7 +2,7 @@
 
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Pool, RowDataPacket } from 'mysql2';
-import { SocketEvents } from '../models/types';
+import { SocketEvents } from '../models/SocketEvents';
 
 // Advisors join a room named after their own email (see 'adminOnline' below),
 // so notifying a class's teachers is one emit per Moderator row for that CRN.

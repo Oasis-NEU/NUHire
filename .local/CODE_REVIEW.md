@@ -42,7 +42,7 @@ Monorepo, three deployable pieces plus auth:
 - **`keycloak/`** — realm export + a Dockerfile/render.yaml for the old
   self-hosted Keycloak. Being replaced by Khoury IT SSO per commit #57.
 
-**Data model** (`Pandployer.sql`, `api/src/models/types.ts`): `Users` carry
+**Data model** (`Pandployer.sql`, `api/src/models/User.ts`): `Users` carry
 `affiliation` (student/admin/none), `group_id`, `class` (= CRN). `Moderator` maps
 an advisor email to a CRN. `GroupsInfo` tracks whether a group is `started`.
 Everything is keyed by the `(group_id, class)` pair. Per-step tables:

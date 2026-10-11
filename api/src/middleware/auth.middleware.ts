@@ -2,7 +2,7 @@
 
 import { Response, NextFunction } from 'express';
 import { Pool, RowDataPacket } from 'mysql2';
-import { AuthRequest } from '../models/types';
+import { AuthRequest } from '../models/AuthRequest';
 
 export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction): void => {
   if (!req.isAuthenticated || !req.isAuthenticated()) {
