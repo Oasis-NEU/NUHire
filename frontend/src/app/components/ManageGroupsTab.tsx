@@ -695,7 +695,9 @@ export function ManageGroupsTab() {
     fetchJobs();
   }, [assignJobModalOpen, selectedClass]);
 
-  const assignJobToAllGroups = async () => {
+  // `reset` false only changes the job; true also erases the groups' work and
+  // must only be sent after the ERASE confirmation.
+  const assignJobToAllGroups = async (reset: boolean) => {
     if (!selectedJobId || !selectedClass) {
       setPopup({ headline: 'Error', message: 'Please select a job first.' });
       return;
@@ -721,7 +723,7 @@ export function ManageGroupsTab() {
         body: JSON.stringify({
           class_id: selectedClass,
           job_title: selectedJob.title,
-          reset: true,
+          reset,
         }),
       });
 
@@ -731,7 +733,9 @@ export function ManageGroupsTab() {
 
         setPopup({
           headline: 'Success',
-          message: `Job "${selectedJob.title}" assigned to all ${result.groups_updated} groups successfully!`,
+          message: reset
+            ? `Job "${selectedJob.title}" assigned to all ${result.groups_updated} groups, and their work was reset.`
+            : `Job changed to "${selectedJob.title}" for all ${result.groups_updated} groups. Everyone's work was kept.`,
         });
         setAssignJobModalOpen(false);
         setSelectedGroupForJob(null);
@@ -774,7 +778,7 @@ export function ManageGroupsTab() {
     setSelectedClass(classId);
   };
 
-  const assignJobToGroup = async () => {
+  const assignJobToGroup = async (reset: boolean) => {
     if (!selectedGroupForJob || !selectedJobId || !selectedClass) return;
 
     setIsAssigningJob(true);
@@ -798,14 +802,19 @@ export function ManageGroupsTab() {
           job_group_id: selectedGroupForJob,
           class_id: selectedClass,
           job: selectedJob.title,
-          reset: true,
+          reset,
         }),
       });
 
       if (response.ok) {
         await refreshGroupsAndStudents();
 
-        setPopup({ headline: 'Success', message: 'Job assigned successfully!' });
+        setPopup({
+          headline: 'Success',
+          message: reset
+            ? `Job "${selectedJob.title}" assigned to Group ${selectedGroupForJob}, and its work was reset.`
+            : `Job changed to "${selectedJob.title}" for Group ${selectedGroupForJob}. Its work was kept.`,
+        });
         setAssignJobModalOpen(false);
         setSelectedGroupForJob(null);
         setSelectedJobId(null);
@@ -1739,7 +1748,10 @@ export function ManageGroupsTab() {
           onSelectJob={setSelectedJobId}
           groupCount={availableGroups.filter((g) => g !== -1).length}
           isAssigning={isAssigningJob}
-          onAssign={() => setConfirmResetOpen(true)}
+          onChangeJob={() =>
+            selectedGroupForJob ? assignJobToGroup(false) : assignJobToAllGroups(false)
+          }
+          onReset={() => setConfirmResetOpen(true)}
           onCancel={() => {
             setAssignJobModalOpen(false);
             setSelectedGroupForJob(null);
@@ -1755,7 +1767,7 @@ export function ManageGroupsTab() {
           jobTitle={availableJobs.find((job) => job.id === selectedJobId)?.title ?? ''}
           isWorking={isAssigningJob}
           onConfirm={async () => {
-            await (selectedGroupForJob ? assignJobToGroup() : assignJobToAllGroups());
+            await (selectedGroupForJob ? assignJobToGroup(true) : assignJobToAllGroups(true));
             setConfirmResetOpen(false);
           }}
           onCancel={() => setConfirmResetOpen(false)}
