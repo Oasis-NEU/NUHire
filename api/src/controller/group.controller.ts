@@ -363,7 +363,32 @@ export class GroupController {
     });
   };
 
-  startAllGroups = (req: AuthRequest, res: Response): void => {
+  // Start the class's unstarted groups, or one of them, and take attendance:
+  // whoever has the app open now counts toward the group's gates, and anyone
+  // else counts once they connect. A stamp from some earlier day would otherwise
+  // have the group wait for a student who is not in the room. Groups already
+  // started keep theirs, so pressing Start All again mid-class is harmless.
+  private async startGroups(classId: number | string, groupId?: number | string): Promise<void> {
+    const promiseDb = this.db.promise();
+    const oneGroup = groupId !== undefined;
+    await promiseDb.query(
+      `UPDATE GroupsInfo g
+         LEFT JOIN Users u ON u.class = g.class_id AND u.group_id = g.group_id
+          SET g.started = 1, u.present_at = NULL
+        WHERE g.class_id = ? AND g.started = 0 ${oneGroup ? 'AND g.group_id = ?' : ''}`,
+      oneGroup ? [classId, groupId] : [classId]
+    );
+
+    const online = [...(await connectedEmails(this.io))];
+    if (online.length === 0) return;
+    await promiseDb.query(
+      `UPDATE Users SET present_at = CURRENT_TIMESTAMP
+        WHERE class = ? AND present_at IS NULL AND email IN (${online.map(() => '?').join(',')})`,
+      [classId, ...online]
+    );
+  }
+
+  startAllGroups = async (req: AuthRequest, res: Response): Promise<void> => {
     const { class_id } = req.body;
 
     if (!class_id) {
@@ -373,25 +398,20 @@ export class GroupController {
       return;
     }
 
-    const updateQuery = 'UPDATE `GroupsInfo` SET started = 1 WHERE class_id = ?';
-
-    this.db.query(updateQuery, [class_id], (err) => {
-      if (err) {
-        console.error('Error starting all groups:', err);
-        res.status(500).json({ error: 'Failed to start all groups' });
-        return;
-      }
-
+    try {
+      await this.startGroups(class_id);
       this.io.to(`class_${class_id}`).emit('groupStartedClass');
-
       res.json({
         message: 'All groups started successfully',
         class_id,
       });
-    });
+    } catch (err) {
+      console.error('Error starting all groups:', err);
+      res.status(500).json({ error: 'Failed to start all groups' });
+    }
   };
 
-  startGroup = (req: AuthRequest, res: Response): void => {
+  startGroup = async (req: AuthRequest, res: Response): Promise<void> => {
     const { class_id, group_id } = req.body;
 
     if (!class_id || !group_id) {
@@ -401,22 +421,18 @@ export class GroupController {
       return;
     }
 
-    const updateQuery = 'UPDATE `GroupsInfo` SET started = 1 WHERE class_id = ? AND group_id = ?';
-    this.db.query(updateQuery, [class_id, group_id], (err) => {
-      if (err) {
-        console.error('Error starting group:', err);
-        res.status(500).json({ error: 'Failed to start group' });
-        return;
-      }
-
+    try {
+      await this.startGroups(class_id, group_id);
       this.io.to(`class_${class_id}`).emit('groupStartedGroup', { group_id });
-
       res.json({
         message: 'Group started successfully',
         class_id,
         group_id,
       });
-    });
+    } catch (err) {
+      console.error('Error starting group:', err);
+      res.status(500).json({ error: 'Failed to start group' });
+    }
   };
 
   getGroupStarted = (req: AuthRequest, res: Response): void => {
@@ -713,6 +729,7 @@ export class GroupController {
         u.l_name,
         u.email,
         u.group_id,
+        u.present_at,
         g.started,
         p.step,
         sc.completed_at AS review_completed_at,

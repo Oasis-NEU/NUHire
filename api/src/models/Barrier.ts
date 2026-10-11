@@ -6,3 +6,13 @@ export interface BarrierStatus {
   totalCount: number;
   released: boolean;
 }
+
+export interface PresentMember {
+  id: number;
+  present_at: Date;
+}
+
+export interface StepCompletion {
+  student_id: number;
+  completed_at: Date;
+}

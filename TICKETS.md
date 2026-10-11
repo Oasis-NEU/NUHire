@@ -757,7 +757,7 @@ with 30 students and afterwards has no artifact to grade or discuss.
 A CSV-imported student who never logs in inflates the group total and the group
 waits forever. Removing someone mid-class does not recount.
 
-- [ ] Barrier counts only students who have actually signed in
+- [x] Barrier counts only students who have actually signed in (`Users.present_at`, migration 006)
 - [ ] Add, remove, reassign triggers a recount and notifies **both** old and new rooms
 
 **TCH-17 [MED] 8h — Tell the professor when a popup was not delivered** — deps: API-4

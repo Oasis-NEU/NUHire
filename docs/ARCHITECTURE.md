@@ -192,10 +192,16 @@ students who had already finished never re-announced, so the group restarted at
 0 and could never reach its total again. Rows in MySQL survive a restart, so the
 same question can be asked as often as anyone needs.
 
-Two details worth knowing. Only completions belonging to a **current** member
-count, because a student moved between groups leaves their row behind. And an
-empty roster is treated as unknown, not finished, so `0 >= 0` cannot walk a
-student through a barrier before their group has anyone in it.
+A few details worth knowing. Only students who showed up count:
+`Users.present_at` is stamped when a student's socket connects and reset when
+the professor starts their group, and `presentMembers` in `socket.ts` is the one
+query every gate counts with, so a student who never logs in is not waited for.
+A student who arrives after everyone present had finished is not counted either,
+so a late login cannot close a barrier the group already went through. Only
+completions belonging to a **current** member count, because a student moved
+between groups leaves their row behind. And an empty group is treated as
+unknown, not finished, so 0 of 0 cannot walk a student through a barrier before
+anyone in their group has shown up.
 
 **3. The teacher has an override.** `POST /groups/force-advance`, admin only.
 A deadlocked group no longer needs someone editing the database mid-class.

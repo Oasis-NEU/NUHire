@@ -3,8 +3,9 @@
 // writes the rows a plan implies and `verify` derives the API's expected answers
 // from the same plan, so a scenario that drifts from the app fails `seed:check`.
 //
-// Group 1 holds the student who never logs in, so past `fresh` it stays stuck at
-// the resume barrier at 3 of 4: the deadlock the teacher's force-advance fixes.
+// Group 1 holds the student who never logs in. Past `fresh` everyone else in it
+// has finished the resume review, and because the gates count only students who
+// showed up, its barrier reads 3 of 3 and is open.
 //
 // A student's step is spelled three ways (Progress.step, Users.current_page, the
 // route) and the client guard trusts Progress.step, so a scenario writes Progress
@@ -51,10 +52,10 @@ function plan(name, group) {
   const n = active(group).length;
   if (name === 'fresh') return { step: null, votes: all(0, n), ratings: all(0, n), offer: false };
 
-  // The stuck group, identical in every scenario after `fresh`: everyone who
-  // can act has finished, the dormant student has not, so 3 of 4.
-  const stuck = { step: 'res_1', votes: all(RESUME_COUNT, n), ratings: all(0, n), offer: false };
-  if (group === 1 && name !== 'mid-resume-review') return stuck;
+  // Group 1, identical in every scenario after `fresh`: everyone who can act has
+  // finished and nobody has moved on yet. The dormant student is not waited for.
+  const reviewed = { step: 'res_1', votes: all(RESUME_COUNT, n), ratings: all(0, n), offer: false };
+  if (group === 1 && name !== 'mid-resume-review') return reviewed;
 
   if (name === 'mid-resume-review') {
     // Progress varies within each group and nobody finishes, so no barrier opens.
@@ -63,8 +64,8 @@ function plan(name, group) {
   }
 
   if (name === 'waiting-on-group') {
-    if (group === 2) return { ...stuck, votes: cycle([10, 10, 10, 6], n) }; // one slow member
-    if (group === 8) return { ...stuck, votes: cycle([10, 10, 4, 4], n) }; // two still voting
+    if (group === 2) return { ...reviewed, votes: cycle([10, 10, 10, 6], n) }; // one slow member
+    if (group === 8) return { ...reviewed, votes: cycle([10, 10, 4, 4], n) }; // two still voting
     // Through the barrier and reviewing the shortlist together.
     return { step: 'res_2', votes: all(RESUME_COUNT, n), ratings: all(0, n), offer: false };
   }
@@ -124,10 +125,11 @@ async function apply(name, { conn }) {
            ON DUPLICATE KEY UPDATE crn = VALUES(crn), group_id = VALUES(group_id), step = VALUES(step)`,
           [SIM.crn, progressGroup, p.step, student.email]
         );
-        await conn.query('UPDATE Users SET current_page = ?, seen = 1 WHERE id = ?', [
-          STEP_PAGE[p.step],
-          id,
-        ]);
+        // present_at as the socket would stamp it, before any completion below.
+        await conn.query(
+          'UPDATE Users SET current_page = ?, seen = 1, present_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [STEP_PAGE[p.step], id]
+        );
 
         const votes = resumeIds.slice(0, p.votes[i]).map((resumeId, k) => [
           id,
@@ -232,8 +234,10 @@ async function verify(name, { conn, config, sessions, startedByGroup }) {
       problems.push(`${label}: started is ${!wantStarted}, expected ${wantStarted}`);
     }
 
-    // The resume-review barrier, answered by the same code the students hit.
-    const total = membersOf(group).length;
+    // The resume-review barrier, answered by the same code the students hit. It
+    // counts only students who showed up, which in a started group is everyone
+    // but the dormant student.
+    const total = wantStarted ? active(group).length : 0;
     const completed = finishedReview(p);
     const barrier = await get(`/groups/barrier-status/${SIM.crn}/${group}?step=res_1`);
     const wantReleased = total > 0 && completed === total;

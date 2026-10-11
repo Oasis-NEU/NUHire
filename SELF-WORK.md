@@ -43,7 +43,17 @@ start.** Those break in ways you won't see until a full class is on it.
 
 ## In progress
 
-_Nothing yet._
+### Absent students no longer block their group
+
+- **Who:** Audrey
+- **What:** gates count only students who showed up since their group started (`Users.present_at`), so a student on the roster who never logs in no longer holds the group. Part 1 of the late/absent pair; late students rejoining is part 2.
+- **Why it matters:** one absent student kept a whole group at "3 of 4" for the rest of the class
+- **Files:** `api/src/config/socket.ts`, `api/src/controller/group.controller.ts`, `api/src/controller/interview.controller.ts`, `frontend/src/app/live-class/page.tsx`, `frontend/src/types/index.ts`, `database-files/migrations/006-users-present-at.sql`, `database-files/Pandployer.sql`, `.local/tests/seed/scenarios.mjs`, docs
+- **Touches auth / sockets / schema / deploy?** sockets and schema; talked to Aarav
+- **Size:** days
+- **Status:** in review
+- **Branch:** `audreynge/absent-students`
+- **Linear:** TCH-16 (first checkbox)
 
 ## Done
 
