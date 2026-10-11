@@ -121,7 +121,7 @@ api/src/
   routes/            path -> controller, plus auth middleware per route
   controller/        request handling and raw SQL
   middleware/        requireAuth, requireAdmin, requireStudent
-  models/            shared types: User, AuthRequest, SocketEvents (socket payloads)
+  models/            shared types: User, AuthRequest, SocketEvents (socket payloads), Barrier
 ```
 
 **Request flow:** `routes/ -> controller/ -> raw SQL`. No service layer, no ORM.

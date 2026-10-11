@@ -445,7 +445,7 @@ api/src/routes/group.routes.ts:39          router.get('/barrier-status/:classId/
 ```
 
 The response is `{ step, completedCount, totalCount, released }`
-(`BarrierStatus` in `socket.ts`).
+(`BarrierStatus` in `models/Barrier.ts`).
 
 ### For an agent
 

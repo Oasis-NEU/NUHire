@@ -3,6 +3,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Pool, RowDataPacket } from 'mysql2';
 import { SocketEvents } from '../models/SocketEvents';
+import { BarrierStatus } from '../models/Barrier';
 
 // Advisors join a room named after their own email (see 'adminOnline' below),
 // so notifying a class's teachers is one emit per Moderator row for that CRN.
@@ -41,13 +42,6 @@ interface SocketUser {
 // the `Progress`.`step` vocabulary because `Step_Completion`.`step` stores it,
 // and a second spelling would record a completion nobody looks for.
 export const RES_REVIEW_BARRIER_STEP = 'res_1';
-
-export interface BarrierStatus {
-  step: string;
-  completedCount: number;
-  totalCount: number;
-  released: boolean;
-}
 
 // Has every current member of (group_id, class) recorded `step`?
 //
