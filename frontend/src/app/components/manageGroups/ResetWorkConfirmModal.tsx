@@ -122,21 +122,21 @@ export function ResetWorkConfirmModal({
           </div>
         )}
 
-        {preview &&
-          (lostItems.length > 0 ? (
-            <ul className="list-disc pl-5 text-sm text-gray-800 mb-3">
-              {lostItems.map(([label, count]) => (
-                <li key={label}>
-                  {label}: {count}
-                </li>
-              ))}
-              <li>progress for students: {studentCount}</li>
-            </ul>
-          ) : (
-            <p className="text-sm text-gray-700 mb-3">
-              Nothing has been saved yet, so no work will be lost.
-            </p>
-          ))}
+        {/* Progress resets even when nothing is saved yet, so it is listed on
+            its own rather than folded into a "nothing will be lost" message. */}
+        {preview && lostItems.length === 0 && (
+          <p className="text-sm text-gray-700 mb-2">No saved work yet.</p>
+        )}
+        {preview && (lostItems.length > 0 || studentCount > 0) && (
+          <ul className="list-disc pl-5 text-sm text-gray-800 mb-3">
+            {lostItems.map(([label, count]) => (
+              <li key={label}>
+                {label}: {count}
+              </li>
+            ))}
+            {studentCount > 0 && <li>progress for students: {studentCount}</li>}
+          </ul>
+        )}
 
         {groupsWithOffers.length > 0 && (
           <div className="border-2 border-red-600 bg-red-50 rounded-lg p-3 mb-3 text-sm text-red-800">
