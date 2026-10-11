@@ -198,7 +198,9 @@ A few details worth knowing. Only students who showed up count:
 the professor starts their group, and `presentMembers` in `socket.ts` is the one
 query every gate counts with, so a student who never logs in is not waited for.
 A student who arrives after everyone present had finished is not counted either,
-so a late login cannot close a barrier the group already went through. Only
+so a late login cannot close a barrier the group already went through; instead
+the dashboard offers them their group's step (`/groups/catch-up`) and they skip
+the solo review. Only
 completions belonging to a **current** member count, because a student moved
 between groups leaves their row behind. And an empty group is treated as
 unknown, not finished, so 0 of 0 cannot walk a student through a barrier before

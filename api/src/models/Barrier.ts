@@ -9,6 +9,7 @@ export interface BarrierStatus {
 
 export interface PresentMember {
   id: number;
+  email: string;
   present_at: Date;
 }
 

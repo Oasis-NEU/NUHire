@@ -2,6 +2,7 @@
 
 import { PoolConnection } from 'mysql2/promise';
 import { User } from '../models/User';
+import { RES_REVIEW_BARRIER_STEP } from './socket';
 
 // The `Progress`.`step` values, in the order a group walks them. Shared by
 // getProgress (which wants the group's leftmost member) and forceAdvance (which
@@ -47,6 +48,24 @@ export function leftmostStep(steps: string[]): string {
   return started.reduce((earliest, current) =>
     order.indexOf(current) < order.indexOf(earliest) ? current : earliest
   );
+}
+
+// The step a late student should join their group at, or null when there is
+// nothing to catch up on. Only once the group is through the solo resume review:
+// until then the student is still waited for and does it like everyone else,
+// and after it they skip it rather than doing ten timed reviews alone.
+// `groupSteps` are the other present members' steps, so the student's own
+// stale row cannot drag the group's position back to theirs.
+export function catchUpStep(
+  groupSteps: string[],
+  ownStep: string,
+  reviewReleased: boolean
+): string | null {
+  if (!reviewReleased) return null;
+  const order: readonly string[] = STEP_ORDER;
+  const afterReview = order.indexOf(RES_REVIEW_BARRIER_STEP) + 1;
+  const target = order[Math.max(order.indexOf(leftmostStep(groupSteps)), afterReview)];
+  return order.indexOf(target) > order.indexOf(ownStep) ? target : null;
 }
 
 // Put `members` of (group_id, class) on `targetStep`.

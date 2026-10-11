@@ -333,6 +333,9 @@ Then:
 - The barrier opens at the first completion by which everyone present had
   finished. Someone who arrives after that is not counted, so a late login
   cannot close a barrier the group already went through.
+- That late student is offered their group's step on the dashboard
+  (`GET`/`POST /groups/catch-up`, `catchUpStep` in `config/steps.ts`) and skips
+  the solo review. The later gates count them from then on.
 - An empty group is **unknown, not finished** — releasing on 0 of 0 would walk a
   student through a barrier before anyone in their group had shown up.
 

@@ -1,7 +1,7 @@
 // src/config/socket.ts
 
 import { Server as SocketIOServer, Socket } from 'socket.io';
-import { Pool, RowDataPacket } from 'mysql2';
+import { Pool, ResultSetHeader, RowDataPacket } from 'mysql2';
 import { SocketEvents } from '../models/SocketEvents';
 import { BarrierStatus, PresentMember, StepCompletion } from '../models/Barrier';
 
@@ -52,7 +52,7 @@ export async function presentMembers(
   groupId: number | string
 ): Promise<PresentMember[]> {
   const [rows] = await db.promise().query<(RowDataPacket & PresentMember)[]>(
-    `SELECT id, present_at FROM Users
+    `SELECT id, email, present_at FROM Users
       WHERE group_id = ? AND class = ? AND affiliation = 'student' AND present_at IS NOT NULL`,
     [groupId, classId]
   );
@@ -203,13 +203,23 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     // From here on this student counts toward their group's gates (see
     // presentMembers). Keeping the first stamp is what lets the barrier tell a
     // late arrival from someone who was there all along.
+    // The first stamp changes the group's size, so tell the group: every gate
+    // page re-reads the size on studentAddedToGroup.
     const connectedUser = socket.data.user as SocketUser | undefined;
     if (connectedUser) {
       db.promise()
-        .query(
+        .query<ResultSetHeader>(
           'UPDATE Users SET present_at = CURRENT_TIMESTAMP WHERE id = ? AND present_at IS NULL',
           [connectedUser.id]
         )
+        .then(([result]) => {
+          const { group_id: groupId, class: classId } = connectedUser;
+          if (result.affectedRows === 0 || !groupId || !classId) return;
+          io.to(`group_${groupId}_class_${classId}`).emit('studentAddedToGroup', {
+            groupId,
+            classId,
+          });
+        })
         .catch((err) => {
           console.error(`Could not mark ${connectedUser.email} present:`, err);
         });

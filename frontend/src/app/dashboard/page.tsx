@@ -12,6 +12,7 @@ import { useProgressManager } from '../components/progress';
 import { STEP_LABEL } from '../components/useProgress';
 import { useAuth } from '../components/AuthContext';
 import { useSocket } from '../components/socketContext';
+import { useCatchUp } from '../components/useCatchUp';
 
 const Dashboard = () => {
   const { updateProgress, fetchProgress } = useProgressManager();
@@ -69,6 +70,7 @@ const Dashboard = () => {
   const [_jobLoading, setJobLoading] = useState(true);
   const [flipped, setFlipped] = useState(Array(steps.length).fill(false));
   const { user, loading: userloading } = useAuth();
+  const catchUp = useCatchUp(!!user);
 
   const fetchJobDescription = useCallback(
     async (userData: typeof user) => {
@@ -356,6 +358,22 @@ const Dashboard = () => {
       </div>
       {popup && (
         <Popup headline={popup.headline} message={popup.message} onDismiss={() => setPopup(null)} />
+      )}
+      {catchUp.step && (
+        <Popup
+          headline="Your group is ahead of you"
+          message={`Your group is on ${STEP_LABEL[catchUp.step]}. Join them there? You will skip the individual resume review.`}
+          confirmLabel="Join my group"
+          busy={catchUp.joining}
+          onDismiss={catchUp.dismiss}
+          onConfirm={() =>
+            catchUp
+              .join()
+              .catch((error: Error) =>
+                setPopup({ headline: 'Could not join your group', message: error.message })
+              )
+          }
+        />
       )}
 
       <style jsx>{`
