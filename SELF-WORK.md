@@ -52,7 +52,7 @@ start.** Those break in ways you won't see until a full class is on it.
 - **Touches auth / sockets / schema / deploy?** sockets and schema; talked to Aarav
 - **Size:** days
 - **Status:** in review
-- **Branch:** `audreynge/absent-students`
+- **Branch:** see [#41](https://github.com/Oasis-NEU/NUHire/pull/41)
 - **Linear:** TCH-16 (first checkbox)
 
 ## Done

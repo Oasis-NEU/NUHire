@@ -17,7 +17,7 @@ const GATE_FIELD: Partial<Record<Step, 'review_completed_at' | 'confirmed_at'>> 
 
 // Only these pages listen for moveGroup. Anywhere else force-advance writes the
 // rows but nobody's screen moves, so the button would report a fake success.
-const UNSTICKABLE: Step[] = ['res_1', 'res_2', 'interview'];
+const UNSTICK_STEPS: Step[] = ['res_1', 'res_2', 'interview'];
 
 const LiveClass = () => {
   const { user, loading: userloading } = useAuth();
@@ -235,8 +235,7 @@ const LiveClass = () => {
 
         {refreshError && (
           <p className="mb-4 p-3 rounded-lg bg-red-100 text-red-800 text-sm">
-            Couldn&apos;t refresh the board. What you see may be out of date; retrying every 10
-            seconds.
+            Could not refresh the board. What you see may be out of date; retrying every 10 seconds.
           </p>
         )}
 
@@ -247,7 +246,7 @@ const LiveClass = () => {
             const waiting = waitingOn(groupId);
             const next = nextStep(groupId);
             const step = groupSteps[groupId];
-            const canUnstick = members[0].started === 1 && !!next && UNSTICKABLE.includes(step);
+            const canUnstick = members[0].started === 1 && !!next && UNSTICK_STEPS.includes(step);
             // Only flag a group that is partly done; at the start of a step everyone is waiting.
             const stuck = waiting.length > 0 && waiting.length < present.length;
 

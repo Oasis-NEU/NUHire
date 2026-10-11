@@ -363,11 +363,12 @@ export class GroupController {
     });
   };
 
-  // Start the class's unstarted groups, or one of them, and take attendance:
-  // whoever has the app open now counts toward the group's gates, and anyone
-  // else counts once they connect. A stamp from some earlier day would otherwise
-  // have the group wait for a student who is not in the room. Groups already
-  // started keep theirs, so pressing Start All again mid-class is harmless.
+  // Start every group in the class that has not started yet, or just one, and
+  // take attendance: whoever has the app open now counts toward the group's
+  // gates, and anyone else counts once they connect. A stamp from some earlier
+  // day would otherwise have the group wait for a student who is not in the
+  // room. Groups already started keep theirs, so pressing Start All again
+  // mid-class is harmless.
   private async startGroups(classId: number | string, groupId?: number | string): Promise<void> {
     const promiseDb = this.db.promise();
     const oneGroup = groupId !== undefined;
