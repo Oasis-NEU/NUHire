@@ -60,7 +60,9 @@ const NotesPage: React.FC = () => {
   useEffect(() => {
     if (!socket) return;
 
-    const handleJobUpdated = () => {
+    // Notes are only erased by a reset, so a plain job change leaves them alone.
+    const handleJobUpdated = ({ reset }: { reset?: boolean }) => {
+      if (reset === false) return;
       setNotes([]);
       setNewNote('');
     };

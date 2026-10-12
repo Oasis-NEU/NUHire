@@ -46,7 +46,9 @@ const NotesPage = () => {
 
   useEffect(() => {
     if (!socket) return;
-    const onJobUpdated = () => {
+    // Notes are only erased by a reset, so a plain job change leaves them alone.
+    const onJobUpdated = ({ reset }: { reset?: boolean }) => {
+      if (reset === false) return;
       setNotes([]);
       setNote('');
     };
