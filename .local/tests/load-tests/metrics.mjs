@@ -66,12 +66,13 @@ export class Metrics {
     };
   }
 
+  // Pooled p95 alone lets a few slow routes hide behind hundreds of cheap
+  // ones, so also report every HTTP route whose own p95 is over the limit.
   apiStats() {
-    const all = [...this.samples]
-      .filter(([name]) => isHttp(name))
-      .flatMap(([, values]) => values)
-      .sort((a, b) => a - b);
-    return { count: all.length, p95: percentile(all, 95) };
+    const http = [...this.samples].filter(([name]) => isHttp(name));
+    const all = http.flatMap(([, values]) => values).sort((a, b) => a - b);
+    const slow = http.map(([name]) => name).filter((name) => this.stats(name).p95 > P95_LIMIT_MS);
+    return { count: all.length, p95: percentile(all, 95), slow };
   }
 
   total(map) {

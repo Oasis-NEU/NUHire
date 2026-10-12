@@ -37,10 +37,26 @@ async function crashApi(h) {
   h.metrics.killed = true;
   h.killedAt = performance.now();
   say(`Killing the API for ${OUTAGE_MS / 1000}s...`);
-  await compose('exec', '-T', 'api', 'pkill', '-KILL', '-f', '^/usr/local/bin/node dist/server.js');
-  await sleep(OUTAGE_MS);
-  await compose('exec', '-T', 'api', 'touch', 'dist/server.js');
-  while (!(await http(`${h.config.apiUrl}/health`).catch(() => null))?.ok) await sleep(250);
+  try {
+    await compose(
+      'exec',
+      '-T',
+      'api',
+      'pkill',
+      '-KILL',
+      '-f',
+      '^/usr/local/bin/node dist/server.js'
+    );
+    await sleep(OUTAGE_MS);
+  } finally {
+    // Always bring the API back, even if the run dies mid-outage.
+    await compose('exec', '-T', 'api', 'touch', 'dist/server.js');
+  }
+  const deadline = performance.now() + 120_000;
+  while (!(await http(`${h.config.apiUrl}/health`).catch(() => null))?.ok) {
+    if (performance.now() > deadline) throw new Error('API did not come back within 120s');
+    await sleep(250);
+  }
   h.outageMs = performance.now() - h.killedAt;
   h.metrics.outage = false;
   up();
@@ -149,15 +165,17 @@ run(async () => {
   const criteria = [
     [
       `API p95 under ${P95_LIMIT_MS}ms`,
-      `${Math.round(api.p95)}ms over ${api.count} requests`,
-      api.p95 < P95_LIMIT_MS,
+      `${Math.round(api.p95)}ms over ${api.count} requests` +
+        (api.slow.length ? `; slow routes: ${api.slow.join(', ')}` : ''),
+      api.p95 < P95_LIMIT_MS && api.slow.length === 0,
     ],
     [`No request unanswered after ${HANG_MS / 1000}s`, `${hangs} hung`, hangs === 0],
     ['No stuck students', `${stuck.size} stuck`, stuck.size === 0],
     [
       `Class-start burst under ${BURST_LIMIT_MS / 1000}s`,
       `${landed} students on the dashboard ${Math.round(burstMs)}ms after start`,
-      burstMs < BURST_LIMIT_MS,
+      // lastLanded stays 0 if nobody lands, which would make burstMs negative.
+      landed >= resumeReviewers && burstMs >= 0 && burstMs < BURST_LIMIT_MS,
     ],
   ];
 
