@@ -60,6 +60,23 @@ describe('requireClassModerator', () => {
     expect(query).not.toHaveBeenCalled();
   });
 
+  it('checks a class id sent in the body, for routes without it in the URL', async () => {
+    const { db, query } = fakeDb([]);
+    const res = fakeRes();
+    const req = {
+      ...fakeReq('admin', '101'),
+      params: {},
+      body: { class_id: 202 },
+    } as unknown as AuthRequest;
+    const next = await run(db, req, res);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('FROM Moderator'), [
+      202,
+      'prof@northeastern.edu',
+    ]);
+  });
+
   it('rejects a class id that is not a number', async () => {
     const { db, query } = fakeDb([{ 1: 1 }]);
     const res = fakeRes();
