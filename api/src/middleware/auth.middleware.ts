@@ -26,14 +26,14 @@ export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction
   next();
 };
 
-// requireAdmin, plus the class in the URL must be one this admin teaches (a
+// requireAdmin, plus the class in the URL or body must be one this admin teaches (a
 // Moderator row with their email). requireAdmin alone lets any professor read
 // any section's students. Use this on admin routes that take a class id.
 export const requireClassModerator =
   (db: Pool, param = 'class_id') =>
   (req: AuthRequest, res: Response, next: NextFunction): void => {
     requireAdmin(req, res, async () => {
-      const crn = Number(req.params[param]);
+      const crn = Number(req.params[param] ?? req.body?.[param]);
       if (!Number.isInteger(crn)) {
         res.status(400).json({ error: 'Invalid class' });
         return;

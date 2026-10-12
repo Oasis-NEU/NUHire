@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Pool } from 'mysql2';
 import type { Response } from 'express';
 import { JobController, GROUP_WORK_TABLES } from '../src/controller/job.controller';
-import type { AuthRequest } from '../src/models/types';
+import type { AuthRequest } from '../src/models/AuthRequest';
 
 // Assigning a job used to delete every vote, rating and note for the group, so
 // fixing a typo in a job title wiped the class. Now only `reset: true` erases
