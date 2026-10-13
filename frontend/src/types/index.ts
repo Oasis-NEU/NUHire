@@ -119,6 +119,8 @@ export type Step =
 export type LiveStudent = Pick<Student, 'id' | 'email' | 'f_name' | 'l_name'> & {
   group_id: number;
   started: DbBool | null;
+  /** When the student was first connected since their group started. Null means no gate waits for them. */
+  present_at: string | null;
   step: Step | null;
   review_completed_at: string | null;
   confirmed_at: string | null;

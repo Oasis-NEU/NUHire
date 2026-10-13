@@ -153,7 +153,7 @@ export default function Interview() {
 
       const newGroupSubmissions = response.data.finishedCount;
       setGroupSubmissions(newGroupSubmissions);
-      setGroupFinished(newGroupSubmissions >= groupSize);
+      setGroupFinished(groupSize > 0 && newGroupSubmissions >= groupSize);
     } catch (err) {
       console.error('❌ [FETCH-FINISHED] Failed to fetch finished count:', err);
     }
@@ -459,7 +459,9 @@ export default function Interview() {
     const handleInterviewStatusUpdated = ({ count, total }: { count: number; total: number }) => {
       setGroupSubmissions(count);
       setGroupSize(total);
-      setGroupFinished(count === total);
+      // >= rather than ===: a member who leaves mid-step drops the total under
+      // a count that already included them, and === then never matches.
+      setGroupFinished(total > 0 && count >= total);
     };
 
     const handleInterviewStageFinished = () => {

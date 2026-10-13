@@ -90,3 +90,4 @@ the way the API does at start, and then all of them twice more.
 | `003-resume-checked-per-group.sql` | `Resume.checked` is group-level; realign drifted rows                       |
 | `004-group-confirmations.sql`      | `GroupConfirmations` table; res-review-group confirm state survives refresh |
 | `005-step-completion.sql`          | `Step_Completion` table; the group barrier survives an API restart          |
+| `006-users-present-at.sql`         | `Users.present_at`; gates wait only for students who showed up              |

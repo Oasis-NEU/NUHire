@@ -96,7 +96,7 @@ export class ProgressController {
 
         // The IF re-checks the row so two racing requests can't both advance
         // it. `step` must come before crn/group_id so the IF sees the old values.
-        const fromIndex = STEP_ORDER.indexOf(stored ?? 'none') + 1;
+        const fromIndex = (STEP_ORDER as readonly string[]).indexOf(stored ?? 'none') + 1;
 
         this.db.query(
           `INSERT INTO Progress (crn, group_id, step, email)

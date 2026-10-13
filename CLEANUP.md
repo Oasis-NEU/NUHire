@@ -219,7 +219,7 @@ team, mid-activity, with no visible cause.
 
 ### Evidence
 
-The `check` handler in `api/src/config/socket.ts:264` writes `checked` for the
+The `check` handler in `api/src/config/socket.ts:339` writes `checked` for the
 whole group. The vote INSERTs at `resume.controller.ts:83` (`submitVote`) and
 `:426` (`batchVote`) never carry it forward. The reader overwrites per row:
 
@@ -309,13 +309,13 @@ changes still do not:
 ### Evidence
 
 ```
-api/src/controller/group.controller.ts:274   this.recountBarrier(class_id, new_group_id);
+api/src/controller/group.controller.ts:231   this.recountBarrier(class_id, new_group_id);
 ```
 
-The comment just above it (`:268`) says the old group is not recounted because
+The comment just above it (`:226`) says the old group is not recounted because
 the handler never learns which group the student came from. `deleteStudent`
-(`:619`) has no `recountBarrier` call. Compare `removeFromGroup` (`:286`), which
-reads the group first and recounts it at `:350`.
+(`:593`) has no `recountBarrier` call. Compare `removeFromGroup` (`:243`), which
+reads the group first and recounts it at `:307`.
 
 ### For an agent
 
@@ -324,9 +324,9 @@ reads the group first and recounts it at `:350`.
 - `recountBarrier` is fire-and-forget by design. A failed recount must not turn
   a successful move into a 500. Keep that.
 - Scope every query by `group_id` **and** `class`.
-- This is the cheap half of `TCH-16`. The expensive half (only counting students
-  who have signed in) stays in `TICKETS.md`. If the late/absent-students pair
-  has picked up `TCH-16`, this is theirs; ask first.
+- This is the remaining half of `TCH-16`. The other half (only counting
+  students who have signed in) is done: `presentMembers` in `socket.ts`. A
+  recount here goes through it like every other gate.
 - Do this before `CU-18`, which restructures the same handlers. Behaviour change
   and refactor go in separate PRs.
 
@@ -354,8 +354,8 @@ recounted, and nobody is told.
 ### Evidence
 
 ```
-api/src/controller/group.controller.ts:579   if (existingStudent.class === class_id) {
-api/src/controller/group.controller.ts:585   const updateQuery = 'UPDATE Users SET class = ?, group_id = ? WHERE email = ?';
+api/src/controller/group.controller.ts:553   if (existingStudent.class === class_id) {
+api/src/controller/group.controller.ts:559   const updateQuery = 'UPDATE Users SET class = ?, group_id = ? WHERE email = ?';
 ```
 
 `Users.class` is `int`. The caller sends `class_id: selectedClass`, and
@@ -445,7 +445,7 @@ api/src/routes/group.routes.ts:39          router.get('/barrier-status/:classId/
 ```
 
 The response is `{ step, completedCount, totalCount, released }`
-(`BarrierStatus` in `socket.ts`).
+(`BarrierStatus` in `models/Barrier.ts`).
 
 ### For an agent
 
@@ -652,7 +652,7 @@ grep -rnE "console\.[a-z]+\(\s*[\`'\"](❌|✅|🔄|🚀|🔥|⚠️|📊|🎉)"
   delete them; they are how you know the API came up.
 - Strip the emoji and bracket tags; keep the words.
 - Do **not** add a logger. Adopting pino is `INFRA-12` and a separate decision.
-- `socket.ts:324` and `:389` are in the socket lockdown pair's file. Tell them,
+- `socket.ts:399` and `:464` are in the socket lockdown pair's file. Tell them,
   or leave those two.
 
 ### Done when
@@ -877,8 +877,8 @@ It is also where the next roster bug will be fixed, so it should be readable.
 
 ```bash
 grep -nE "(this\.)?db\.query\(" api/src/controller/group.controller.ts | wc -l   # 22 callback queries
-grep -n "DELETE gc FROM\|DELETE sc FROM" api/src/controller/group.controller.ts  # pair at :252 and :336
-grep -n "emit('studentAddedToGroup'" api/src/controller/group.controller.ts      # :240, :554, :601
+grep -n "DELETE gc FROM\|DELETE sc FROM" api/src/controller/group.controller.ts  # pair at :209 and :293
+grep -n "emit('studentAddedToGroup'" api/src/controller/group.controller.ts      # :197, :528, :575
 ```
 
 `removeFromGroup` nests at `:299`, `:310`, `:335`, `:340`.
@@ -960,8 +960,8 @@ names for one fact is how they drift.
 ### Evidence
 
 ```
-api/src/controller/group.controller.ts:421   getGroupStarted
-api/src/controller/group.controller.ts:442   getGroupStatus      // same SQL, same response
+api/src/controller/group.controller.ts:395   getGroupStarted
+api/src/controller/group.controller.ts:416   getGroupStatus      // same SQL, same response
 frontend/src/app/components/ManageGroupsTab.tsx:159   /groups/started/...
 frontend/src/app/waitingGroup/page.tsx:23             /groups/status/...
 ```
@@ -1329,7 +1329,7 @@ it. These are wrong today.
 - 12 controller headers say `src/controllers/`; the folder is `controller/`.
   `facts.controller.ts:1` names `group.controller.ts`.
   `grep -rn "^// src/controllers" api/src`
-- `resume.controller.ts:411` and `interview.controller.ts:263` say "single
+- `resume.controller.ts:411` and `interview.controller.ts:235` say "single
   transaction". There is no transaction; it is one multi-row INSERT.
 - `jobdes/page.tsx:145`: `// Update your fetchJob useEffect in jobdes/page.tsx`,
   an instruction pasted from a chat.
@@ -1370,7 +1370,7 @@ grep -rn "^// =" api/src | wc -l                                                
 
 Worst offenders: `advisor-dashboard/page.tsx:1-9` labels every import;
 `app.ts:69`, `:84`, `:93` (`// Now this.sessionStore exists!`);
-`group.controller.ts:704-732`, a 29-line header on `forceAdvance`;
+`group.controller.ts:729-757`, a 29-line header on `forceAdvance`;
 `res-review/page.tsx:558-576`.
 
 ### For an agent

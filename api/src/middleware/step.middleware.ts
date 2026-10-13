@@ -5,6 +5,8 @@ import { Pool, RowDataPacket } from 'mysql2';
 import { AuthRequest } from '../models/AuthRequest';
 import { STEP_ORDER } from '../config/steps';
 
+const ORDER: readonly string[] = STEP_ORDER;
+
 // Refuses the request unless stored step has reached minStep
 // Admin can still pass them through manually
 export const requireStep =
@@ -41,7 +43,7 @@ export const requireStep =
         }
 
         const stored: string = (rows as RowDataPacket[])[0]?.step ?? 'none';
-        if (STEP_ORDER.indexOf(stored) < STEP_ORDER.indexOf(minStep)) {
+        if (ORDER.indexOf(stored) < ORDER.indexOf(minStep)) {
           res.status(409).json({ error: 'Step not reached yet', currentStep: stored });
           return;
         }

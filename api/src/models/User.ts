@@ -13,5 +13,7 @@ export interface User {
   current_page?:
     'dashboard' | 'resumepage' | 'resumepage2' | 'jobdes' | 'interviewpage' | 'makeofferpage';
   seen?: number;
+  // When the student was first seen since their group started; null until then.
+  present_at?: Date | null;
   keycloakProfile?: any;
 }

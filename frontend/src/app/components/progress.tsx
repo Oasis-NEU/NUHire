@@ -39,29 +39,25 @@ export const useProgressManager = (): ProgressOperations => {
       return;
     }
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/progress`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        // Callers navigate right after this resolves or fails. keepalive lets
-        // the write finish even if the page unloads first, otherwise the next
-        // page's progress POST is a skip and gets a 409.
-        keepalive: true,
-        body: JSON.stringify({
-          crn: user.class,
-          group_id: user.group_id,
-          step: step,
-          email: user.email,
-        }),
-      });
+    const response = await fetch(`${API_BASE_URL}/progress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      // Callers navigate right after this resolves or fails. keepalive lets
+      // the write finish even if the page unloads first, otherwise the next
+      // page's progress POST is a skip and gets a 409.
+      keepalive: true,
+      body: JSON.stringify({
+        crn: user.class,
+        group_id: user.group_id,
+        step: step,
+        email: user.email,
+      }),
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to update progress: ${errorText}`);
-      }
-    } catch (error) {
-      throw error;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to update progress: ${errorText}`);
     }
   };
 
