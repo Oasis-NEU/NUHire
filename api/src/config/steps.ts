@@ -17,6 +17,49 @@ export const STEP_ORDER = [
   'employer',
 ] as const;
 
+// STEP_ORDER is `as const`; lookups by an arbitrary string need a widened view.
+const ORDER: readonly string[] = STEP_ORDER;
+
+// checks that request is valid
+export const isStep = (step: unknown): step is string =>
+  typeof step === 'string' && ORDER.includes(step);
+
+export type StepDecision = 'allow' | 'noop' | 'reject';
+
+// stored: what the DB has (null/undefined counts as "none")
+// moved:  the stored row belongs to a different class or group than the
+//         student is in now, e.g. a professor moved them mid-activity
+// allow  = exactly one step ahead, or any step after a move
+// noop   = same step or earlier, nothing to write
+// reject = skipping ahead
+export function decideStep(
+  stored: string | null | undefined,
+  incoming: string,
+  moved = false
+): StepDecision {
+  const from = ORDER.indexOf(stored ?? 'none');
+  const to = ORDER.indexOf(incoming);
+  if (to === -1) {
+    return 'reject';
+  }
+  // A moved student starts over wherever their new group's page puts them,
+  // so the old group's step says nothing about what they may do now.
+  if (moved) {
+    return 'allow';
+  }
+  if (from === -1) {
+    return 'reject';
+  }
+  if (to <= from) {
+    return 'noop';
+  }
+  if (to === from + 1) {
+    return 'allow';
+  }
+
+  return 'reject';
+}
+
 // Where each step is rendered. This duplicates STEP_TO_ROUTE in
 // frontend/src/app/components/useProgress.tsx because the two live in different
 // processes; they have to be changed together. It exists here only because

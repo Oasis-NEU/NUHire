@@ -394,7 +394,7 @@ export default function Interview() {
     socket.emit('studentOnline', { studentId: user.email });
     socket.emit('studentPageChanged', { studentId: user.email, currentPage: pathname });
 
-    const handleMoveGroup = ({
+    const handleMoveGroup = async ({
       groupId,
       classId,
       targetPage,
@@ -409,7 +409,13 @@ export default function Interview() {
         classId === user.class &&
         targetPage === '/makeOffer'
       ) {
-        updateProgress(user, 'offer');
+        // Wait for the write so POST /offers sees the offer step. Navigate
+        // even if it failed so the student is not stranded.
+        try {
+          await updateProgress(user, 'offer');
+        } catch (err) {
+          console.error('[handleMoveGroup] Error updating progress:', err);
+        }
         localStorage.setItem('progress', 'offer');
         window.location.href = targetPage;
       }
