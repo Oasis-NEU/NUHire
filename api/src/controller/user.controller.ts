@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { User } from '../models/User';
 import { Pool, RowDataPacket } from 'mysql2';
-import { emitToClassModerators } from '../config/socket';
+import { emitToClassModerators, markPresent } from '../config/socket';
 
 export class UserController {
   constructor(
@@ -178,6 +178,17 @@ export class UserController {
       if (!page || !user_email) {
         res.status(400).json({ error: 'Page and email are required.' });
         return;
+      }
+
+      // Every student page calls this on mount, so it doubles as attendance
+      // for a student whose socket arrived with no session and was never
+      // stamped. Taken from the session, never from the body's email, and
+      // skipped once stamped, so it is not a write per page load.
+      const me = req.user;
+      if (me?.affiliation === 'student' && !me.present_at) {
+        await markPresent(this.io, this.db, me).catch((err) => {
+          console.error(`Could not mark ${me.email} present:`, err);
+        });
       }
 
       this.db.query(

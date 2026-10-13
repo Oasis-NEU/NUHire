@@ -458,6 +458,7 @@ CREATE TABLE `Users` (
   `class` int DEFAULT NULL,
   `current_page` enum('dashboard','resumepage','resumepage2','jobdes','interviewpage','makeofferpage') DEFAULT NULL,
   `seen` tinyint NOT NULL DEFAULT '0',
+  `present_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

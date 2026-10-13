@@ -153,7 +153,7 @@ export default function Interview() {
 
       const newGroupSubmissions = response.data.finishedCount;
       setGroupSubmissions(newGroupSubmissions);
-      setGroupFinished(newGroupSubmissions >= groupSize);
+      setGroupFinished(groupSize > 0 && newGroupSubmissions >= groupSize);
     } catch (err) {
       console.error('❌ [FETCH-FINISHED] Failed to fetch finished count:', err);
     }
@@ -394,7 +394,7 @@ export default function Interview() {
     socket.emit('studentOnline', { studentId: user.email });
     socket.emit('studentPageChanged', { studentId: user.email, currentPage: pathname });
 
-    const handleMoveGroup = ({
+    const handleMoveGroup = async ({
       groupId,
       classId,
       targetPage,
@@ -409,7 +409,13 @@ export default function Interview() {
         classId === user.class &&
         targetPage === '/makeOffer'
       ) {
-        updateProgress(user, 'offer');
+        // Wait for the write so POST /offers sees the offer step. Navigate
+        // even if it failed so the student is not stranded.
+        try {
+          await updateProgress(user, 'offer');
+        } catch (err) {
+          console.error('[handleMoveGroup] Error updating progress:', err);
+        }
         localStorage.setItem('progress', 'offer');
         window.location.href = targetPage;
       }
@@ -453,7 +459,9 @@ export default function Interview() {
     const handleInterviewStatusUpdated = ({ count, total }: { count: number; total: number }) => {
       setGroupSubmissions(count);
       setGroupSize(total);
-      setGroupFinished(count === total);
+      // >= rather than ===: a member who leaves mid-step drops the total under
+      // a count that already included them, and === then never matches.
+      setGroupFinished(total > 0 && count >= total);
     };
 
     const handleInterviewStageFinished = () => {

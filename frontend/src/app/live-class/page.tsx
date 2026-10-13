@@ -17,7 +17,7 @@ const GATE_FIELD: Partial<Record<Step, 'review_completed_at' | 'confirmed_at'>> 
 
 // Only these pages listen for moveGroup. Anywhere else force-advance writes the
 // rows but nobody's screen moves, so the button would report a fake success.
-const UNSTICKABLE: Step[] = ['res_1', 'res_2', 'interview'];
+const UNSTICK_STEPS: Step[] = ['res_1', 'res_2', 'interview'];
 
 const LiveClass = () => {
   const { user, loading: userloading } = useAuth();
@@ -142,7 +142,12 @@ const LiveClass = () => {
   const waitingOn = (groupId: number) => {
     const gateField = GATE_FIELD[groupSteps[groupId]];
     return gateField
-      ? students.filter((student) => student.group_id === groupId && student[gateField] === null)
+      ? students.filter(
+          (student) =>
+            student.group_id === groupId &&
+            student.present_at !== null &&
+            student[gateField] === null
+        )
       : [];
   };
 
@@ -230,20 +235,20 @@ const LiveClass = () => {
 
         {refreshError && (
           <p className="mb-4 p-3 rounded-lg bg-red-100 text-red-800 text-sm">
-            Couldn&apos;t refresh the board. What you see may be out of date; retrying every 10
-            seconds.
+            Could not refresh the board. What you see may be out of date; retrying every 10 seconds.
           </p>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {groupIds.map((groupId) => {
             const members = students.filter((student) => student.group_id === groupId);
+            const present = members.filter((member) => member.present_at !== null);
             const waiting = waitingOn(groupId);
             const next = nextStep(groupId);
             const step = groupSteps[groupId];
-            const canUnstick = members[0].started === 1 && !!next && UNSTICKABLE.includes(step);
+            const canUnstick = members[0].started === 1 && !!next && UNSTICK_STEPS.includes(step);
             // Only flag a group that is partly done; at the start of a step everyone is waiting.
-            const stuck = waiting.length > 0 && waiting.length < members.length;
+            const stuck = waiting.length > 0 && waiting.length < present.length;
 
             return (
               <div
@@ -257,7 +262,7 @@ const LiveClass = () => {
 
                 {stuck && (
                   <p className="text-sm text-yellow-800 mb-4">
-                    {members.length - waiting.length} of {members.length} done. Waiting on:{' '}
+                    {present.length - waiting.length} of {present.length} done. Waiting on:{' '}
                     {waiting.map(studentName).join(', ')}
                   </p>
                 )}
@@ -271,7 +276,9 @@ const LiveClass = () => {
                       />
                       <span>{studentName(member)}</span>
                       <span className="ml-auto text-gray-500">
-                        {STEP_LABEL[member.step ?? 'none']}
+                        {member.present_at === null
+                          ? 'Not signed in'
+                          : STEP_LABEL[member.step ?? 'none']}
                       </span>
                     </li>
                   ))}
