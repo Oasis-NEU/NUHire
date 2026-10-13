@@ -290,10 +290,11 @@ exercised by two real browsers at once.
 Every capacity number is a projection until measured. The critical unknown is
 whether saturation shows up as **errors** (recoverable) or **hangs** (class over).
 
-- [ ] 30 socket clients plus an advisor through the full journey
-- [ ] A synchronized-advance burst where all 30 transition within 2 seconds
-- [ ] A chaos case: restart the API mid-run, assert every student recovers
-- [ ] Pass criteria: p95 under 500ms, zero hung requests, zero stuck students
+- [x] 30 socket clients plus an advisor through the full journey (`npm run load`)
+- [x] A synchronized-advance burst where all 30 transition within 2 seconds
+- [x] A chaos case: restart the API mid-run, assert every student recovers (`--restart`)
+- [ ] Pass criteria: p95 under 500ms, zero hung requests, zero stuck students.
+      Plain runs pass; restart runs strand 12–21 students. See `docs/LOAD_TEST.md`
 
 **INFRA-15 [HARD] 14h — Error tracking and observability** — deps: INFRA-4
 During the pilot the lead needs to know a student is stuck before a hand goes up.

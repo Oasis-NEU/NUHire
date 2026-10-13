@@ -57,4 +57,7 @@ export const ACCOUNTS = [ADVISOR, ...STUDENTS];
 export const SIM_EMAILS = ACCOUNTS.map((a) => a.email);
 
 export const membersOf = (group) => STUDENTS.filter((s) => s.group === group);
+// Students who can act: the dormant one never does, and the one with no group
+// belongs to none.
+export const activeMembersOf = (group) => membersOf(group).filter((s) => !s.dormant);
 export const GROUP_IDS = Array.from({ length: SIM.groupCount }, (_, i) => i + 1);

@@ -14,6 +14,7 @@ override that.
 .local/tests/
   lib/          shared code: env, roster, db, keycloak admin, login, cleanup
   seed/         seed.mjs, wipe.mjs, check.mjs, scenarios.mjs
+  load-tests/   run.mjs, student.mjs, advisor.mjs, journey.mjs, metrics.mjs
 ```
 
 ## Commands
@@ -97,6 +98,23 @@ scenario quietly going stale.
 Offers are one per group: the `Offers` table has a unique key on class and group
 (migration 002), so a duplicate pending offer cannot be seeded. A second submit
 updates the existing one.
+
+## Load test
+
+`npm run load` reseeds `fresh`, then walks 29 students (all but the dormant one)
+and the advisor through the whole activity at once. It prints latency per route
+and socket event, then PASS or FAIL against INFRA-14: API p95 under 500ms, no
+request unanswered after 10s, no stuck student, class-start burst under 2s.
+`npm run load -- --restart` also crashes the API for 5s halfway through resume
+review.
+
+Set `SOCKET_AUTH_REQUIRED=true` in `api/.env` and recreate `api` first; the
+report says which mode it saw.
+
+Each method in `load-tests/student.mjs` copies one page's requests and socket
+events, bugs included. When a page changes, change its method. `journey.mjs`
+says where each student should end. Method and results:
+[docs/LOAD_TEST.md](../../docs/LOAD_TEST.md).
 
 ## How the fake students log in
 
