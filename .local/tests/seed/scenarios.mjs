@@ -21,6 +21,7 @@ import {
   SIM,
   SIM_EMAILS,
   STUDENTS,
+  activeMembersOf,
   membersOf,
 } from '../lib/roster.mjs';
 
@@ -36,20 +37,24 @@ const STEP_PAGE = {
   offer: 'makeofferpage',
 };
 
-const STEP_ORDER = ['none', 'job_description', 'res_1', 'res_2', 'interview', 'offer', 'employer'];
+export const STEP_ORDER = [
+  'none',
+  'job_description',
+  'res_1',
+  'res_2',
+  'interview',
+  'offer',
+  'employer',
+];
 const reached = (step, target) => STEP_ORDER.indexOf(step) >= STEP_ORDER.indexOf(target);
-
-// Students who can act: the dormant one never does, and the one with no group
-// belongs to none.
-const active = (group) => membersOf(group).filter((s) => !s.dormant);
 
 const all = (count, n) => Array(n).fill(count);
 const cycle = (pattern, n) => Array.from({ length: n }, (_, i) => pattern[i % pattern.length]);
 
 // Where group `group` stands in scenario `name`. votes[i] and ratings[i] belong to
-// active(group)[i].
+// activeMembersOf(group)[i].
 function plan(name, group) {
-  const n = active(group).length;
+  const n = activeMembersOf(group).length;
   if (name === 'fresh') return { step: null, votes: all(0, n), ratings: all(0, n), offer: false };
 
   // Group 1, identical in every scenario after `fresh`: everyone who can act has
@@ -114,7 +119,7 @@ async function apply(name, { conn }) {
         group,
       ]);
       const picked = shortlist(resumeIds, group);
-      const members = active(group);
+      const members = activeMembersOf(group);
 
       for (const [i, student] of members.entries()) {
         const id = idOf.get(student.email);
