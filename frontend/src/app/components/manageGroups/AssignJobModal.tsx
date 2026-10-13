@@ -9,10 +9,16 @@ interface AssignJobModalProps {
   onSelectJob: (jobId: number) => void;
   groupCount: number;
   isAssigning: boolean;
-  onAssign: () => void;
+  // Changes the job and keeps every group's work.
+  onChangeJob: () => void;
+  // Opens the ERASE confirmation; nothing is deleted from here.
+  onReset: () => void;
   onCancel: () => void;
 }
 
+// Two separate actions on purpose: changing the job is the safe default, and
+// erasing work is a distinct, visibly destructive choice behind its own
+// confirmation, so fixing a job title mid-class never wipes anyone's work.
 export function AssignJobModal({
   groupId,
   jobs,
@@ -20,9 +26,13 @@ export function AssignJobModal({
   onSelectJob,
   groupCount,
   isAssigning,
-  onAssign,
+  onChangeJob,
+  onReset,
   onCancel,
 }: AssignJobModalProps) {
+  const disabled = isAssigning || !selectedJobId;
+  const target = groupId ? 'this group' : 'all groups';
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-96">
@@ -47,21 +57,37 @@ export function AssignJobModal({
             This will assign the selected job to all {groupCount} groups in this class.
           </p>
         )}
-        <div className="flex space-x-3">
+        <button
+          onClick={onChangeJob}
+          disabled={disabled}
+          className={`w-full bg-blue-600 text-white py-2 px-4 rounded-lg ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
+        >
+          {isAssigning ? 'Saving...' : 'Change job'}
+        </button>
+        <p className="text-xs text-gray-600 mt-1 mb-4">
+          Keeps everyone&apos;s votes, ratings, notes and progress.
+        </p>
+
+        <div className="border-t border-gray-200 pt-4 mb-4">
           <button
-            onClick={onAssign}
-            disabled={isAssigning || !selectedJobId}
-            className={`flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 ${isAssigning ? 'opacity-50 cursor-not-allowed' : ''}`}
+            onClick={onReset}
+            disabled={disabled}
+            className={`w-full border-2 border-red-600 text-red-700 py-2 px-4 rounded-lg ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50'}`}
           >
-            {isAssigning ? 'Assigning...' : 'Assign Job'}
+            Reset {target} and assign...
           </button>
-          <button
-            onClick={onCancel}
-            className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400"
-          >
-            Cancel
-          </button>
+          <p className="text-xs text-gray-600 mt-1">
+            Erases saved work and any offer, and sends students back to the start. You confirm on
+            the next screen.
+          </p>
         </div>
+
+        <button
+          onClick={onCancel}
+          className="w-full bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400"
+        >
+          Cancel
+        </button>
       </div>
     </div>
   );
