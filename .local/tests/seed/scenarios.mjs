@@ -22,7 +22,6 @@ import {
   SIM_EMAILS,
   STUDENTS,
   activeMembersOf,
-  membersOf,
 } from '../lib/roster.mjs';
 
 const RESUME_COUNT = 10;
@@ -242,7 +241,7 @@ async function verify(name, { conn, config, sessions, startedByGroup }) {
     // The resume-review barrier, answered by the same code the students hit. It
     // counts only students who showed up, which in a started group is everyone
     // but the dormant student.
-    const total = wantStarted ? active(group).length : 0;
+    const total = wantStarted ? activeMembersOf(group).length : 0;
     const completed = finishedReview(p);
     const barrier = await get(`/groups/barrier-status/${SIM.crn}/${group}?step=res_1`);
     const wantReleased = total > 0 && completed === total;
