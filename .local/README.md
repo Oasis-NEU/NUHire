@@ -92,6 +92,7 @@ class:
 
     npm run seed          # needs the stack up (npm run all)
     npm run seed:check    # logs in all 30 students and the teacher
+    npm run load          # all 30 through the activity at once (load test)
 
 That creates `advisor01@example.test` and `student01@example.test` to
 `student30@example.test` (password `nuhire`) in class 9001, in 8 groups, with a
@@ -99,7 +100,8 @@ student who never logs in, one with no group and a group of one. To start from
 later in the activity, add a scenario, for example
 `npm run seed -- --scenario=waiting-on-group`. Its own README,
 [tests/README.md](tests/README.md), has the roster, the scenarios, how the fake
-students log in and why, and the other commands (`seed:wipe`, `seed:reset`).
+students log in and why, the load test, and the other commands (`seed:wipe`,
+`seed:reset`).
 
 The local Keycloak realm now also accepts `@example.test` addresses (it only
 took `@northeastern.edu` before). A Keycloak container created before that needs

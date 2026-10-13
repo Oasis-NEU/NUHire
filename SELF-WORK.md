@@ -43,7 +43,29 @@ start.** Those break in ways you won't see until a full class is on it.
 
 ## In progress
 
-_Nothing yet._
+### Absent students no longer block their group
+
+- **Who:** Audrey
+- **What:** gates count only students who showed up since their group started (`Users.present_at`), so a student on the roster who never logs in no longer holds the group. Part 1 of the late/absent pair; late students rejoining is part 2.
+- **Why it matters:** one absent student kept a whole group at "3 of 4" for the rest of the class
+- **Files:** `api/src/config/socket.ts`, `api/src/controller/group.controller.ts`, `api/src/controller/interview.controller.ts`, `frontend/src/app/live-class/page.tsx`, `frontend/src/types/index.ts`, `database-files/migrations/006-users-present-at.sql`, `database-files/Pandployer.sql`, `.local/tests/seed/scenarios.mjs`, docs
+- **Touches auth / sockets / schema / deploy?** sockets and schema; talked to Aarav
+- **Size:** days
+- **Status:** in review
+- **Branch:** see [#41](https://github.com/Oasis-NEU/NUHire/pull/41)
+- **Linear:** TCH-16 (first checkbox)
+
+### Late students can rejoin their group
+
+- **Who:** Audrey
+- **What:** a student who arrives after their group finished the solo resume review is offered the group's current step on the dashboard and skips the review. Part 2 of the late/absent pair; builds on #41.
+- **Why it matters:** a student 15 minutes late did 10 timed reviews alone while the group waited
+- **Files:** `api/src/config/steps.ts`, `api/src/controller/catchUp.controller.ts`, `api/src/routes/group.routes.ts`, `api/src/config/socket.ts`, `frontend/src/app/components/useCatchUp.tsx`, `frontend/src/app/dashboard/page.tsx`, `frontend/src/lib/api.ts`, docs
+- **Touches auth / sockets / schema / deploy?** sockets: one emit of the existing `studentAddedToGroup` event
+- **Size:** days
+- **Status:** in review
+- **Branch:** stacked on #41
+- **Linear:** STU-21
 
 ## Done
 

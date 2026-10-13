@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useProgressManager } from './progress';
+import { useSocket } from './socketContext';
 import type { Step } from '../../types';
 
 /**
@@ -13,7 +14,7 @@ import type { Step } from '../../types';
  * Until they are unified, this table is the one place that translates
  * step -> route. Do not inline a fourth version somewhere else.
  *
- * The API has its own copy, in api/src/controller/group.controller.ts, because
+ * The API has its own copy, in api/src/config/steps.ts, because
  * force-advance has to send a route path over the wire. Change both together.
  */
 export const STEP_TO_ROUTE: Record<string, string> = {
@@ -64,6 +65,24 @@ const furthestStep = (a: string, b: string): string =>
 export const useProgress = () => {
   const { user, loading } = useAuth();
   const { fetchProgress } = useProgressManager();
+  const socket = useSocket();
+
+  // A job reset erases the group's work and puts Progress back to
+  // job_description. Students already on a step page would keep voting into
+  // wiped tables, and Progress only moves forward, so send them back now.
+  useEffect(() => {
+    if (!socket) return;
+    const handleJobUpdated = (data?: { reset?: boolean }) => {
+      if (data?.reset !== true) return;
+      if (!(window.location.pathname in allowedRoutes)) return;
+      localStorage.setItem('progress', 'job_description');
+      window.location.replace('/dashboard');
+    };
+    socket.on('jobUpdated', handleJobUpdated);
+    return () => {
+      socket.off('jobUpdated', handleJobUpdated);
+    };
+  }, [socket]);
 
   useEffect(() => {
     const currentPath = window.location.pathname;

@@ -58,6 +58,7 @@ verified; the detail is in git history.
 | `SEC-13`               | `/stats` requires admin; the route-timestamp arrays are bounded                                                                                                               |
 | `API-2`                | No `process.exit` on unhandled rejection, Express error middleware, `restart: unless-stopped`, `/health` healthcheck                                                          |
 | `API-8`                | Real transactions on a checked-out connection at all three sites. `withTransaction` helper and CI grep still open — see `API-8b`                                              |
+| `STU-21`               | A late student is offered their group's step on the dashboard and skips the solo resume review                                                                                |
 | `API-10`               | Zero bare `io.emit` remain; advisor events go to the class's moderators                                                                                                       |
 | `API-12`               | `getCheckedResumes` returned the inverted set (`checked = "True"` coerced to 0)                                                                                               |
 | `STU-1,2,4,5`          | `/employerPannel` 404, `NEXT_PUBLIC_FRONT_URL`, dashboard progress field, `/about` wiping localStorage                                                                        |
@@ -290,10 +291,11 @@ exercised by two real browsers at once.
 Every capacity number is a projection until measured. The critical unknown is
 whether saturation shows up as **errors** (recoverable) or **hangs** (class over).
 
-- [ ] 30 socket clients plus an advisor through the full journey
-- [ ] A synchronized-advance burst where all 30 transition within 2 seconds
-- [ ] A chaos case: restart the API mid-run, assert every student recovers
-- [ ] Pass criteria: p95 under 500ms, zero hung requests, zero stuck students
+- [x] 30 socket clients plus an advisor through the full journey (`npm run load`)
+- [x] A synchronized-advance burst where all 30 transition within 2 seconds
+- [x] A chaos case: restart the API mid-run, assert every student recovers (`--restart`)
+- [ ] Pass criteria: p95 under 500ms, zero hung requests, zero stuck students.
+      Plain runs pass; restart runs strand 12–21 students. See `docs/LOAD_TEST.md`
 
 **INFRA-15 [HARD] 14h — Error tracking and observability** — deps: INFRA-4
 During the pilot the lead needs to know a student is stuck before a hand goes up.
@@ -648,11 +650,6 @@ Also `job.controller.ts` does a bare `UPDATE Progress` that silently affects
 - [ ] `POST /progress` validates and 400s instead of a MySQL truncation 500
 - [ ] Migration backfills; one doc page mapping all three including historical values
 
-**STU-21 [MED] 10h — Route a late joiner to where their group actually is** — deps: STU-8
-A student arriving 15 minutes late has progress `none` while their group is at
-the interview stage, so they must do 10 timed resume reviews alone while three
-teammates sit at a barrier. In a 50-minute class that group does not finish.
-
 ---
 
 # PRODUCT
@@ -757,7 +754,7 @@ with 30 students and afterwards has no artifact to grade or discuss.
 A CSV-imported student who never logs in inflates the group total and the group
 waits forever. Removing someone mid-class does not recount.
 
-- [ ] Barrier counts only students who have actually signed in
+- [x] Barrier counts only students who have actually signed in (`Users.present_at`, migration 006)
 - [ ] Add, remove, reassign triggers a recount and notifies **both** old and new rooms
 
 **TCH-17 [MED] 8h — Tell the professor when a popup was not delivered** — deps: API-4

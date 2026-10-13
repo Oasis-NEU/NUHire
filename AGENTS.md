@@ -108,7 +108,9 @@ these has stranded a group at some point. When you add or touch a gate:
 - the client must be able to recover by polling an endpoint, not only by
   receiving one socket event at one instant. `GET /groups/barrier-status` is
   the existing poll
-- it must tolerate a student who is on the roster but never logs in
+- it must not wait for a student who is on the roster but never shows up.
+  Count the group with `presentMembers` in `config/socket.ts`, which every
+  existing gate uses, rather than counting `Users` rows yourself
 
 ### 4. Emit to rooms, never `io.emit`
 
@@ -241,10 +243,11 @@ api/src/
     database.ts      mysql pool + boot-time seeding
     passport.ts      keycloak oidc strategy
     socket.ts        ALL real-time behaviour
+    steps.ts         step order, step -> route, and writing a step
   routes/            path -> controller, and the auth middleware per route
   controller/        request handling and raw SQL
   middleware/        requireAuth, requireAdmin, requireStudent
-  models/            shared types: User, AuthRequest, SocketEvents (socket payloads)
+  models/            shared types: User, AuthRequest, SocketEvents (socket payloads), Barrier
 
 frontend/src/app/
   page.tsx           landing
@@ -301,7 +304,7 @@ of the existing code does not look like this yet; do not copy it.
 - **Keep files small.** Aim for under 300 lines. Do not grow a file that is
   already over 800; extract first.
 - **Use the existing names.** Steps come from `STEP_ORDER` and `STEP_TO_ROUTE`
-  (`useProgress.tsx`, `group.controller.ts`), the barrier step from
+  (`useProgress.tsx`, `api/src/config/steps.ts`), the barrier step from
   `RES_REVIEW_BARRIER_STEP`. Export them where you need them; do not retype the
   strings.
 - **Delete dead code.** Do not comment it out or leave it "in case". Check both
@@ -322,8 +325,9 @@ Then walk the affected flow against the local stack. Test accounts are in
 `.local/README.md`; password is `nuhire` for all of them. Anything touching
 groups, barriers, or sockets needs **two browser sessions in the same group**, or
 you have not tested it. The built-in accounts only go as far as three students;
-`npm run seed` builds a 30-student class when you need the real size (see
-`.local/tests/README.md`).
+`npm run seed` builds a 30-student class when you need the real size, and
+`npm run load` walks that whole class through the activity at once, which is
+the check for barrier and socket changes (see `.local/tests/README.md`).
 
 ## Before you open a PR
 
