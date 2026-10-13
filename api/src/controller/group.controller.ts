@@ -13,6 +13,13 @@ import {
 } from '../config/socket';
 import { STEP_ORDER, STEP_TO_ROUTE, leftmostStep, recordStep } from '../config/steps';
 
+// A student moved into a group arrives there now, whatever their stamp says.
+// Kept, a stamp from before the new group's barrier released makes them look
+// present all along: the barrier reads closed for a group already through it,
+// and the student is never offered the catch-up. Someone never stamped stays
+// unstamped, since they still have not shown up.
+const RESTAMP_ON_MOVE = 'present_at = IF(present_at IS NULL, NULL, CURRENT_TIMESTAMP)';
+
 export class GroupController {
   constructor(
     private db: Pool,
@@ -178,7 +185,7 @@ export class GroupController {
       return;
     }
 
-    const updateQuery = 'UPDATE Users SET group_id = ? WHERE email = ? AND class = ?';
+    const updateQuery = `UPDATE Users SET group_id = ?, ${RESTAMP_ON_MOVE} WHERE email = ? AND class = ?`;
 
     this.db.query(updateQuery, [new_group_id, email, class_id], (err, result: any) => {
       if (err) {
@@ -569,7 +576,7 @@ export class GroupController {
       }
 
       // Student exists but not in this class, update their class and group
-      const updateQuery = 'UPDATE Users SET class = ?, group_id = ? WHERE email = ?';
+      const updateQuery = `UPDATE Users SET class = ?, group_id = ?, ${RESTAMP_ON_MOVE} WHERE email = ?`;
 
       this.db.query(updateQuery, [class_id, group_id, email], (updateErr, updateResult: any) => {
         if (updateErr) {
