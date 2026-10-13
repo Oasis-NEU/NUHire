@@ -44,6 +44,10 @@ export const useProgressManager = (): ProgressOperations => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        // Callers navigate right after this resolves or fails. keepalive lets
+        // the write finish even if the page unloads first, otherwise the next
+        // page's progress POST is a skip and gets a 409.
+        keepalive: true,
         body: JSON.stringify({
           crn: user.class,
           group_id: user.group_id,
