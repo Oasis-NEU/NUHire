@@ -118,6 +118,7 @@ api/src/
     database.ts      mysql pool, boot-time seeding
     passport.ts      keycloak strategy
     socket.ts        ALL real-time behaviour
+    steps.ts         step order, step -> route, and writing a step
   routes/            path -> controller, plus auth middleware per route
   controller/        request handling and raw SQL
   middleware/        requireAuth, requireAdmin, requireStudent
@@ -200,7 +201,10 @@ counts with, so a student who never logs in is not waited for. Before anyone in
 a group is stamped, `GET /interview/group-size` reports the whole roster rather
 than 0, so the client gates cannot open on 0 of 0.
 A student who arrives after everyone present had finished is not counted either,
-so a late login cannot close a barrier the group already went through. Only
+so a late login cannot close a barrier the group already went through; instead
+the dashboard offers them their group's step (`/groups/catch-up`) and they skip
+the solo review. A student moved into a group is re-stamped, so they count as
+arriving then, and get the same offer. Only
 completions belonging to a **current** member count, because a student moved
 between groups leaves their row behind. And an empty group is treated as
 unknown, not finished, so 0 of 0 cannot walk a student through a barrier before

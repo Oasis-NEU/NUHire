@@ -58,6 +58,7 @@ verified; the detail is in git history.
 | `SEC-13`               | `/stats` requires admin; the route-timestamp arrays are bounded                                                                                                               |
 | `API-2`                | No `process.exit` on unhandled rejection, Express error middleware, `restart: unless-stopped`, `/health` healthcheck                                                          |
 | `API-8`                | Real transactions on a checked-out connection at all three sites. `withTransaction` helper and CI grep still open — see `API-8b`                                              |
+| `STU-21`               | A late student is offered their group's step on the dashboard and skips the solo resume review                                                                                |
 | `API-10`               | Zero bare `io.emit` remain; advisor events go to the class's moderators                                                                                                       |
 | `API-12`               | `getCheckedResumes` returned the inverted set (`checked = "True"` coerced to 0)                                                                                               |
 | `STU-1,2,4,5`          | `/employerPannel` 404, `NEXT_PUBLIC_FRONT_URL`, dashboard progress field, `/about` wiping localStorage                                                                        |
@@ -648,11 +649,6 @@ Also `job.controller.ts` does a bare `UPDATE Progress` that silently affects
 - [ ] Upserts everywhere, never bare UPDATE
 - [ ] `POST /progress` validates and 400s instead of a MySQL truncation 500
 - [ ] Migration backfills; one doc page mapping all three including historical values
-
-**STU-21 [MED] 10h — Route a late joiner to where their group actually is** — deps: STU-8
-A student arriving 15 minutes late has progress `none` while their group is at
-the interview stage, so they must do 10 timed resume reviews alone while three
-teammates sit at a barrier. In a 50-minute class that group does not finish.
 
 ---
 

@@ -1,7 +1,7 @@
 // src/config/socket.ts
 
 import { Server as SocketIOServer, Socket } from 'socket.io';
-import { Pool, RowDataPacket } from 'mysql2';
+import { Pool, ResultSetHeader, RowDataPacket } from 'mysql2';
 import { SocketEvents } from '../models/SocketEvents';
 import { BarrierStatus, PresentMember, StepCompletion } from '../models/Barrier';
 
@@ -52,7 +52,7 @@ export async function presentMembers(
   groupId: number | string
 ): Promise<PresentMember[]> {
   const [rows] = await db.promise().query<(RowDataPacket & PresentMember)[]>(
-    `SELECT id, present_at FROM Users
+    `SELECT id, email, present_at FROM Users
       WHERE group_id = ? AND class = ? AND affiliation = 'student' AND present_at IS NOT NULL`,
     [groupId, classId]
   );
@@ -83,12 +83,23 @@ export async function gateMemberIds(
 // Count this user toward their group's gates from now on (see presentMembers).
 // Keeping the first stamp is what lets the barrier tell a late arrival from
 // someone who was there all along, so calling it again is a no-op.
-export async function markPresent(db: Pool, userId: number): Promise<void> {
-  await db
+//
+// The first stamp changes the group's size, so tell the group: every gate page
+// re-reads the size on studentAddedToGroup.
+export async function markPresent(
+  io: SocketIOServer,
+  db: Pool,
+  user: { id: number; group_id?: number | null; class?: number | null }
+): Promise<void> {
+  const [result] = await db
     .promise()
-    .query('UPDATE Users SET present_at = CURRENT_TIMESTAMP WHERE id = ? AND present_at IS NULL', [
-      userId,
-    ]);
+    .query<ResultSetHeader>(
+      'UPDATE Users SET present_at = CURRENT_TIMESTAMP WHERE id = ? AND present_at IS NULL',
+      [user.id]
+    );
+  const { group_id: groupId, class: classId } = user;
+  if (result.affectedRows === 0 || !groupId || !classId) return;
+  io.to(`group_${groupId}_class_${classId}`).emit('studentAddedToGroup', { groupId, classId });
 }
 
 // Has every present member of (group_id, class) recorded `step`?
@@ -237,7 +248,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     // covers it on the next page load.
     const connectedUser = socket.data.user as SocketUser | undefined;
     if (connectedUser) {
-      markPresent(db, connectedUser.id).catch((err) => {
+      markPresent(io, db, connectedUser).catch((err) => {
         console.error(`Could not mark ${connectedUser.email} present:`, err);
       });
     }

@@ -55,6 +55,18 @@ start.** Those break in ways you won't see until a full class is on it.
 - **Branch:** see [#41](https://github.com/Oasis-NEU/NUHire/pull/41)
 - **Linear:** TCH-16 (first checkbox)
 
+### Late students can rejoin their group
+
+- **Who:** Audrey
+- **What:** a student who arrives after their group finished the solo resume review is offered the group's current step on the dashboard and skips the review. Part 2 of the late/absent pair; builds on #41.
+- **Why it matters:** a student 15 minutes late did 10 timed reviews alone while the group waited
+- **Files:** `api/src/config/steps.ts`, `api/src/controller/catchUp.controller.ts`, `api/src/routes/group.routes.ts`, `api/src/config/socket.ts`, `frontend/src/app/components/useCatchUp.tsx`, `frontend/src/app/dashboard/page.tsx`, `frontend/src/lib/api.ts`, docs
+- **Touches auth / sockets / schema / deploy?** sockets: one emit of the existing `studentAddedToGroup` event
+- **Size:** days
+- **Status:** in review
+- **Branch:** stacked on #41
+- **Linear:** STU-21
+
 ## Done
 
 _Move entries here when they merge or get dropped._

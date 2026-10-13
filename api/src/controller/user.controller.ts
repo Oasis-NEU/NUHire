@@ -186,7 +186,7 @@ export class UserController {
       // skipped once stamped, so it is not a write per page load.
       const me = req.user;
       if (me?.affiliation === 'student' && !me.present_at) {
-        await markPresent(this.db, me.id).catch((err) => {
+        await markPresent(this.io, this.db, me).catch((err) => {
           console.error(`Could not mark ${me.email} present:`, err);
         });
       }
