@@ -193,9 +193,12 @@ students who had already finished never re-announced, so the group restarted at
 same question can be asked as often as anyone needs.
 
 A few details worth knowing. Only students who showed up count:
-`Users.present_at` is stamped when a student's socket connects and reset when
-the professor starts their group, and `presentMembers` in `socket.ts` is the one
-query every gate counts with, so a student who never logs in is not waited for.
+`Users.present_at` is stamped when a student's socket connects or a student page
+calls `POST /users/update-currentpage`, and reset when the professor starts
+their group, and `presentMembers` in `socket.ts` is the one query every gate
+counts with, so a student who never logs in is not waited for. Before anyone in
+a group is stamped, `GET /interview/group-size` reports the whole roster rather
+than 0, so the client gates cannot open on 0 of 0.
 A student who arrives after everyone present had finished is not counted either,
 so a late login cannot close a barrier the group already went through. Only
 completions belonging to a **current** member count, because a student moved

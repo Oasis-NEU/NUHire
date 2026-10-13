@@ -3,7 +3,7 @@
 --
 -- Every gate counted the whole roster. A CSV-imported student who never logged
 -- in held their group at "3 of 4" for the rest of the class. The API stamps
--- this column when a student's socket connects, clears it for a group's members
+-- this column when a student's socket connects or a page loads, clears it for a group's members
 -- when the professor starts that group, and the gates count only stamped rows.
 --
 -- NOT destructive: it adds a nullable column and backfills it. No row is

@@ -320,12 +320,14 @@ SELECT student_id, completed_at FROM Step_Completion
 Then:
 
 - Only students who **showed up** count. `Users.present_at` is stamped when a
-  student's socket connects and reset for a group's members when the professor
-  starts that group, keeping whoever is connected at that moment. A student on
-  the roster who never logs in is not waited for. The first query is
+  student's socket connects or a student page calls
+  `POST /users/update-currentpage`, and reset for a group's members when the
+  professor starts that group, keeping whoever is connected at that moment. A
+  student on the roster who never logs in is not waited for. The first query is
   `presentMembers` (`socket.ts`), and every gate counts through it, including
   `GET /interview/group-size`, which the res-review-group, interview and offer
-  pages compare against.
+  pages compare against. That endpoint falls back to the whole roster while
+  nobody in the group is stamped, so it never reports 0 for a real group.
 - Only completions belonging to a **current** member count. A student moved to
   another group mid-class leaves a row behind, and counting it would release a
   group that still has someone unfinished.

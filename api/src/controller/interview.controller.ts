@@ -6,7 +6,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool, RowDataPacket } from 'mysql2';
 import { dbErrorStatus } from '../config/database';
-import { presentMembers } from '../config/socket';
+import { gateMemberIds } from '../config/socket';
 
 export class InterviewController {
   constructor(
@@ -87,7 +87,7 @@ export class InterviewController {
     });
   };
 
-  getFinishedCount = (req: AuthRequest, res: Response): void => {
+  getFinishedCount = async (req: AuthRequest, res: Response): Promise<void> => {
     const { group_id, class_id } = req.query;
 
     if (!group_id || !class_id) {
@@ -95,21 +95,36 @@ export class InterviewController {
       return;
     }
 
-    const query = `
-      SELECT COUNT(*) AS finishedCount
-      FROM Interview_Status 
-      WHERE group_id = ? AND class = ? AND finished = 1
-    `;
-
-    this.db.query(query, [group_id, class_id], (err, results: any[]) => {
-      if (err) {
-        console.error('Error counting finished interviews:', err);
-        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch finished count' });
-        return;
-      }
-      res.json({ finishedCount: results[0].finishedCount });
-    });
+    try {
+      const { count } = await this.interviewProgress(String(class_id), String(group_id));
+      res.json({ finishedCount: count });
+    } catch (err) {
+      console.error('Error counting finished interviews:', err);
+      res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch finished count' });
+    }
   };
+
+  // How many of the members the interview gate waits for have finished, out of
+  // how many. Only rows for those members count: a student moved out leaves
+  // their row under the old group, and counting rows the total does not include
+  // could push the count past it or stall it short.
+  private async interviewProgress(
+    classId: number | string,
+    groupId: number | string
+  ): Promise<{ count: number; total: number }> {
+    const ids = await gateMemberIds(this.db, classId, groupId);
+    if (ids.length === 0) return { count: 0, total: 0 };
+
+    const [[row]] = await this.db.promise().query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS finishedCount
+         FROM Interview_Status s
+         JOIN Users u ON u.id = s.student_id AND u.group_id = s.group_id AND u.class = s.class
+        WHERE s.group_id = ? AND s.class = ? AND s.finished = 1
+          AND u.id IN (${ids.map(() => '?').join(',')})`,
+      [groupId, classId, ...ids]
+    );
+    return { count: Number(row.finishedCount), total: ids.length };
+  }
 
   updateFinishedStatus = async (req: AuthRequest, res: Response): Promise<void> => {
     const { student_id, finished, group_id, class: class_id } = req.body;
@@ -132,15 +147,11 @@ export class InterviewController {
          ON DUPLICATE KEY UPDATE finished = VALUES(finished), group_id = VALUES(group_id), class = VALUES(class)`,
         [student_id, !!finished, group_id, class_id]
       );
-      const [[{ finishedCount }]] = await promiseDb.query<RowDataPacket[]>(
-        'SELECT COUNT(*) AS finishedCount FROM Interview_Status WHERE group_id = ? AND class = ? AND finished = 1',
-        [group_id, class_id]
-      );
-      const members = await presentMembers(this.db, class_id, group_id);
+      const { count, total } = await this.interviewProgress(class_id, group_id);
 
       this.io
         .to(`group_${group_id}_class_${class_id}`)
-        .emit('interviewStatusUpdated', { count: finishedCount, total: members.length });
+        .emit('interviewStatusUpdated', { count, total });
       res.json({ success: true });
     } catch (err) {
       console.error('Error updating interview finished status:', err);
@@ -148,12 +159,12 @@ export class InterviewController {
     }
   };
 
-  // The total every group gate on the frontend compares against, so it counts
-  // the same members the barrier does.
+  // The total every group gate on the frontend compares against: the present
+  // members, or the whole roster before anyone is stamped (see gateMemberIds).
   getGroupSize = async (req: AuthRequest, res: Response): Promise<void> => {
     const { group_id, class_id } = req.params;
     try {
-      const members = await presentMembers(this.db, class_id, group_id);
+      const members = await gateMemberIds(this.db, class_id, group_id);
       res.json({ group_id, count: members.length });
     } catch (err) {
       console.error('Error fetching group size:', err);

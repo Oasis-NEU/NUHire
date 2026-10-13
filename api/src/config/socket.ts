@@ -59,6 +59,38 @@ export async function presentMembers(
   return rows;
 }
 
+// The members a frontend gate compares against: whoever is present, or the
+// whole roster when nobody is stamped yet. Zero present happens when no stamp
+// has landed since the group started (the socket may carry no session), and
+// reporting 0 opened every `count >= size` gate on the client at 0 of 0.
+export async function gateMemberIds(
+  db: Pool,
+  classId: number | string,
+  groupId: number | string
+): Promise<number[]> {
+  const present = await presentMembers(db, classId, groupId);
+  if (present.length > 0) return present.map((member) => member.id);
+
+  const [roster] = await db
+    .promise()
+    .query<(RowDataPacket & { id: number })[]>(
+      "SELECT id FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
+      [groupId, classId]
+    );
+  return roster.map((row) => row.id);
+}
+
+// Count this user toward their group's gates from now on (see presentMembers).
+// Keeping the first stamp is what lets the barrier tell a late arrival from
+// someone who was there all along, so calling it again is a no-op.
+export async function markPresent(db: Pool, userId: number): Promise<void> {
+  await db
+    .promise()
+    .query('UPDATE Users SET present_at = CURRENT_TIMESTAMP WHERE id = ? AND present_at IS NULL', [
+      userId,
+    ]);
+}
+
 // Has every present member of (group_id, class) recorded `step`?
 //
 // Answered by query every time instead of from a cached count. The count used
@@ -200,19 +232,14 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
   });
 
   io.on('connection', (socket: Socket) => {
-    // From here on this student counts toward their group's gates (see
-    // presentMembers). Keeping the first stamp is what lets the barrier tell a
-    // late arrival from someone who was there all along.
+    // From here on this student counts toward their group's gates. A socket
+    // with no session cannot be stamped here; POST /users/update-currentpage
+    // covers it on the next page load.
     const connectedUser = socket.data.user as SocketUser | undefined;
     if (connectedUser) {
-      db.promise()
-        .query(
-          'UPDATE Users SET present_at = CURRENT_TIMESTAMP WHERE id = ? AND present_at IS NULL',
-          [connectedUser.id]
-        )
-        .catch((err) => {
-          console.error(`Could not mark ${connectedUser.email} present:`, err);
-        });
+      markPresent(db, connectedUser.id).catch((err) => {
+        console.error(`Could not mark ${connectedUser.email} present:`, err);
+      });
     }
 
     // Register every handler through this instead of socket.on.
