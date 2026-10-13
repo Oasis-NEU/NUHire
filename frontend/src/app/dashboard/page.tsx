@@ -370,7 +370,9 @@ const Dashboard = () => {
       {catchUp.step && (
         <Popup
           headline="Your group is ahead of you"
-          message={`Your group is on ${STEP_LABEL[catchUp.step]}. Join them there? You will skip the individual resume review.`}
+          // Offered to anyone behind, not only late arrivals, so it names no
+          // step as skipped: someone who already did their review keeps it.
+          message={`Your group is on ${STEP_LABEL[catchUp.step]}. Join them there? Any steps before it that you have not done will be skipped.`}
           confirmLabel="Join my group"
           busy={catchUp.joining}
           onDismiss={catchUp.dismiss}
