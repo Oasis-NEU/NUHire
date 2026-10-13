@@ -369,24 +369,37 @@ export class GroupController {
   // day would otherwise have the group wait for a student who is not in the
   // room. Groups already started keep theirs, so pressing Start All again
   // mid-class is harmless.
+  //
+  // One transaction, so a failure between the two cannot leave a started group
+  // with nobody marked present.
   private async startGroups(classId: number | string, groupId?: number | string): Promise<void> {
-    const promiseDb = this.db.promise();
     const oneGroup = groupId !== undefined;
-    await promiseDb.query(
-      `UPDATE GroupsInfo g
-         LEFT JOIN Users u ON u.class = g.class_id AND u.group_id = g.group_id
-          SET g.started = 1, u.present_at = NULL
-        WHERE g.class_id = ? AND g.started = 0 ${oneGroup ? 'AND g.group_id = ?' : ''}`,
-      oneGroup ? [classId, groupId] : [classId]
-    );
-
     const online = [...(await connectedEmails(this.io))];
-    if (online.length === 0) return;
-    await promiseDb.query(
-      `UPDATE Users SET present_at = CURRENT_TIMESTAMP
-        WHERE class = ? AND present_at IS NULL AND email IN (${online.map(() => '?').join(',')})`,
-      [classId, ...online]
-    );
+
+    const conn = await this.db.promise().getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query(
+        `UPDATE GroupsInfo g
+           LEFT JOIN Users u ON u.class = g.class_id AND u.group_id = g.group_id
+            SET g.started = 1, u.present_at = NULL
+          WHERE g.class_id = ? AND g.started = 0 ${oneGroup ? 'AND g.group_id = ?' : ''}`,
+        oneGroup ? [classId, groupId] : [classId]
+      );
+      if (online.length > 0) {
+        await conn.query(
+          `UPDATE Users SET present_at = CURRENT_TIMESTAMP
+            WHERE class = ? AND present_at IS NULL AND email IN (${online.map(() => '?').join(',')})`,
+          [classId, ...online]
+        );
+      }
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   }
 
   startAllGroups = async (req: AuthRequest, res: Response): Promise<void> => {
