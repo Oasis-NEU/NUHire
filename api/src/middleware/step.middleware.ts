@@ -21,18 +21,31 @@ export const requireStep =
       return;
     }
 
-    db.query('SELECT step FROM Progress WHERE email = ?', [email], (err, rows) => {
-      if (err) {
-        console.error('Error checking step:', err);
-        res.status(500).json({ error: 'Could not verify your step' });
-        return;
-      }
+    const crn = req.user?.class;
+    const groupId = req.user?.group_id;
+    if (!crn || !groupId) {
+      res.status(409).json({ error: 'You are not assigned to a group yet', currentStep: 'none' });
+      return;
+    }
 
-      const stored: string = (rows as RowDataPacket[])[0]?.step ?? 'none';
-      if (STEP_ORDER.indexOf(stored) < STEP_ORDER.indexOf(minStep)) {
-        res.status(409).json({ error: 'Step not reached yet', currentStep: stored });
-        return;
+    // Scoped to the student's current class and group so a row left over
+    // from before a move does not let them act at the old group's step.
+    db.query(
+      'SELECT step FROM Progress WHERE email = ? AND crn = ? AND group_id = ?',
+      [email, crn, groupId],
+      (err, rows) => {
+        if (err) {
+          console.error('Error checking step:', err);
+          res.status(500).json({ error: 'Could not verify your step' });
+          return;
+        }
+
+        const stored: string = (rows as RowDataPacket[])[0]?.step ?? 'none';
+        if (STEP_ORDER.indexOf(stored) < STEP_ORDER.indexOf(minStep)) {
+          res.status(409).json({ error: 'Step not reached yet', currentStep: stored });
+          return;
+        }
+        next();
       }
-      next();
-    });
+    );
   };

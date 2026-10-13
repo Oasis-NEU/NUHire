@@ -4,7 +4,7 @@
 
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
-import { Pool, RowDataPacket } from 'mysql2';
+import { Pool, ResultSetHeader, RowDataPacket } from 'mysql2';
 import { emitToClassModerators } from '../config/socket';
 import { STEP_ORDER, isStep, decideStep } from '../config/steps';
 
@@ -61,50 +61,91 @@ export class ProgressController {
       return;
     }
 
-    this.db.query('SELECT step FROM Progress WHERE email = ?', [email], (selErr, rows) => {
-      if (selErr) {
-        console.error('Error reading progress:', selErr);
-        res.status(500).json({ error: selErr.message });
-        return;
-      }
-
-      const stored: string | null = (rows as RowDataPacket[])[0]?.step ?? null;
-      const decision = decideStep(stored, step);
-
-      if (decision === 'reject') {
-        res.status(409).json({ error: 'Step not allowed yet', currentStep: stored ?? 'none' });
-        return;
-      }
-
-      if (decision === 'noop') {
-        res.json({ success: true, message: 'Progress unchanged', step: stored ?? 'none' });
-        return;
-      }
-
-      // Two racing requests can't both advance step
-      const fromIndex = STEP_ORDER.indexOf(stored ?? 'none') + 1;
-
-      this.db.query(
-        `INSERT INTO Progress (crn, group_id, step, email)
-          VALUES (?, ?, ?, ?)
-          ON DUPLICATE KEY UPDATE step = IF(step IS NULL OR step + 0 = ?, VALUES(step), step)`,
-        [crn, group_id, step, email, fromIndex],
-        (err) => {
-          if (err) {
-            console.error('Error updating progress:', err);
-            res.status(500).json({ error: err.message });
-            return;
-          }
-
-          const payload = { crn, group_id, step, email };
-          this.io.to(`group_${group_id}_class_${crn}`).emit('progressUpdated', payload);
-
-          emitToClassModerators(this.io, this.db, crn, 'progressUpdated', payload);
-
-          res.json({ success: true, message: 'Progress updated successfully', step });
+    this.db.query(
+      'SELECT step, crn, group_id FROM Progress WHERE email = ?',
+      [email],
+      (selErr, rows) => {
+        if (selErr) {
+          console.error('Error reading progress:', selErr);
+          res.status(500).json({ error: 'Could not read your progress' });
+          return;
         }
-      );
-    });
+
+        const row = (rows as RowDataPacket[])[0];
+        const stored: string | null = row?.step ?? null;
+        // A row left over from another class or group is not this student's
+        // progress any more, so it must not hold them to the old step.
+        const moved =
+          !!row && (Number(row.crn) !== Number(crn) || Number(row.group_id) !== Number(group_id));
+        const decision = decideStep(stored, step, moved);
+
+        if (decision === 'reject') {
+          res.status(409).json({ error: 'Step not allowed yet', currentStep: stored ?? 'none' });
+          return;
+        }
+
+        if (decision === 'noop') {
+          res.json({
+            success: true,
+            updated: false,
+            message: 'Progress unchanged',
+            step: stored ?? 'none',
+          });
+          return;
+        }
+
+        // The IF re-checks the row so two racing requests can't both advance
+        // it. `step` must come before crn/group_id so the IF sees the old values.
+        const fromIndex = STEP_ORDER.indexOf(stored ?? 'none') + 1;
+
+        this.db.query(
+          `INSERT INTO Progress (crn, group_id, step, email)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+              step = IF(
+                crn <> VALUES(crn) OR group_id <> VALUES(group_id)
+                  OR step IS NULL OR step + 0 = ?,
+                VALUES(step),
+                step
+              ),
+              crn = VALUES(crn),
+              group_id = VALUES(group_id)`,
+          [crn, group_id, step, email, fromIndex],
+          (err, result) => {
+            if (err) {
+              console.error('Error updating progress:', err);
+              res.status(500).json({ error: 'Could not save your progress' });
+              return;
+            }
+
+            // An insert reports 1 affected row and a changed update reports 2.
+            // An update that changed nothing reports 0, or 1 under FOUND_ROWS,
+            // which is why the expected count depends on whether a row existed.
+            const { affectedRows } = result as ResultSetHeader;
+            if (affectedRows !== (row ? 2 : 1)) {
+              res.json({
+                success: true,
+                updated: false,
+                message: 'Progress was already changed by another request',
+              });
+              return;
+            }
+
+            const payload = { crn, group_id, step, email };
+            this.io.to(`group_${group_id}_class_${crn}`).emit('progressUpdated', payload);
+
+            emitToClassModerators(this.io, this.db, crn, 'progressUpdated', payload);
+
+            res.json({
+              success: true,
+              updated: true,
+              message: 'Progress updated successfully',
+              step,
+            });
+          }
+        );
+      }
+    );
   };
 
   // --- Group-selection confirmations (res-review-group) -------------------
