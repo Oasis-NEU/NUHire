@@ -110,7 +110,7 @@ api/src/
   routes/            path -> controller, plus the auth middleware per route
   controller/        request handling and raw SQL
   middleware/        requireAuth, requireAdmin, requireModerator, requireStudent
-  models/            shared types: User, AuthRequest, SocketEvents (socket payloads)
+  models/            shared types: User, AuthRequest, SocketEvents (socket payloads), Barrier
 
 frontend/src/app/
   page.tsx                    landing
@@ -283,7 +283,7 @@ checkboxes, professor popups, step transitions, and offer approvals.
 
 ### Socket auth
 
-`io.use(...)` at `socket.ts:139` reads the login session off the handshake and
+`io.use(...)` at `socket.ts:182` reads the login session off the handshake and
 populates the authenticated user. It refuses to join a student to another
 group's room.
 
@@ -300,31 +300,42 @@ This is the core group mechanic and the thing most likely to break a live class.
 
 **Every member of a group must finish their own resume review before
 `res-review-group` opens.** The step constant is
-`RES_REVIEW_BARRIER_STEP = 'res_1'` (`socket.ts:43`).
+`RES_REVIEW_BARRIER_STEP = 'res_1'` (`socket.ts:44`).
 
 It used to live in a plain JavaScript object in process memory. An API restart
 wiped it: students who had already finished never re-announced, so the group
 restarted at 0 and could never reach its total again. **It is now DB-backed.**
 
-`evaluateGroupBarrier(db, classId, groupId, step)` (`socket.ts:60`) answers the
+`evaluateGroupBarrier(db, classId, groupId, step)` (`socket.ts:70`) answers the
 question **by query, every time**:
 
 ```sql
-SELECT id FROM Users
- WHERE group_id = ? AND class = ? AND affiliation = 'student';
+SELECT id, present_at FROM Users
+ WHERE group_id = ? AND class = ? AND affiliation = 'student' AND present_at IS NOT NULL;
 
-SELECT student_id FROM Step_Completion
+SELECT student_id, completed_at FROM Step_Completion
  WHERE group_id = ? AND class = ? AND step = ?;
 ```
 
 Then:
 
+- Only students who **showed up** count. `Users.present_at` is stamped when a
+  student's socket connects or a student page calls
+  `POST /users/update-currentpage`, and reset for a group's members when the
+  professor starts that group, keeping whoever is connected at that moment. A
+  student on the roster who never logs in is not waited for. The first query is
+  `presentMembers` (`socket.ts`), and every gate counts through it, including
+  `GET /interview/group-size`, which the res-review-group, interview and offer
+  pages compare against. That endpoint falls back to the whole roster while
+  nobody in the group is stamped, so it never reports 0 for a real group.
 - Only completions belonging to a **current** member count. A student moved to
   another group mid-class leaves a row behind, and counting it would release a
   group that still has someone unfinished.
-- `released = members.length > 0 && completedCount >= members.length`. An empty
-  roster is **unknown, not finished** — releasing on `0 >= 0` would walk a
-  student through a barrier before their group had anyone in it.
+- The barrier opens at the first completion by which everyone present had
+  finished. Someone who arrives after that is not counted, so a late login
+  cannot close a barrier the group already went through.
+- An empty group is **unknown, not finished** — releasing on 0 of 0 would walk a
+  student through a barrier before anyone in their group had shown up.
 
 `broadcastGroupBarrier(...)` re-evaluates and, if open, emits
 `groupCompletedResReview` **to the room**, not to cached socket ids. Nothing is

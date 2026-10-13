@@ -45,15 +45,15 @@ One advisor, 30 students, 8 groups, class number **9001**. Everyone's password i
 `nuhire`. All addresses are on `example.test`, a reserved domain, so nothing here
 can be mistaken for a real person.
 
-| Email                                   | Group  | Why it is there                                                                |
-| --------------------------------------- | ------ | ------------------------------------------------------------------------------ |
-| `advisor01@example.test`                | -      | The teacher.                                                                   |
-| `student01` to `student24@example.test` | 1 to 6 | Four to a group.                                                               |
-| `student04@example.test`                | 1      | **Never logs in.** On the roster, so group 1 can never reach 4 of 4 by itself. |
-| `student12@example.test`                | 3      | **Stale `Progress` row**: it still names group 2. See below.                   |
-| `student25@example.test`                | 7      | A group of one.                                                                |
-| `student26` to `student29@example.test` | 8      | Four to a group.                                                               |
-| `student30@example.test`                | none   | On the roster with no group.                                                   |
+| Email                                   | Group  | Why it is there                                                           |
+| --------------------------------------- | ------ | ------------------------------------------------------------------------- |
+| `advisor01@example.test`                | -      | The teacher.                                                              |
+| `student01` to `student24@example.test` | 1 to 6 | Four to a group.                                                          |
+| `student04@example.test`                | 1      | **Never logs in.** On the roster but not present, so group 1 waits for 3. |
+| `student12@example.test`                | 3      | **Stale `Progress` row**: it still names group 2. See below.              |
+| `student25@example.test`                | 7      | A group of one.                                                           |
+| `student26` to `student29@example.test` | 8      | Four to a group.                                                          |
+| `student30@example.test`                | none   | On the roster with no group.                                              |
 
 Class 9001 shares group numbers 1 and 2 with the class `.local/seed.sql` makes.
 That is useful: anything scoped by group alone and not by `(group_id, class)`
@@ -77,17 +77,19 @@ a matching `current_page`, and the work they would really have produced. This ta
 is the only description of the scenarios; the code builds each from a per-group
 plan in `seed/scenarios.mjs`.
 
-| Scenario            | State                                                                                                                                |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `fresh` (default)   | Job assigned, no group started. Students sit on `/waitingGroup`.                                                                     |
-| `mid-resume-review` | Everyone is partway through the 10 resumes. No group has finished.                                                                   |
-| `waiting-on-group`  | Groups 1 and 2 wait at the resume barrier at 3 of 4, group 8 at 2 of 4, and groups 3 to 7 are through it.                            |
-| `interview-stage`   | Groups 2 to 8 shortlisted four resumes and are partway through rating interviews. Group 1 stays stuck.                               |
-| `offers-pending`    | Groups 2 to 8 finished their interviews. Groups 2 to 6 have a pending offer, groups 7 and 8 are still deciding. Group 1 stays stuck. |
+| Scenario            | State                                                                                                                             |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `fresh` (default)   | Job assigned, no group started. Students sit on `/waitingGroup`.                                                                  |
+| `mid-resume-review` | Everyone is partway through the 10 resumes. No group has finished.                                                                |
+| `waiting-on-group`  | Group 2 waits at the resume barrier at 3 of 4, group 8 at 2 of 4, and groups 1 and 3 to 7 are through it.                         |
+| `interview-stage`   | Groups 2 to 8 shortlisted four resumes and are partway through rating interviews. Group 1 has not moved.                          |
+| `offers-pending`    | Groups 2 to 8 finished their interviews. Groups 2 to 6 have a pending offer, groups 7 and 8 are still deciding. Group 1 as above. |
 
-Group 1 is the deadlock the seed exists to reproduce. Its dormant student never
-finishes, so in every scenario after `fresh` it sits at 3 of 4 until the teacher
-uses `POST /groups/force-advance`, which is what the override is for.
+Group 1 is the absent student the seed exists to reproduce. The seed marks
+everyone else who acts as present (`Users.present_at`, as their socket would),
+so in every scenario after `fresh` group 1's barrier reads 3 of 3 and is open.
+Its students are still on the resume review; the release reaches them when they
+next join the group room.
 
 `seed:check` does not just compare database rows. It asks the real API (the
 barrier status for each group, the finished-interview count, the offers) and

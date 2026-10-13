@@ -108,7 +108,9 @@ these has stranded a group at some point. When you add or touch a gate:
 - the client must be able to recover by polling an endpoint, not only by
   receiving one socket event at one instant. `GET /groups/barrier-status` is
   the existing poll
-- it must tolerate a student who is on the roster but never logs in
+- it must not wait for a student who is on the roster but never shows up.
+  Count the group with `presentMembers` in `config/socket.ts`, which every
+  existing gate uses, rather than counting `Users` rows yourself
 
 ### 4. Emit to rooms, never `io.emit`
 
@@ -244,7 +246,7 @@ api/src/
   routes/            path -> controller, and the auth middleware per route
   controller/        request handling and raw SQL
   middleware/        requireAuth, requireAdmin, requireStudent
-  models/            shared types: User, AuthRequest, SocketEvents (socket payloads)
+  models/            shared types: User, AuthRequest, SocketEvents (socket payloads), Barrier
 
 frontend/src/app/
   page.tsx           landing

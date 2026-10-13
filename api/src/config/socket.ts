@@ -3,6 +3,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Pool, RowDataPacket } from 'mysql2';
 import { SocketEvents } from '../models/SocketEvents';
+import { BarrierStatus, PresentMember, StepCompletion } from '../models/Barrier';
 
 // Advisors join a room named after their own email (see 'adminOnline' below),
 // so notifying a class's teachers is one emit per Moderator row for that CRN.
@@ -42,14 +43,55 @@ interface SocketUser {
 // and a second spelling would record a completion nobody looks for.
 export const RES_REVIEW_BARRIER_STEP = 'res_1';
 
-export interface BarrierStatus {
-  step: string;
-  completedCount: number;
-  totalCount: number;
-  released: boolean;
+// Who a group waits for: students on its roster who have had the app open since
+// the group was started, so one absent student cannot hold everyone else. Every
+// gate counts members through this, so they cannot disagree about the total.
+export async function presentMembers(
+  db: Pool,
+  classId: number | string,
+  groupId: number | string
+): Promise<PresentMember[]> {
+  const [rows] = await db.promise().query<(RowDataPacket & PresentMember)[]>(
+    `SELECT id, present_at FROM Users
+      WHERE group_id = ? AND class = ? AND affiliation = 'student' AND present_at IS NOT NULL`,
+    [groupId, classId]
+  );
+  return rows;
 }
 
-// Has every current member of (group_id, class) recorded `step`?
+// The members a frontend gate compares against: whoever is present, or the
+// whole roster when nobody is stamped yet. Zero present happens when no stamp
+// has landed since the group started (the socket may carry no session), and
+// reporting 0 opened every `count >= size` gate on the client at 0 of 0.
+export async function gateMemberIds(
+  db: Pool,
+  classId: number | string,
+  groupId: number | string
+): Promise<number[]> {
+  const present = await presentMembers(db, classId, groupId);
+  if (present.length > 0) return present.map((member) => member.id);
+
+  const [roster] = await db
+    .promise()
+    .query<(RowDataPacket & { id: number })[]>(
+      "SELECT id FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
+      [groupId, classId]
+    );
+  return roster.map((row) => row.id);
+}
+
+// Count this user toward their group's gates from now on (see presentMembers).
+// Keeping the first stamp is what lets the barrier tell a late arrival from
+// someone who was there all along, so calling it again is a no-op.
+export async function markPresent(db: Pool, userId: number): Promise<void> {
+  await db
+    .promise()
+    .query('UPDATE Users SET present_at = CURRENT_TIMESTAMP WHERE id = ? AND present_at IS NULL', [
+      userId,
+    ]);
+}
+
+// Has every present member of (group_id, class) recorded `step`?
 //
 // Answered by query every time instead of from a cached count. The count used
 // to live in `global.completedResReview`, which an API restart wiped: the
@@ -63,43 +105,55 @@ export async function evaluateGroupBarrier(
   groupId: number | string,
   step: string
 ): Promise<BarrierStatus> {
-  const promiseDb = db.promise();
+  const members = await presentMembers(db, classId, groupId);
 
-  const [members] = await promiseDb.query<RowDataPacket[]>(
-    "SELECT id FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
-    [groupId, classId]
-  );
+  const [completions] = await db
+    .promise()
+    .query<(RowDataPacket & StepCompletion)[]>(
+      'SELECT student_id, completed_at FROM Step_Completion WHERE group_id = ? AND class = ? AND step = ?',
+      [groupId, classId, step]
+    );
 
-  const [completions] = await promiseDb.query<RowDataPacket[]>(
-    'SELECT student_id FROM Step_Completion WHERE group_id = ? AND class = ? AND step = ?',
-    [groupId, classId, step]
-  );
-
-  return summarizeBarrier(
-    step,
-    members.map((row) => row.id as number),
-    completions.map((row) => row.student_id as number)
-  );
+  return summarizeBarrier(step, members, completions);
 }
 
 export function summarizeBarrier(
   step: string,
-  memberIds: number[],
-  completedIds: number[]
+  members: PresentMember[],
+  completions: StepCompletion[]
 ): BarrierStatus {
   // Count only completions belonging to a CURRENT member. A student moved to
   // another group mid-class leaves their row behind, and counting it would
   // release a group that still has somebody unfinished.
-  const members = new Set(memberIds);
-  const completedCount = completedIds.filter((id) => members.has(id)).length;
+  const memberIds = new Set(members.map((member) => member.id));
+  const doneAt = new Map(
+    completions
+      .filter((completion) => memberIds.has(completion.student_id))
+      .map((completion) => [completion.student_id, completion.completed_at.getTime()])
+  );
 
+  // The barrier opened at the first completion by which everyone present had
+  // finished. Students who arrived after that are not waited for, so a late
+  // login cannot close a barrier the rest of the group already went through.
+  // An empty group is unknown, not finished: releasing on 0 of 0 would walk a
+  // student through a barrier before anyone in their group had shown up.
+  const presentBy = (time: number) =>
+    members.filter((member) => member.present_at.getTime() <= time);
+  const releasedAt = [...doneAt.values()]
+    .sort((a, b) => a - b)
+    .find((time) => {
+      const present = presentBy(time);
+      return (
+        present.length > 0 && present.every((member) => (doneAt.get(member.id) ?? Infinity) <= time)
+      );
+    });
+
+  const counted = releasedAt === undefined ? members : presentBy(releasedAt);
   return {
     step,
-    completedCount,
-    totalCount: memberIds.length,
-    // An empty roster is unknown, not finished. Releasing on 0 >= 0 would walk
-    // a student through a barrier before their group has been assigned anyone.
-    released: memberIds.length > 0 && completedCount >= memberIds.length,
+    completedCount: counted.filter((member) => doneAt.has(member.id)).length,
+    totalCount: counted.length,
+    released: releasedAt !== undefined,
   };
 }
 
@@ -178,6 +232,16 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
   });
 
   io.on('connection', (socket: Socket) => {
+    // From here on this student counts toward their group's gates. A socket
+    // with no session cannot be stamped here; POST /users/update-currentpage
+    // covers it on the next page load.
+    const connectedUser = socket.data.user as SocketUser | undefined;
+    if (connectedUser) {
+      markPresent(db, connectedUser.id).catch((err) => {
+        console.error(`Could not mark ${connectedUser.email} present:`, err);
+      });
+    }
+
     // Register every handler through this instead of socket.on.
     //
     // socket.io does not catch a throw inside a handler. It escapes to the
