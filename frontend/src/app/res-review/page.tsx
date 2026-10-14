@@ -399,7 +399,7 @@ export default function ResumesPage() {
       setPopup({ headline, message });
     };
 
-    const handleMoveGroup = ({
+    const handleMoveGroup = async ({
       groupId,
       classId,
       targetPage,
@@ -413,7 +413,13 @@ export default function ResumesPage() {
         classId === user.class &&
         targetPage === '/res-review-group'
       ) {
-        updateProgress(user, 'res_2');
+        // Wait for the write so the next page's POST is one step ahead, not
+        // a skip. Navigate even if it failed so the student is not stranded.
+        try {
+          await updateProgress(user, 'res_2');
+        } catch (err) {
+          console.error('[handleMoveGroup] Error updating progress:', err);
+        }
         localStorage.setItem('progress', 'res_2');
         // The saved counters used to be dropped when the tenth decision landed.
         // Now that they survive until the student leaves, this path has to

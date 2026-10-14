@@ -1,3 +1,4 @@
+-- migrate:up
 -- 005: durable per-student step completion, so the group barrier survives a
 -- restart.
 --
@@ -81,3 +82,5 @@ ORDER BY ORDINAL_POSITION;
 -- And how much the backfill picked up. Running the migration a second time
 -- must not change this number.
 SELECT COUNT(*) AS backfilled_completions FROM `Step_Completion` WHERE `step` = 'res_1';
+
+-- migrate:down

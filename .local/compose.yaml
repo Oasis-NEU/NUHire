@@ -1,6 +1,4 @@
-# Local-only stack: stateful services in Docker, api + frontend run on the host.
-# Keycloak must be reachable at the SAME url from the browser and from the api
-# process, which is why the api is not containerised here.
+# MySQL and Keycloak, extended by the root compose.dev.yaml. On its own: `npm run dev:services`.
 name: nuhire-local
 
 services:
@@ -8,11 +6,13 @@ services:
     image: mysql:8.4
     container_name: nuhire-mysql
     restart: unless-stopped
+    # Let mysqld finish shutting down; Docker may otherwise force-kill it after 1s.
+    stop_grace_period: 30s
     environment:
       MYSQL_ROOT_PASSWORD: nuhire
       MYSQL_DATABASE: nuhire
     ports:
-      - '3307:3306'
+      - '127.0.0.1:3307:3306'
     healthcheck:
       test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 -u root -pnuhire']
       interval: 5s
@@ -35,8 +35,21 @@ services:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
       KC_HEALTH_ENABLED: 'true'
+    # No curl in the image, so bash /dev/tcp against the management port.
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'bash',
+          '-c',
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q UP <&3",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 30s
     ports:
-      - '8080:8080'
+      - '127.0.0.1:8080:8080'
     volumes:
       - ./realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
     # No volume for keycloak's h2 db on purpose: the named volume is root-owned

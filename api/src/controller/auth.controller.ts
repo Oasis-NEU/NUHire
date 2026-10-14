@@ -4,7 +4,7 @@
 
 import { Response, NextFunction } from 'express';
 import passport from 'passport';
-import { AuthRequest } from '../models/types';
+import { AuthRequest } from '../models/AuthRequest';
 import { Pool } from 'mysql2';
 
 export class AuthController {
@@ -180,8 +180,6 @@ export class AuthController {
   };
 
   logout = (req: AuthRequest, res: Response, next: NextFunction): void => {
-    const FRONT_URL = process.env.REACT_APP_FRONT_URL;
-
     req.logout((err) => {
       if (err) {
         next(err);

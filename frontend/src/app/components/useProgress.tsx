@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useProgressManager } from './progress';
+import { useSocket } from './socketContext';
+import type { Step } from '../../types';
 
 /**
  * Maps a Progress.step enum value to the route that renders it.
@@ -12,7 +14,7 @@ import { useProgressManager } from './progress';
  * Until they are unified, this table is the one place that translates
  * step -> route. Do not inline a fourth version somewhere else.
  *
- * The API has its own copy, in api/src/controller/group.controller.ts, because
+ * The API has its own copy, in api/src/config/steps.ts, because
  * force-advance has to send a route path over the wire. Change both together.
  */
 export const STEP_TO_ROUTE: Record<string, string> = {
@@ -25,10 +27,28 @@ export const STEP_TO_ROUTE: Record<string, string> = {
   employer: '/employerPanel',
 };
 
+export const STEP_LABEL: Record<Step, string> = {
+  none: 'Not started',
+  job_description: 'Job Description',
+  res_1: 'Resume Review',
+  res_2: 'Resume Review Group',
+  interview: 'Interview Stage',
+  offer: 'Make an Offer',
+  employer: 'Employer Panel',
+};
+
 // The order a group walks the steps. Declared rather than derived from the keys
 // above so that reordering that table for readability cannot silently change
 // which step counts as "further along".
-const STEP_ORDER = ['none', 'job_description', 'res_1', 'res_2', 'interview', 'offer', 'employer'];
+export const STEP_ORDER = [
+  'none',
+  'job_description',
+  'res_1',
+  'res_2',
+  'interview',
+  'offer',
+  'employer',
+];
 
 const allowedRoutes: Record<string, string[]> = {
   '/jobdes': ['job_description', 'res_1', 'res_2', 'interview', 'offer', 'employer'],
@@ -45,6 +65,24 @@ const furthestStep = (a: string, b: string): string =>
 export const useProgress = () => {
   const { user, loading } = useAuth();
   const { fetchProgress } = useProgressManager();
+  const socket = useSocket();
+
+  // A job reset erases the group's work and puts Progress back to
+  // job_description. Students already on a step page would keep voting into
+  // wiped tables, and Progress only moves forward, so send them back now.
+  useEffect(() => {
+    if (!socket) return;
+    const handleJobUpdated = (data?: { reset?: boolean }) => {
+      if (data?.reset !== true) return;
+      if (!(window.location.pathname in allowedRoutes)) return;
+      localStorage.setItem('progress', 'job_description');
+      window.location.replace('/dashboard');
+    };
+    socket.on('jobUpdated', handleJobUpdated);
+    return () => {
+      socket.off('jobUpdated', handleJobUpdated);
+    };
+  }, [socket]);
 
   useEffect(() => {
     const currentPath = window.location.pathname;

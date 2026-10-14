@@ -1,60 +1,24 @@
 // src/controllers/group.controller.ts
 
 import { Response } from 'express';
-import { AuthRequest } from '../models/types';
+import { AuthRequest } from '../models/AuthRequest';
+import { User } from '../models/User';
 import { Pool, RowDataPacket } from 'mysql2';
 import { PoolConnection } from 'mysql2/promise';
 import {
   RES_REVIEW_BARRIER_STEP,
   broadcastGroupBarrier,
+  connectedEmails,
   evaluateGroupBarrier,
 } from '../config/socket';
+import { STEP_ORDER, STEP_TO_ROUTE, leftmostStep, recordStep } from '../config/steps';
 
-// The `Progress`.`step` values, in the order a group walks them. Shared by
-// getProgress (which wants the group's leftmost member) and forceAdvance (which
-// needs to know what comes before the step it is pushing the group to).
-const STEP_ORDER = [
-  'none',
-  'job_description',
-  'res_1',
-  'res_2',
-  'interview',
-  'offer',
-  'employer',
-] as const;
-
-// Where each step is rendered. This duplicates STEP_TO_ROUTE in
-// frontend/src/app/components/useProgress.tsx because the two live in different
-// processes; they have to be changed together. It exists here only because
-// moveGroup carries a route path, which is what every page's handler compares
-// against — sending a step name instead would be silently ignored by all of
-// them and the group would stay put.
-const STEP_TO_ROUTE: Record<string, string> = {
-  none: '/dashboard',
-  job_description: '/jobdes',
-  res_1: '/res-review',
-  res_2: '/res-review-group',
-  interview: '/interview-stage',
-  offer: '/makeOffer',
-  employer: '/employerPanel',
-};
-
-// A group is wherever its slowest member is. Rows at 'none' are members who
-// have not started and do not hold the group back; an unknown value sorts
-// first, so a bad row surfaces as the group's step rather than vanishing.
-//
-// One function for both readers on purpose. getProgress is what the advisor
-// dashboard shows the professor, and forceAdvance decides what it will accept
-// from that same number; if the two computed it differently the professor
-// would be refused a move the screen in front of them said was next.
-function leftmostStep(steps: string[]): string {
-  const order: readonly string[] = STEP_ORDER;
-  const started = steps.filter((step) => step !== 'none');
-  if (started.length === 0) return 'none';
-  return started.reduce((earliest, current) =>
-    order.indexOf(current) < order.indexOf(earliest) ? current : earliest
-  );
-}
+// A student moved into a group arrives there now, whatever their stamp says.
+// Kept, a stamp from before the new group's barrier released makes them look
+// present all along: the barrier reads closed for a group already through it,
+// and the student is never offered the catch-up. Someone never stamped stays
+// unstamped, since they still have not shown up.
+const RESTAMP_ON_MOVE = 'present_at = IF(present_at IS NULL, NULL, CURRENT_TIMESTAMP)';
 
 export class GroupController {
   constructor(
@@ -221,7 +185,7 @@ export class GroupController {
       return;
     }
 
-    const updateQuery = 'UPDATE Users SET group_id = ? WHERE email = ? AND class = ?';
+    const updateQuery = `UPDATE Users SET group_id = ?, ${RESTAMP_ON_MOVE} WHERE email = ? AND class = ?`;
 
     this.db.query(updateQuery, [new_group_id, email, class_id], (err, result: any) => {
       if (err) {
@@ -362,7 +326,46 @@ export class GroupController {
     });
   };
 
-  startAllGroups = (req: AuthRequest, res: Response): void => {
+  // Start every group in the class that has not started yet, or just one, and
+  // take attendance: whoever has the app open now counts toward the group's
+  // gates, and anyone else counts once they connect. A stamp from some earlier
+  // day would otherwise have the group wait for a student who is not in the
+  // room. Groups already started keep theirs, so pressing Start All again
+  // mid-class is harmless.
+  //
+  // One transaction, so a failure between the two cannot leave a started group
+  // with nobody marked present.
+  private async startGroups(classId: number | string, groupId?: number | string): Promise<void> {
+    const oneGroup = groupId !== undefined;
+    const online = [...(await connectedEmails(this.io))];
+
+    const conn = await this.db.promise().getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query(
+        `UPDATE GroupsInfo g
+           LEFT JOIN Users u ON u.class = g.class_id AND u.group_id = g.group_id
+            SET g.started = 1, u.present_at = NULL
+          WHERE g.class_id = ? AND g.started = 0 ${oneGroup ? 'AND g.group_id = ?' : ''}`,
+        oneGroup ? [classId, groupId] : [classId]
+      );
+      if (online.length > 0) {
+        await conn.query(
+          `UPDATE Users SET present_at = CURRENT_TIMESTAMP
+            WHERE class = ? AND present_at IS NULL AND email IN (${online.map(() => '?').join(',')})`,
+          [classId, ...online]
+        );
+      }
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  startAllGroups = async (req: AuthRequest, res: Response): Promise<void> => {
     const { class_id } = req.body;
 
     if (!class_id) {
@@ -372,25 +375,20 @@ export class GroupController {
       return;
     }
 
-    const updateQuery = 'UPDATE `GroupsInfo` SET started = 1 WHERE class_id = ?';
-
-    this.db.query(updateQuery, [class_id], (err) => {
-      if (err) {
-        console.error('Error starting all groups:', err);
-        res.status(500).json({ error: 'Failed to start all groups' });
-        return;
-      }
-
+    try {
+      await this.startGroups(class_id);
       this.io.to(`class_${class_id}`).emit('groupStartedClass');
-
       res.json({
         message: 'All groups started successfully',
         class_id,
       });
-    });
+    } catch (err) {
+      console.error('Error starting all groups:', err);
+      res.status(500).json({ error: 'Failed to start all groups' });
+    }
   };
 
-  startGroup = (req: AuthRequest, res: Response): void => {
+  startGroup = async (req: AuthRequest, res: Response): Promise<void> => {
     const { class_id, group_id } = req.body;
 
     if (!class_id || !group_id) {
@@ -400,22 +398,18 @@ export class GroupController {
       return;
     }
 
-    const updateQuery = 'UPDATE `GroupsInfo` SET started = 1 WHERE class_id = ? AND group_id = ?';
-    this.db.query(updateQuery, [class_id, group_id], (err) => {
-      if (err) {
-        console.error('Error starting group:', err);
-        res.status(500).json({ error: 'Failed to start group' });
-        return;
-      }
-
+    try {
+      await this.startGroups(class_id, group_id);
       this.io.to(`class_${class_id}`).emit('groupStartedGroup', { group_id });
-
       res.json({
         message: 'Group started successfully',
         class_id,
         group_id,
       });
-    });
+    } catch (err) {
+      console.error('Error starting group:', err);
+      res.status(500).json({ error: 'Failed to start group' });
+    }
   };
 
   getGroupStarted = (req: AuthRequest, res: Response): void => {
@@ -582,7 +576,7 @@ export class GroupController {
       }
 
       // Student exists but not in this class, update their class and group
-      const updateQuery = 'UPDATE Users SET class = ?, group_id = ? WHERE email = ?';
+      const updateQuery = `UPDATE Users SET class = ?, group_id = ?, ${RESTAMP_ON_MOVE} WHERE email = ?`;
 
       this.db.query(updateQuery, [class_id, group_id, email], (updateErr, updateResult: any) => {
         if (updateErr) {
@@ -701,6 +695,57 @@ export class GroupController {
     }
   };
 
+  getLiveClass = (req: AuthRequest, res: Response): void => {
+    const { classId } = req.params;
+
+    // Joined on the student's current group, so rows left from an old group do not count.
+    const query = `
+      SELECT
+        u.id,
+        u.f_name,
+        u.l_name,
+        u.email,
+        u.group_id,
+        u.present_at,
+        g.started,
+        p.step,
+        sc.completed_at AS review_completed_at,
+        gc.confirmed_at
+      FROM Users u
+      -- Nothing makes (class_id, group_id) unique, so collapse duplicates rather
+      -- than doubling every member of a duplicated group.
+      LEFT JOIN (
+        SELECT class_id, group_id, MAX(started) AS started
+        FROM GroupsInfo
+        GROUP BY class_id, group_id
+      ) g ON g.class_id = u.class AND g.group_id = u.group_id
+      LEFT JOIN Progress p ON p.email = u.email AND p.crn = u.class AND p.group_id = u.group_id
+      LEFT JOIN Step_Completion sc
+        ON sc.student_id = u.id AND sc.class = u.class AND sc.group_id = u.group_id AND sc.step = ?
+      LEFT JOIN GroupConfirmations gc
+        ON gc.student_id = u.id AND gc.class = u.class AND gc.group_id = u.group_id
+      WHERE u.class = ? AND u.affiliation = 'student' AND u.group_id IS NOT NULL
+      ORDER BY u.group_id, u.l_name, u.f_name
+    `;
+
+    this.db.query<RowDataPacket[]>(query, [RES_REVIEW_BARRIER_STEP, classId], (err, students) => {
+      if (err) {
+        console.error('Error fetching live class view:', err);
+        res.status(500).json({ error: 'Failed to fetch live class view' });
+        return;
+      }
+
+      connectedEmails(this.io)
+        .then((online) => {
+          res.json(students.map((student) => ({ ...student, online: online.has(student.email) })));
+        })
+        .catch((error) => {
+          console.error('Error reading connected sockets:', error);
+          res.status(500).json({ error: 'Failed to fetch live class view' });
+        });
+    });
+  };
+
   // The professor's way past a stuck group.
   //
   // `moveGroup` is otherwise emitted only by students, so when a group
@@ -762,7 +807,7 @@ export class GroupController {
       conn = await this.db.promise().getConnection();
       await conn.beginTransaction();
 
-      const [members] = await conn.query<RowDataPacket[]>(
+      const [members] = await conn.query<(RowDataPacket & Pick<User, 'id' | 'email'>)[]>(
         "SELECT id, email FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
         [group_id, class_id]
       );
@@ -806,41 +851,7 @@ export class GroupController {
         return;
       }
 
-      // One multi-row upsert rather than a query per member: this runs while a
-      // class waits, and Progress is keyed on email so the whole group lands in
-      // the same statement.
-      const progressPlaceholders = members.map(() => '(?, ?, ?, ?)').join(', ');
-      const progressValues = members.flatMap((member) => [
-        class_id,
-        group_id,
-        target_step,
-        member.email,
-      ]);
-      await conn.query(
-        `INSERT INTO Progress (crn, group_id, step, email)
-         VALUES ${progressPlaceholders}
-         ON DUPLICATE KEY UPDATE crn = VALUES(crn), group_id = VALUES(group_id), step = VALUES(step)`,
-        progressValues
-      );
-
-      // Mark every barrier behind the target satisfied, for every member.
-      //
-      // Deleting the completions instead would make those barriers MORE closed:
-      // a client that re-polls barrier-status, or rejoins the room, would read
-      // 0/4 and disable the button the professor just pressed. Recording them
-      // as done is what "past this gate" means, and it holds across a restart.
-      const priorSteps = STEP_ORDER.slice(1, targetIndex);
-      if (priorSteps.length > 0) {
-        const completionRows = members.flatMap((member) =>
-          priorSteps.map((step) => [member.id, class_id, group_id, step])
-        );
-        const completionPlaceholders = completionRows.map(() => '(?, ?, ?, ?)').join(', ');
-        await conn.query(
-          `INSERT IGNORE INTO Step_Completion (student_id, class, group_id, step)
-           VALUES ${completionPlaceholders}`,
-          completionRows.flat()
-        );
-      }
+      await recordStep(conn, class_id, group_id, members, target_step);
 
       await conn.commit();
     } catch (error) {

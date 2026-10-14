@@ -9,9 +9,11 @@ import { usePathname } from 'next/navigation';
 import Popup from '../components/popup';
 import Slideshow from '../components/slideshow';
 import { useProgressManager } from '../components/progress';
+import { STEP_LABEL } from '../components/useProgress';
 import { useAuth } from '../components/AuthContext';
 import { useSocket } from '../components/socketContext';
 import { PageLoader } from '../components/spinner';
+import { useCatchUp } from '../components/useCatchUp';
 
 const Dashboard = () => {
   const { updateProgress, fetchProgress } = useProgressManager();
@@ -21,42 +23,42 @@ const Dashboard = () => {
   const steps = [
     {
       key: 'job_description',
-      label: 'Job Description',
+      label: STEP_LABEL.job_description,
       path: '/jobdes',
       emoji: '📝',
       desc: 'Review your assigned job description.',
     },
     {
       key: 'res_1',
-      label: 'Resume Review',
+      label: STEP_LABEL.res_1,
       path: '/res-review',
       emoji: '📄',
       desc: 'Individually review candidate resumes.',
     },
     {
       key: 'res_2',
-      label: 'Resume Review Group',
+      label: STEP_LABEL.res_2,
       path: '/res-review-group',
       emoji: '👥',
       desc: 'Discuss resumes with your group.',
     },
     {
       key: 'interview',
-      label: 'Interview Stage',
+      label: STEP_LABEL.interview,
       path: '/interview-stage',
       emoji: '🎤',
       desc: 'Interview selected candidates.',
     },
     {
       key: 'offer',
-      label: 'Make an Offer',
+      label: STEP_LABEL.offer,
       path: '/makeOffer',
       emoji: '💼',
       desc: 'Decide which candidate to hire.',
     },
     {
       key: 'employer',
-      label: 'Employer Panel',
+      label: STEP_LABEL.employer,
       path: '/employerPanel',
       emoji: '🚧',
       desc: 'Coming Soon...',
@@ -66,9 +68,10 @@ const Dashboard = () => {
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
   const [progress, setProgress] = useState<string>('none');
   const [jobDescription, setJobDescription] = useState<string | null>(null);
-  const [jobLoading, setJobLoading] = useState(true);
+  const [_jobLoading, setJobLoading] = useState(true);
   const [flipped, setFlipped] = useState(Array(steps.length).fill(false));
   const { user, loading: userloading } = useAuth();
+  const catchUp = useCatchUp(!!user);
 
   const fetchJobDescription = useCallback(
     async (userData: typeof user) => {
@@ -154,8 +157,14 @@ const Dashboard = () => {
     const roomId = `group_${user.group_id}_class_${user.class}`;
     socket.emit('joinGroup', roomId);
 
-    const handleReconnect = () => {
+    const handleReconnect = async () => {
       socket.emit('joinGroup', roomId);
+      // A jobUpdated sent while this socket was down went to a room it was not
+      // in. Re-read the job and progress so the dashboard is not left stale.
+      await fetchJobDescription(user);
+      const currentProgress = await fetchProgress(user);
+      setProgress(currentProgress);
+      localStorage.setItem('progress', currentProgress);
     };
 
     socket.on('connect', handleReconnect);
@@ -197,20 +206,22 @@ const Dashboard = () => {
   useEffect(() => {
     if (!socket || !user) return;
 
-    const handleJobUpdated = async ({ job }: { job: string }) => {
-      // Clear any cached comments
-      localStorage.removeItem('pdf-comments');
-
+    const handleJobUpdated = async ({ job, reset }: { job: string; reset?: boolean }) => {
       // Show popup with the job title (job is an array, so use job[0])
       setPopup({
         headline: 'You have been assigned a new job!',
         message: `You are an employer for ${job}!`,
       });
 
-      // Update progress to job_description stage
-      await updateProgress(user, 'job_description');
-      setProgress('job_description');
-      localStorage.setItem('progress', 'job_description');
+      // Only a reset erases the group's work. A job change with reset: false
+      // must keep the student's comments and progress. A missing flag is an
+      // older payload, which always meant a reset.
+      if (reset !== false) {
+        localStorage.removeItem('pdf-comments');
+        await updateProgress(user, 'job_description');
+        setProgress('job_description');
+        localStorage.setItem('progress', 'job_description');
+      }
 
       // Refresh the entire dashboard (this will fetch the new job description)
       await refreshDashboardUI();
@@ -349,6 +360,24 @@ const Dashboard = () => {
       </div>
       {popup && (
         <Popup headline={popup.headline} message={popup.message} onDismiss={() => setPopup(null)} />
+      )}
+      {catchUp.step && (
+        <Popup
+          headline="Your group is ahead of you"
+          // Offered to anyone behind, not only late arrivals, so it names no
+          // step as skipped: someone who already did their review keeps it.
+          message={`Your group is on ${STEP_LABEL[catchUp.step]}. Join them there? Any steps before it that you have not done will be skipped.`}
+          confirmLabel="Join my group"
+          busy={catchUp.joining}
+          onDismiss={catchUp.dismiss}
+          onConfirm={() =>
+            catchUp
+              .join()
+              .catch((error: Error) =>
+                setPopup({ headline: 'Could not join your group', message: error.message })
+              )
+          }
+        />
       )}
 
       <style jsx>{`

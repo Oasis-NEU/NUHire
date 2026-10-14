@@ -18,6 +18,7 @@ import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { pdfSource } from '../../lib/pdfSource';
 import { PageLoader, Spinner } from '../components/spinner';
+import { CURVEBALL_COLUMN, NO_SHOW_SCORE, RATING_COLUMN, RATING_LABEL } from '../../lib/ratings';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -84,7 +85,6 @@ export default function Interview() {
 
   // Video states
   const [videoIndex, setVideoIndex] = useState(0);
-  const [fadingEffect, setFadingEffect] = useState(false);
   const [finished, setFinished] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [currentCandidateId, setCurrentCandidateId] = useState<number | null>(null);
@@ -154,7 +154,7 @@ export default function Interview() {
 
       const newGroupSubmissions = response.data.finishedCount;
       setGroupSubmissions(newGroupSubmissions);
-      setGroupFinished(newGroupSubmissions >= groupSize);
+      setGroupFinished(groupSize > 0 && newGroupSubmissions >= groupSize);
     } catch (err) {
       console.error('❌ [FETCH-FINISHED] Failed to fetch finished count:', err);
     }
@@ -395,7 +395,7 @@ export default function Interview() {
     socket.emit('studentOnline', { studentId: user.email });
     socket.emit('studentPageChanged', { studentId: user.email, currentPage: pathname });
 
-    const handleMoveGroup = ({
+    const handleMoveGroup = async ({
       groupId,
       classId,
       targetPage,
@@ -410,7 +410,13 @@ export default function Interview() {
         classId === user.class &&
         targetPage === '/makeOffer'
       ) {
-        updateProgress(user, 'offer');
+        // Wait for the write so POST /offers sees the offer step. Navigate
+        // even if it failed so the student is not stranded.
+        try {
+          await updateProgress(user, 'offer');
+        } catch (err) {
+          console.error('[handleMoveGroup] Error updating progress:', err);
+        }
         localStorage.setItem('progress', 'offer');
         window.location.href = targetPage;
       }
@@ -454,7 +460,9 @@ export default function Interview() {
     const handleInterviewStatusUpdated = ({ count, total }: { count: number; total: number }) => {
       setGroupSubmissions(count);
       setGroupSize(total);
-      setGroupFinished(count === total);
+      // >= rather than ===: a member who leaves mid-step drops the total under
+      // a count that already included them, and === then never matches.
+      setGroupFinished(total > 0 && count >= total);
     };
 
     const handleInterviewStageFinished = () => {
@@ -533,10 +541,12 @@ export default function Interview() {
         student_id: user.id,
         group_id: groupId,
         class: classId,
-        question1: isNoShow ? -10000 : vote.professionalPresence || 0,
-        question2: isNoShow ? -10000 : vote.qualityOfAnswer || 0,
-        question3: isNoShow ? -10000 : vote.personality || 0,
-        question4: isNoShow ? -10000 : vote.overall || 0,
+        [CURVEBALL_COLUMN.overall]: isNoShow ? NO_SHOW_SCORE : vote.overall || 0,
+        [CURVEBALL_COLUMN.professionalPresence]: isNoShow
+          ? NO_SHOW_SCORE
+          : vote.professionalPresence || 0,
+        [CURVEBALL_COLUMN.qualityOfAnswer]: isNoShow ? NO_SHOW_SCORE : vote.qualityOfAnswer || 0,
+        [CURVEBALL_COLUMN.personality]: isNoShow ? NO_SHOW_SCORE : vote.personality || 0,
         candidate_id: candidateId,
       };
 
@@ -628,10 +638,10 @@ export default function Interview() {
         student_id: String(user!.id),
         group_id: user!.group_id,
         studentClass: user!.class,
-        question1: overall,
-        question2: professionalPresence,
-        question3: qualityOfAnswer,
-        question4: personality,
+        [RATING_COLUMN.overall]: overall,
+        [RATING_COLUMN.professionalPresence]: professionalPresence,
+        [RATING_COLUMN.qualityOfAnswer]: qualityOfAnswer,
+        [RATING_COLUMN.personality]: personality,
         candidate_id: currentVid.resume_id,
       };
       updatedVotes = [...votes, voteData];
@@ -903,12 +913,16 @@ export default function Interview() {
           {/* Rating sliders - compact */}
           <div className="flex-1 flex flex-col justify-around">
             <div className="flex flex-col items-center text-center w-full">
-              <h2 className="text-xs text-redHeader font-semibold mb-0.5">Overall</h2>
+              <h2 className="text-xs text-redHeader font-semibold mb-0.5">
+                {RATING_LABEL.overall}
+              </h2>
               <RatingSlider onChange={handleOverallSliderChange} value={overall} />
             </div>
 
             <div className="flex flex-col items-center text-center w-full">
-              <h2 className="text-xs text-redHeader font-semibold mb-0.5">Professional Presence</h2>
+              <h2 className="text-xs text-redHeader font-semibold mb-0.5">
+                {RATING_LABEL.professionalPresence}
+              </h2>
               <RatingSlider
                 onChange={handleProfessionalPresenceSliderChange}
                 value={professionalPresence}
@@ -916,13 +930,15 @@ export default function Interview() {
             </div>
 
             <div className="flex flex-col items-center text-center w-full">
-              <h2 className="text-xs text-redHeader font-semibold mb-0.5">Quality of Answer</h2>
+              <h2 className="text-xs text-redHeader font-semibold mb-0.5">
+                {RATING_LABEL.qualityOfAnswer}
+              </h2>
               <RatingSlider onChange={handleQualityOfAnswerSliderChange} value={qualityOfAnswer} />
             </div>
 
             <div className="flex flex-col items-center text-center w-full">
               <h2 className="text-xs text-redHeader font-semibold mb-0.5">
-                Personality & Creativeness
+                {RATING_LABEL.personality}
               </h2>
               <RatingSlider onChange={handlePersonalitySliderChange} value={personality} />
             </div>

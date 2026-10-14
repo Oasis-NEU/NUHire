@@ -3,11 +3,18 @@ import { Router } from 'express';
 import { Pool } from 'mysql2';
 import { Server as SocketIOServer } from 'socket.io';
 import { GroupController } from '../controller/group.controller';
-import { requireAuth, requireAdmin } from '../middleware/auth.middleware';
+import { CatchUpController } from '../controller/catchUp.controller';
+import {
+  requireAuth,
+  requireAdmin,
+  requireClassModerator,
+  requireStudent,
+} from '../middleware/auth.middleware';
 
 export default (db: Pool, io: SocketIOServer): Router => {
   const router = Router();
   const groupController = new GroupController(db, io);
+  const catchUpController = new CatchUpController(db, io);
 
   // Advisor only: anything that changes the class, and the roster reads that
   // return every student's name and email.
@@ -26,6 +33,7 @@ export default (db: Pool, io: SocketIOServer): Router => {
   // group's progress, so a student able to call it could drag their own team
   // past a step they have not done.
   router.post('/force-advance', requireAdmin, groupController.forceAdvance);
+  router.get('/live/:classId', requireClassModerator(db, 'classId'), groupController.getLiveClass);
 
   // Students read their own group's state from these.
   router.get('/started/:classId/:groupId', requireAuth, groupController.getGroupStarted);
@@ -37,5 +45,9 @@ export default (db: Pool, io: SocketIOServer): Router => {
   // retrying after five attempts; this is how they recover without one. The
   // handler checks the caller is in the group it names.
   router.get('/barrier-status/:classId/:groupId', requireAuth, groupController.getBarrierStatus);
+
+  // A late student's way to their group's current step. Identity is the session.
+  router.get('/catch-up', requireStudent, catchUpController.getCatchUp);
+  router.post('/catch-up', requireStudent, catchUpController.catchUp);
   return router;
 };
