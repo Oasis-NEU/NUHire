@@ -4,19 +4,13 @@ import Tabs from '../components/tabs';
 import { StudentCSVTab } from '../components/StudentCSVTab';
 import { ManageGroupsTab } from '../components/ManageGroupsTab';
 import { useAuth } from '../components/AuthContext';
+import { PageLoader } from '../components/spinner';
 
 const Grouping = () => {
   const { user, loading: userloading } = useAuth();
 
   if (userloading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-sand">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Loading...</h2>
-          <div className="w-16 h-16 border-t-4 border-navy border-solid rounded-full animate-spin mx-auto"></div>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (!user || user.affiliation !== 'admin') {
