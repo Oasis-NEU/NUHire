@@ -437,10 +437,9 @@ export class Student {
     await this.currentPage('interviewpage');
 
     const rating = () => 1 + Math.floor(Math.random() * 10);
-    const votes = [];
     for (const candidate of this.candidates) {
       await think(THINK.interview);
-      votes.push({
+      const vote = {
         student_id: String(id),
         group_id,
         studentClass: classId,
@@ -449,9 +448,9 @@ export class Student {
         question3: rating(),
         question4: rating(),
         candidate_id: candidate,
-      });
+      };
+      await this.call('POST', '/interview/batch-vote', '/interview/batch-vote', { votes: [vote] });
     }
-    await this.call('POST', '/interview/batch-vote', '/interview/batch-vote', { votes });
     await this.call('POST', '/interview/status/finished', '/interview/status/finished', {
       student_id: id,
       finished: 1,
