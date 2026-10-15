@@ -14,7 +14,6 @@ export default (db: Pool, io: SocketIOServer): Router => {
   // Full roster dumps. Nothing in the frontend calls these today.
   router.get('/', requireAdmin, userController.getAllUsers);
   router.get('/students', requireAdmin, userController.getStudents);
-  router.get('/:id', requireAuth, userController.getUserById);
   router.post('/update-currentpage', requireAuth, userController.updateCurrentPage);
   router.post('/update-user-class', requireAuth, userController.updateUserClass);
   router.post('/update-seen', requireAuth, userController.updateUserSeen);

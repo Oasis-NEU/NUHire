@@ -1,6 +1,5 @@
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
-import { User } from '../models/User';
 import { Pool, RowDataPacket } from 'mysql2';
 import { emitToClassModerators, markPresent } from '../config/socket';
 
@@ -22,32 +21,6 @@ export class UserController {
       });
     } catch (error) {
       console.error('Unexpected error in getAllUsers:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  };
-
-  getUserById = async (req: AuthRequest, res: Response): Promise<void> => {
-    try {
-      const { id } = req.params;
-
-      this.db.query('SELECT * FROM Users WHERE id = ?', [id], (err, results) => {
-        if (err) {
-          console.error('Error fetching user:', err);
-          res.status(500).json({ error: err.message });
-          return;
-        }
-
-        const users = results as RowDataPacket[] as User[];
-
-        if (users.length === 0) {
-          res.status(404).json({ message: 'User not found' });
-          return;
-        }
-
-        res.json(users[0]);
-      });
-    } catch (error) {
-      console.error('Unexpected error in getUserById:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   };
