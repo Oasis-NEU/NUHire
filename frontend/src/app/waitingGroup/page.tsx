@@ -54,6 +54,7 @@ export default function WaitingGroupPage() {
       }
     } catch (error) {
       console.error('Error fetching group status:', error);
+      startedRef.current = false;
     }
   };
 
