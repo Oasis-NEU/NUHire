@@ -73,6 +73,7 @@ export default function Interview() {
   const [videoIndex, setVideoIndex] = useState(0);
   const [finished, setFinished] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [currentCandidateId, setCurrentCandidateId] = useState<number | null>(null);
   const [videosLoading, setVideosLoading] = useState(true);
 
@@ -604,6 +605,9 @@ export default function Interview() {
       return;
     }
 
+    if (submitting) return;
+    setSubmitting(true);
+
     const voteData = noShow
       ? {
           student_id: String(user!.id),
@@ -638,6 +642,7 @@ export default function Interview() {
         headline: 'Error Saving Ratings',
         message: 'Failed to save your interview ratings. Please try again.',
       });
+      setSubmitting(false);
       return;
     }
 
@@ -673,6 +678,8 @@ export default function Interview() {
         });
       }
     }
+
+    setSubmitting(false);
   };
 
   // Loading state
@@ -931,9 +938,9 @@ export default function Interview() {
           {/* Submit button */}
           <button
             onClick={handleSubmit}
-            disabled={finished || !videoLoaded}
+            disabled={finished || !videoLoaded || submitting}
             className={`px-3 py-2 rounded-lg shadow-md transition duration-300 font-rubik text-xs mt-2 ${
-              finished || !videoLoaded
+              finished || !videoLoaded || submitting
                 ? 'bg-gray-400 text-white opacity-50 cursor-not-allowed'
                 : 'bg-blue-500 text-white hover:bg-blue-900'
             }`}
