@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Socket } from 'socket.io-client';
 import type { AcceptedOffer, CandidateOption, PendingOffer, User } from '../../../types';
 
@@ -19,6 +19,89 @@ export function useOffers(
   const [acceptedOffers, setAcceptedOffers] = useState<AcceptedOffer[]>([]);
   const [dismissedOffers, setDismissedOffers] = useState<Set<number>>(new Set());
 
+  // Offers made while the socket was down never arrive as events, so this is
+  // also run on reconnect, not only when the class or its groups change.
+  const refetchOffers = useCallback(async () => {
+    const fetchAcceptedOffers = async () => {
+      if (!selectedClass || availableGroups.length === 0 || candidates.length === 0) return;
+
+      try {
+        const offerPromises = availableGroups.map(async (groupId) => {
+          const response = await fetch(
+            `${API_BASE_URL}/offers/group/${groupId}/class/${selectedClass}`,
+            {
+              credentials: 'include',
+            }
+          );
+
+          if (response.ok) {
+            const offers = await response.json();
+            return offers.filter((offer: any) => offer.status === 'accepted');
+          }
+          return [];
+        });
+
+        const allOffers = await Promise.all(offerPromises);
+        const flattenedOffers = allOffers.flat();
+
+        const formattedOffers = flattenedOffers.map((offer: any) => {
+          const candidate = candidates.find((c) => c.id === offer.candidate_id);
+          return {
+            groupId: offer.group_id,
+            candidateName: candidate ? candidate.name : `Candidate ${offer.candidate_id}`,
+          };
+        });
+        setAcceptedOffers(formattedOffers);
+      } catch (error) {
+        console.error('Error fetching accepted offers:', error);
+      }
+    };
+
+    const fetchPendingOffers = async () => {
+      if (!selectedClass || availableGroups.length === 0 || candidates.length === 0) return;
+
+      try {
+        const offerPromises = availableGroups.map(async (groupId) => {
+          const response = await fetch(
+            `${API_BASE_URL}/offers/group/${groupId}/class/${selectedClass}`,
+            {
+              credentials: 'include',
+            }
+          );
+
+          if (response.ok) {
+            const offers = await response.json();
+            return offers.filter((offer: any) => offer.status === 'pending');
+          }
+          return [];
+        });
+
+        const allOffers = await Promise.all(offerPromises);
+        const flattenedOffers = allOffers.flat();
+
+        const formattedOffers = flattenedOffers.map((offer: any) => {
+          const candidate = candidates.find((c) => c.id === offer.candidate_id);
+          return {
+            classId: Number(selectedClass),
+            groupId: offer.group_id,
+            candidateId: offer.candidate_id,
+            candidateName: candidate ? candidate.name : `Candidate ${offer.candidate_id}`,
+          };
+        });
+
+        setPendingOffers(formattedOffers);
+      } catch (error) {
+        console.error('Error fetching pending offers:', error);
+      }
+    };
+
+    await Promise.all([fetchAcceptedOffers(), fetchPendingOffers()]);
+  }, [selectedClass, availableGroups, candidates]);
+
+  useEffect(() => {
+    refetchOffers();
+  }, [refetchOffers]);
+
   useEffect(() => {
     if (!socket || !user || user.affiliation !== 'admin') return;
 
@@ -30,8 +113,13 @@ export function useOffers(
     // to say so.
     const joinAdminRoom = () => socket.emit('adminOnline', { adminEmail: user.email });
 
+    const handleReconnect = () => {
+      joinAdminRoom();
+      refetchOffers();
+    };
+
     if (socket.connected) joinAdminRoom();
-    socket.on('connect', joinAdminRoom);
+    socket.on('connect', handleReconnect);
 
     const onRequest = ({
       classId,
@@ -95,11 +183,11 @@ export function useOffers(
     socket.on('makeOfferResponse', onResponse);
 
     return () => {
-      socket.off('connect', joinAdminRoom);
+      socket.off('connect', handleReconnect);
       socket.off('makeOfferRequest', onRequest);
       socket.off('makeOfferResponse', onResponse);
     };
-  }, [socket, user, selectedClass, candidates]);
+  }, [socket, user, selectedClass, candidates, refetchOffers]);
 
   useEffect(() => {
     const fetchCandidates = async () => {
@@ -129,87 +217,6 @@ export function useOffers(
 
     fetchCandidates();
   }, [selectedClass]);
-
-  useEffect(() => {
-    const fetchAcceptedOffers = async () => {
-      if (!selectedClass || availableGroups.length === 0 || candidates.length === 0) return;
-
-      try {
-        const offerPromises = availableGroups.map(async (groupId) => {
-          const response = await fetch(
-            `${API_BASE_URL}/offers/group/${groupId}/class/${selectedClass}`,
-            {
-              credentials: 'include',
-            }
-          );
-
-          if (response.ok) {
-            const offers = await response.json();
-            return offers.filter((offer: any) => offer.status === 'accepted');
-          }
-          return [];
-        });
-
-        const allOffers = await Promise.all(offerPromises);
-        const flattenedOffers = allOffers.flat();
-
-        const formattedOffers = flattenedOffers.map((offer: any) => {
-          const candidate = candidates.find((c) => c.id === offer.candidate_id);
-          return {
-            groupId: offer.group_id,
-            candidateName: candidate ? candidate.name : `Candidate ${offer.candidate_id}`,
-          };
-        });
-        setAcceptedOffers(formattedOffers);
-      } catch (error) {
-        console.error('Error fetching accepted offers:', error);
-      }
-    };
-
-    fetchAcceptedOffers();
-  }, [selectedClass, availableGroups, candidates]);
-
-  useEffect(() => {
-    const fetchPendingOffers = async () => {
-      if (!selectedClass || availableGroups.length === 0 || candidates.length === 0) return;
-
-      try {
-        const offerPromises = availableGroups.map(async (groupId) => {
-          const response = await fetch(
-            `${API_BASE_URL}/offers/group/${groupId}/class/${selectedClass}`,
-            {
-              credentials: 'include',
-            }
-          );
-
-          if (response.ok) {
-            const offers = await response.json();
-            return offers.filter((offer: any) => offer.status === 'pending');
-          }
-          return [];
-        });
-
-        const allOffers = await Promise.all(offerPromises);
-        const flattenedOffers = allOffers.flat();
-
-        const formattedOffers = flattenedOffers.map((offer: any) => {
-          const candidate = candidates.find((c) => c.id === offer.candidate_id);
-          return {
-            classId: Number(selectedClass),
-            groupId: offer.group_id,
-            candidateId: offer.candidate_id,
-            candidateName: candidate ? candidate.name : `Candidate ${offer.candidate_id}`,
-          };
-        });
-
-        setPendingOffers(formattedOffers);
-      } catch (error) {
-        console.error('Error fetching pending offers:', error);
-      }
-    };
-
-    fetchPendingOffers();
-  }, [selectedClass, availableGroups, candidates]);
 
   return {
     pendingOffers,

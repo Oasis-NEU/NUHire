@@ -184,21 +184,25 @@ export function useClassGroups(
     } catch (error) {
       console.error('Error refreshing groups and students:', error);
     }
-  }, [selectedClass]);
+  }, [selectedClass, organizeStudentsIntoGroups]);
 
   useEffect(() => {
     if (!socket) return;
 
-    const handleUserAdded = () => {
+    // A socket that dropped missed every roster change while it was down, so
+    // reload the roster when it reconnects as well as when a student joins.
+    const handleRosterChanged = () => {
       refreshGroupsAndStudents();
     };
 
-    socket.on('userAdded', handleUserAdded);
+    socket.on('userAdded', handleRosterChanged);
+    socket.on('connect', handleRosterChanged);
 
     return () => {
-      socket.off('userAdded', handleUserAdded);
+      socket.off('userAdded', handleRosterChanged);
+      socket.off('connect', handleRosterChanged);
     };
-  }, [socket]);
+  }, [socket, refreshGroupsAndStudents]);
 
   useEffect(() => {
     if (!socket || !selectedClass) return;
