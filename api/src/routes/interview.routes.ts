@@ -11,7 +11,6 @@ export default (db: Pool, io: SocketIOServer): Router => {
   const interviewController = new InterviewController(db, io);
 
   router.post('/vote', requireAuth, requireStep(db, 'interview'), interviewController.submitVote);
-  router.get('/', requireAuth, interviewController.getAllInterviews);
   router.get('/status/finished-count', requireAuth, interviewController.getFinishedCount);
   router.post(
     '/status/finished',

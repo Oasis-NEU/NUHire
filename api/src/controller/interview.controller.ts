@@ -74,19 +74,6 @@ export class InterviewController {
     );
   };
 
-  getAllInterviews = (req: AuthRequest, res: Response): void => {
-    this.db.query('SELECT * FROM InterviewPage', (err, results) => {
-      if (err) {
-        // err.message carried the failing table and column straight to the
-        // browser. Log the real error, tell the client only that it failed.
-        console.error('Error fetching interviews:', err);
-        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch interviews' });
-        return;
-      }
-      res.json(results);
-    });
-  };
-
   getFinishedCount = async (req: AuthRequest, res: Response): Promise<void> => {
     const { group_id, class_id } = req.query;
 
