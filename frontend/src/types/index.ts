@@ -111,6 +111,26 @@ export interface JobOption {
   title: string;
 }
 
+/** A candidate as the teacher panel lists one: id plus display name. */
+export interface CandidateOption {
+  id: number;
+  name: string;
+}
+
+/** An offer a group has made that the teacher has not answered yet. */
+export interface PendingOffer {
+  classId: number;
+  groupId: number;
+  candidateId: number;
+  candidateName?: string;
+}
+
+/** An offer the teacher accepted, as shown on the group's card. */
+export interface AcceptedOffer {
+  groupId: number;
+  candidateName: string;
+}
+
 /** `Progress.step`, an ENUM. */
 export type Step =
   'none' | 'job_description' | 'res_1' | 'res_2' | 'interview' | 'offer' | 'employer';
