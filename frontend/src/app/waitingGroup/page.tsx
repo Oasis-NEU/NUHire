@@ -1,7 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Slideshow from '../components/slideshow';
@@ -14,9 +14,10 @@ export default function WaitingGroupPage() {
   const socket = useSocket();
   const router = useRouter();
   const { user, loading: userloading } = useAuth();
+  const startedRef = useRef(false);
 
   const groupStatusResponse = async () => {
-    if (!user?.class || !user?.group_id) {
+    if (startedRef.current || !user?.class || !user?.group_id) {
       return;
     }
 
@@ -33,7 +34,8 @@ export default function WaitingGroupPage() {
 
       const statusData = await response.json();
 
-      if (statusData.started) {
+      if (statusData.started && !startedRef.current) {
+        startedRef.current = true;
         const seenResponse = await fetch(
           `${API_BASE_URL}/groups/seen?email=${encodeURIComponent(user.email)}`,
           { method: 'GET', credentials: 'include' }
@@ -53,8 +55,19 @@ export default function WaitingGroupPage() {
       }
     } catch (error) {
       console.error('Error fetching group status:', error);
+      startedRef.current = false;
     }
   };
+
+  useEffect(() => {
+    if (!user?.class || !user?.group_id) {
+      return;
+    }
+
+    groupStatusResponse();
+    const timer = setInterval(groupStatusResponse, 10000);
+    return () => clearInterval(timer);
+  }, [user]);
 
   useEffect(() => {
     if (!socket || !user?.class) {
@@ -69,6 +82,7 @@ export default function WaitingGroupPage() {
 
       const roomId = `group_${user.group_id}_class_${user.class}`;
       socket.emit('joinGroup', roomId);
+      groupStatusResponse();
     };
 
     const handleConnectError = (error: Error) => {
