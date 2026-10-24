@@ -22,29 +22,29 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString();
 
+interface VoteData {
+  yes: number;
+  no: number;
+  undecided: number;
+}
+
+interface ResumeData {
+  resume_number: number;
+  vote: 'yes' | 'no' | 'unanswered';
+  checked: boolean;
+}
+
+interface Resume {
+  resume_number: number;
+  file_path: string;
+  checked: boolean;
+  first_name: string;
+  last_name: string;
+  vote: 'yes' | 'no' | 'unanswered';
+}
+
 export default function ResReviewGroup() {
   useProgress();
-
-  interface VoteData {
-    yes: number;
-    no: number;
-    undecided: number;
-  }
-
-  interface ResumeData {
-    resume_number: number;
-    vote: 'yes' | 'no' | 'unanswered';
-    checked: boolean;
-  }
-
-  interface Resume {
-    resume_number: number;
-    file_path: string;
-    checked: boolean;
-    first_name: string;
-    last_name: string;
-    vote: 'yes' | 'no' | 'unanswered';
-  }
 
   const { updateProgress } = useProgressManager();
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
