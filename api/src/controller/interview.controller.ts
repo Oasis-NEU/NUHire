@@ -1,5 +1,5 @@
 // ============================================
-// src/controllers/interview.controller.ts
+// src/controller/interview.controller.ts
 // ============================================
 
 import { Response } from 'express';
@@ -230,7 +230,7 @@ export class InterviewController {
     }
 
     try {
-      // Insert all votes in a single transaction
+      // Insert all votes in one multi-row INSERT
       const values = votes.map((vote) => [
         vote.student_id,
         vote.group_id,

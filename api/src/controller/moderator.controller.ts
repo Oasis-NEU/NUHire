@@ -1,5 +1,5 @@
 // ============================================
-// src/controllers/moderator.controller.ts
+// src/controller/moderator.controller.ts
 // ============================================
 
 import { Response } from 'express';

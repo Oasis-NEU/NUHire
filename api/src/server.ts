@@ -40,7 +40,7 @@ function assertRequiredEnv(): void {
 
 /**
  * See the header of config/database.ts: the socket layer's online-student map
- * and group completion barriers are per-process, so a second replica splits a
+ * and group completion barriers in Step_Completion are per-process, so a second replica splits a
  * group in half and neither half ever reaches its completion count. Coolify
  * makes scaling up a one-click accident, so say so loudly at boot (API-1).
  */
@@ -54,7 +54,7 @@ function warnIfScaledOut(): void {
   if (Number.isFinite(instances) && instances > 1) {
     console.error(
       `❌ INSTANCE_COUNT=${instances}. This API only works as a single replica: group ` +
-        'membership and completion barriers live in process memory, so groups split ' +
+        'membership and completion barriers live in Step_Completion, so groups split ' +
         'across replicas never finish. Scale back to 1.'
     );
   }
@@ -109,7 +109,7 @@ async function bootstrap() {
 // An unhandled rejection used to call process.exit(1). Several controllers use
 // callback-style db.query inside async methods, where a throw becomes exactly
 // that, so a single bad query could kill the API mid-class: every socket drops
-// and the in-memory group barriers are lost. Log and keep serving instead.
+// and the Step_Completion group barriers are lost. Log and keep serving instead.
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
 });
