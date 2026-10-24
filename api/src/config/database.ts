@@ -2,7 +2,7 @@
 //
 // SINGLE REPLICA ONLY (API-1). This API cannot be scaled horizontally:
 // config/socket.ts keeps `onlineStudents` and the "has every group member
-// finished" barrier in plain process memory, and Socket.IO is running without a
+// finished" barrier in Step_Completion, and Socket.IO is running without a
 // room adapter. Run two replicas and a group's students land on different
 // processes, each of which sees only part of the group, so the group NEVER
 // reaches its completion count and is stuck mid-class with no way out. The pool
