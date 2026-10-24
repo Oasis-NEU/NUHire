@@ -1,5 +1,7 @@
 // src/models/SocketEvents.ts
 
+import type { DbBool } from './DbBool';
+
 export interface SocketEvents {
   // Connection events
   adminOnline: { adminEmail: string };
@@ -11,7 +13,8 @@ export interface SocketEvents {
   check: {
     group_id: string;
     resume_number: number;
-    checked: boolean;
+    // Written straight into `Resume.checked`; res-review-group sends 1 or 0.
+    checked: DbBool;
   };
   checkint: {
     group_id: string;
