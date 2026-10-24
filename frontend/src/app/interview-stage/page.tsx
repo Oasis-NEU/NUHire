@@ -56,19 +56,6 @@ export default function Interview() {
   const [noShow, setNoShow] = useState(false);
   const [donePopup, setDonePopup] = useState(false);
 
-  const [votes, setVotes] = useState<
-    {
-      student_id: string;
-      group_id: number;
-      studentClass: number;
-      question1: number;
-      question2: number;
-      question3: number;
-      question4: number;
-      candidate_id: number;
-    }[]
-  >([]);
-
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>('video');
   const [jobDescPath, setJobDescPath] = useState('');
@@ -87,6 +74,7 @@ export default function Interview() {
   const [videoIndex, setVideoIndex] = useState(0);
   const [finished, setFinished] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [currentCandidateId, setCurrentCandidateId] = useState<number | null>(null);
   const [videosLoading, setVideosLoading] = useState(true);
 
@@ -618,62 +606,57 @@ export default function Interview() {
       return;
     }
 
-    // Add current vote to the queue
-    let updatedVotes;
-    if (noShow) {
-      const voteData = {
-        student_id: String(user!.id),
-        group_id: user!.group_id,
-        studentClass: user!.class,
-        question1: 1,
-        question2: 1,
-        question3: 1,
-        question4: 1,
-        candidate_id: currentVid.resume_id,
-      };
-      updatedVotes = [...votes, voteData];
-      setVotes(updatedVotes);
-    } else {
-      const voteData = {
-        student_id: String(user!.id),
-        group_id: user!.group_id,
-        studentClass: user!.class,
-        [RATING_COLUMN.overall]: overall,
-        [RATING_COLUMN.professionalPresence]: professionalPresence,
-        [RATING_COLUMN.qualityOfAnswer]: qualityOfAnswer,
-        [RATING_COLUMN.personality]: personality,
-        candidate_id: currentVid.resume_id,
-      };
-      updatedVotes = [...votes, voteData];
-      setVotes(updatedVotes);
+    if (submitting) return;
+    setSubmitting(true);
+
+    const voteData = noShow
+      ? {
+          student_id: String(user!.id),
+          group_id: user!.group_id,
+          studentClass: user!.class,
+          question1: 1,
+          question2: 1,
+          question3: 1,
+          question4: 1,
+          candidate_id: currentVid.resume_id,
+        }
+      : {
+          student_id: String(user!.id),
+          group_id: user!.group_id,
+          studentClass: user!.class,
+          [RATING_COLUMN.overall]: overall,
+          [RATING_COLUMN.professionalPresence]: professionalPresence,
+          [RATING_COLUMN.qualityOfAnswer]: qualityOfAnswer,
+          [RATING_COLUMN.personality]: personality,
+          candidate_id: currentVid.resume_id,
+        };
+
+    try {
+      await axios.post(
+        `${API_BASE_URL}/interview/batch-vote`,
+        { votes: [voteData] },
+        { withCredentials: true }
+      );
+    } catch (err) {
+      console.error('Error saving interview vote:', err);
+      setPopup({
+        headline: 'Error Saving Ratings',
+        message: 'Failed to save your interview ratings. Please try again.',
+      });
+      setSubmitting(false);
+      return;
     }
 
     const nextVideoIndex = videoIndex + 1;
     const isLastInterview = nextVideoIndex >= interviews.length;
 
     if (!isLastInterview) {
-      // Not the last interview - just move to next video
       setVideoIndex(nextVideoIndex);
       setVideoLoaded(false);
       resetRatings();
       setNoShow(false);
     } else {
-      // This is the last interview - submit all votes to database
       try {
-        const response = await axios.post(
-          `${API_BASE_URL}/interview/batch-vote`,
-          {
-            votes: updatedVotes,
-          },
-          { withCredentials: true }
-        );
-
-        if (response.status !== 200) {
-          console.error('❌ [BATCH-INTERVIEW-VOTE] Error response from backend');
-          throw new Error('Failed to save interview votes');
-        }
-
-        // Mark as finished in the database
         await axios.post(
           `${API_BASE_URL}/interview/status/finished`,
           {
@@ -689,13 +672,15 @@ export default function Interview() {
 
         setFinished(true);
       } catch (err) {
-        console.error('❌ [BATCH-INTERVIEW-VOTE] Error saving votes:', err);
+        console.error('Error marking interviews finished:', err);
         setPopup({
           headline: 'Error Saving Ratings',
           message: 'Failed to save your interview ratings. Please try again.',
         });
       }
     }
+
+    setSubmitting(false);
   };
 
   // Loading state
@@ -947,9 +932,9 @@ export default function Interview() {
           {/* Submit button */}
           <button
             onClick={handleSubmit}
-            disabled={finished || !videoLoaded}
+            disabled={finished || !videoLoaded || submitting}
             className={`px-3 py-2 rounded-lg shadow-md transition duration-300 font-rubik text-xs mt-2 ${
-              finished || !videoLoaded
+              finished || !videoLoaded || submitting
                 ? 'bg-gray-400 text-white opacity-50 cursor-not-allowed'
                 : 'bg-blue-500 text-white hover:bg-blue-900'
             }`}
