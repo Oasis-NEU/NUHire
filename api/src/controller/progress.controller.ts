@@ -1,5 +1,5 @@
 // ============================================
-// src/controllers/progress.controller.ts
+// src/controller/progress.controller.ts
 // ============================================
 
 import { Response } from 'express';

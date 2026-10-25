@@ -1,4 +1,4 @@
-// src/controllers/group.controller.ts
+// src/controller/group.controller.ts
 
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
