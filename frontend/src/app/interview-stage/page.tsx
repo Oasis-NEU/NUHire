@@ -17,10 +17,9 @@ import Facts from '../components/facts';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { Document, Page, pdfjs } from 'react-pdf';
+import { API_BASE_URL } from '../../lib/api';
 import { pdfSource } from '../../lib/pdfSource';
 import { CURVEBALL_COLUMN, NO_SHOW_SCORE, RATING_COLUMN, RATING_LABEL } from '../../lib/ratings';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -533,9 +532,6 @@ export default function Interview() {
 
     const voteData = noShow
       ? {
-          student_id: String(user!.id),
-          group_id: user!.group_id,
-          studentClass: user!.class,
           question1: 1,
           question2: 1,
           question3: 1,
@@ -543,9 +539,6 @@ export default function Interview() {
           candidate_id: currentVid.resume_id,
         }
       : {
-          student_id: String(user!.id),
-          group_id: user!.group_id,
-          studentClass: user!.class,
           [RATING_COLUMN.overall]: overall,
           [RATING_COLUMN.professionalPresence]: professionalPresence,
           [RATING_COLUMN.qualityOfAnswer]: qualityOfAnswer,
@@ -554,11 +547,13 @@ export default function Interview() {
         };
 
     try {
-      await axios.post(
-        `${API_BASE_URL}/interview/batch-vote`,
-        { votes: [voteData] },
-        { withCredentials: true }
-      );
+      const res = await fetch(`${API_BASE_URL}/interview/batch-vote`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ votes: [voteData] }),
+      });
+      if (!res.ok) throw new Error(`Saving the rating failed with ${res.status}`);
     } catch (err) {
       console.error('Error saving interview vote:', err);
       setPopup({
@@ -579,18 +574,13 @@ export default function Interview() {
       setNoShow(false);
     } else {
       try {
-        await axios.post(
-          `${API_BASE_URL}/interview/status/finished`,
-          {
-            student_id: user?.id,
-            finished: 1,
-            group_id: user?.group_id,
-            class: user?.class,
-          },
-          {
-            withCredentials: true,
-          }
-        );
+        const res = await fetch(`${API_BASE_URL}/interview/status/finished`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ finished: 1 }),
+        });
+        if (!res.ok) throw new Error(`Marking interviews finished failed with ${res.status}`);
 
         setFinished(true);
       } catch (err) {
