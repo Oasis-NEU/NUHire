@@ -28,6 +28,10 @@ RUN npm ci
 # Copy source code
 COPY api/src/ ./src/
 
+# `npm run build` generates the Prisma client from the schema before tsc.
+COPY api/prisma7.config.ts ./
+COPY api/prisma/ ./prisma/
+
 COPY api/uploads/ ./uploads/
 
 # Where `npm run db:migrate` looks for them: ../database-files/migrations,
@@ -37,9 +41,10 @@ COPY database-files/migrations/ /database-files/migrations/
 # Compile TypeScript
 RUN npm run build
 
-# tsc and its @types are build-only. Dropping them after the build keeps the
-# devDependency tree out of the running image. dbmate is a regular dependency,
-# so it stays: `npm start` needs it.
+# tsc, its @types and the prisma CLI are build-only. Dropping them after the
+# build keeps the devDependency tree out of the running image. dbmate is a
+# regular dependency, so it stays: `npm start` needs it. So do @prisma/client
+# and the adapter, which the generated client in dist/ loads at runtime.
 RUN npm prune --omit=dev
 
 # Expose backend port
