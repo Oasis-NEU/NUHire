@@ -4,7 +4,7 @@
 
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
-import { Pool } from 'mysql2';
+import { Pool, RowDataPacket } from 'mysql2';
 import fs from 'fs';
 import path from 'path';
 
@@ -70,13 +70,28 @@ export class ResumeController {
       (err, results: any[]) => {
         const oldVote = results && results.length > 0 ? results[0].vote : 'unanswered';
 
-        const query = `INSERT INTO Resume (student_id, group_id, class, timespent, resume_number, vote) 
-          VALUES (?, ?, ?, ?, ?, ?)
+        // `checked` is the group's shortlist flag, kept on every vote row. A new
+        // row takes the group's current value in the same statement; at the
+        // column default of 0, a teammate voting after the shortlist un-ticked
+        // the resume for the whole group. A re-vote leaves its row's flag alone.
+        const query = `INSERT INTO Resume (student_id, group_id, class, timespent, resume_number, vote, checked)
+          SELECT ?, ?, ?, ?, ?, ?, COALESCE(MAX(checked), 0)
+          FROM Resume WHERE group_id = ? AND class = ? AND resume_number = ?
           ON DUPLICATE KEY UPDATE timespent = VALUES(timespent), vote = VALUES(vote);`;
 
         this.db.query(
           query,
-          [student_id, group_id, classId, timespent, resume_number, vote],
+          [
+            student_id,
+            group_id,
+            classId,
+            timespent,
+            resume_number,
+            vote,
+            group_id,
+            classId,
+            resume_number,
+          ],
           (err) => {
             if (err) {
               console.error('❌ [BACKEND-VOTE] Error saving vote:', err);
@@ -372,7 +387,24 @@ export class ResumeController {
     }
 
     try {
-      // Insert all votes in a single transaction
+      // New rows carry the group's current shortlist flag, as in submitVote.
+      // Look it up once per (group, class) in the batch.
+      const checkedByGroup = new Map<string, Map<number, number>>();
+      for (const vote of votes) {
+        const key = `${vote.group_id}:${vote.class}`;
+        if (checkedByGroup.has(key)) continue;
+        const [rows] = await this.db
+          .promise()
+          .query<RowDataPacket[]>(
+            'SELECT resume_number, MAX(checked) AS checked FROM Resume WHERE group_id = ? AND class = ? GROUP BY resume_number',
+            [vote.group_id, vote.class]
+          );
+        checkedByGroup.set(
+          key,
+          new Map(rows.map((row) => [Number(row.resume_number), Number(row.checked)]))
+        );
+      }
+
       const values = votes.map((vote) => [
         vote.student_id,
         vote.group_id,
@@ -380,6 +412,7 @@ export class ResumeController {
         vote.timespent,
         vote.resume_number,
         vote.vote,
+        checkedByGroup.get(`${vote.group_id}:${vote.class}`)?.get(Number(vote.resume_number)) ?? 0,
       ]);
 
       // Resubmitting must overwrite the student's earlier vote rather than add
@@ -387,23 +420,16 @@ export class ResumeController {
       // student who went back and changed an answer, or whose client retried,
       // counted twice in the group's tally.
       const query = `
-        INSERT INTO Resume (student_id, group_id, class, timespent, resume_number, vote)
+        INSERT INTO Resume (student_id, group_id, class, timespent, resume_number, vote, checked)
         VALUES ?
         ON DUPLICATE KEY UPDATE timespent = VALUES(timespent), vote = VALUES(vote)
       `;
 
-      this.db.query(query, [values], (err) => {
-        if (err) {
-          console.error('Error saving batch votes:', err);
-          res.status(500).json({ error: 'Failed to save votes' });
-          return;
-        }
-
-        res.json({ success: true, votesCount: votes.length });
-      });
+      await this.db.promise().query(query, [values]);
+      res.json({ success: true, votesCount: votes.length });
     } catch (error) {
-      console.error('Error in batchVote:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('Error saving batch votes:', error);
+      res.status(500).json({ error: 'Failed to save votes' });
     }
   };
 }
