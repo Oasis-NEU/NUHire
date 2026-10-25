@@ -95,7 +95,7 @@ export default function Interview() {
     setPersonality,
     resetRatings,
     clearSavedProgress,
-  } = useInterviewProgress(interviews);
+  } = useInterviewProgress(user?.id, interviews);
 
   const interviewInstructions = [
     "Watch each candidate's interview video carefully.",

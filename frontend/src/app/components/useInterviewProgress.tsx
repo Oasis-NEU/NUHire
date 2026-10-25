@@ -1,10 +1,29 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { dropOtherUsersKeys, userScope } from '../../lib/userStorage';
+
+const STORAGE_PREFIX = 'interviewStage';
+
+const storageKeys = (userId: string) => {
+  const scope = userScope(STORAGE_PREFIX, userId);
+  return {
+    videoIndex: `${scope}videoIndex`,
+    candidateId: `${scope}candidateId`,
+    overall: `${scope}overall`,
+    professionalPresence: `${scope}professionalPresence`,
+    qualityOfAnswer: `${scope}qualityOfAnswer`,
+    personality: `${scope}personality`,
+    noShow: `${scope}noShow`,
+  };
+};
 
 // Where a student is in the interview stage and the ratings they have entered
 // for the current candidate, kept in localStorage so a refresh does not lose them.
-export const useInterviewProgress = (interviews: { resume_id: number }[]) => {
+export const useInterviewProgress = (
+  userId: number | undefined,
+  interviews: { resume_id: number }[]
+) => {
   const [noShow, setNoShow] = useState(false);
   const [overall, setOverall] = useState(5);
   const [professionalPresence, setProfessionalPresence] = useState(5);
@@ -12,15 +31,26 @@ export const useInterviewProgress = (interviews: { resume_id: number }[]) => {
   const [personality, setPersonality] = useState(5);
   const [videoIndex, setVideoIndex] = useState(0);
   const [currentCandidateId, setCurrentCandidateId] = useState<number | null>(null);
+  // The user whose progress has been read back. Null until then, which stops
+  // the save effect writing the initial values over the saved ones, or writing
+  // under nobody's key before login.
+  const [storageUserId, setStorageUserId] = useState<string | null>(null);
 
+  // Waits for the user because the keys are per user. The shared keys these
+  // replace handed a previous student's position on a lab browser to the next.
   useEffect(() => {
-    const savedVideoIndex = localStorage.getItem('interviewStage_videoIndex');
-    const savedCandidateId = localStorage.getItem('interviewStage_candidateId');
-    const savedOverall = localStorage.getItem('interviewStage_overall');
-    const savedProfessionalPresence = localStorage.getItem('interviewStage_professionalPresence');
-    const savedQualityOfAnswer = localStorage.getItem('interviewStage_qualityOfAnswer');
-    const savedPersonality = localStorage.getItem('interviewStage_personality');
-    const savedNoShow = localStorage.getItem('interviewStage_noShow');
+    if (!userId) return;
+    const id = String(userId);
+    dropOtherUsersKeys(STORAGE_PREFIX, id);
+
+    const keys = storageKeys(id);
+    const savedVideoIndex = localStorage.getItem(keys.videoIndex);
+    const savedCandidateId = localStorage.getItem(keys.candidateId);
+    const savedOverall = localStorage.getItem(keys.overall);
+    const savedProfessionalPresence = localStorage.getItem(keys.professionalPresence);
+    const savedQualityOfAnswer = localStorage.getItem(keys.qualityOfAnswer);
+    const savedPersonality = localStorage.getItem(keys.personality);
+    const savedNoShow = localStorage.getItem(keys.noShow);
 
     if (savedVideoIndex) setVideoIndex(Number(savedVideoIndex));
     if (savedCandidateId) setCurrentCandidateId(Number(savedCandidateId));
@@ -29,32 +59,31 @@ export const useInterviewProgress = (interviews: { resume_id: number }[]) => {
     if (savedQualityOfAnswer) setQualityOfAnswer(Number(savedQualityOfAnswer));
     if (savedPersonality) setPersonality(Number(savedPersonality));
     if (savedNoShow) setNoShow(savedNoShow === 'true');
-  }, []);
-
-  // Save state to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('interviewStage_videoIndex', String(videoIndex));
-  }, [videoIndex]);
+    setStorageUserId(id);
+  }, [userId]);
 
   useEffect(() => {
-    localStorage.setItem('interviewStage_overall', String(overall));
-  }, [overall]);
-
-  useEffect(() => {
-    localStorage.setItem('interviewStage_professionalPresence', String(professionalPresence));
-  }, [professionalPresence]);
-
-  useEffect(() => {
-    localStorage.setItem('interviewStage_qualityOfAnswer', String(qualityOfAnswer));
-  }, [qualityOfAnswer]);
-
-  useEffect(() => {
-    localStorage.setItem('interviewStage_personality', String(personality));
-  }, [personality]);
-
-  useEffect(() => {
-    localStorage.setItem('interviewStage_noShow', String(noShow));
-  }, [noShow]);
+    if (!storageUserId) return;
+    const keys = storageKeys(storageUserId);
+    localStorage.setItem(keys.videoIndex, String(videoIndex));
+    localStorage.setItem(keys.overall, String(overall));
+    localStorage.setItem(keys.professionalPresence, String(professionalPresence));
+    localStorage.setItem(keys.qualityOfAnswer, String(qualityOfAnswer));
+    localStorage.setItem(keys.personality, String(personality));
+    localStorage.setItem(keys.noShow, String(noShow));
+    if (currentCandidateId !== null) {
+      localStorage.setItem(keys.candidateId, String(currentCandidateId));
+    }
+  }, [
+    storageUserId,
+    videoIndex,
+    overall,
+    professionalPresence,
+    qualityOfAnswer,
+    personality,
+    noShow,
+    currentCandidateId,
+  ]);
 
   const currentVid = interviews[videoIndex];
 
@@ -62,7 +91,6 @@ export const useInterviewProgress = (interviews: { resume_id: number }[]) => {
   useEffect(() => {
     if (currentVid) {
       setCurrentCandidateId(currentVid.resume_id);
-      localStorage.setItem('interviewStage_candidateId', String(currentVid.resume_id));
     }
   }, [currentVid]);
 
@@ -75,7 +103,6 @@ export const useInterviewProgress = (interviews: { resume_id: number }[]) => {
         resetRatings();
         setNoShow(false);
         setCurrentCandidateId(currentVideoCandidate);
-        localStorage.setItem('interviewStage_candidateId', String(currentVideoCandidate));
       }
     }
   }, [interviews, videoIndex, currentCandidateId]);
@@ -89,13 +116,8 @@ export const useInterviewProgress = (interviews: { resume_id: number }[]) => {
   };
 
   const clearSavedProgress = () => {
-    localStorage.removeItem('interviewStage_videoIndex');
-    localStorage.removeItem('interviewStage_candidateId');
-    localStorage.removeItem('interviewStage_overall');
-    localStorage.removeItem('interviewStage_professionalPresence');
-    localStorage.removeItem('interviewStage_qualityOfAnswer');
-    localStorage.removeItem('interviewStage_personality');
-    localStorage.removeItem('interviewStage_noShow');
+    if (!storageUserId) return;
+    Object.values(storageKeys(storageUserId)).forEach((key) => localStorage.removeItem(key));
   };
 
   return {
