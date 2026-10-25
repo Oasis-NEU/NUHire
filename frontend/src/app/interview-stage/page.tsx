@@ -12,6 +12,7 @@ import Popup from '../components/popup';
 import axios from 'axios';
 import { useAuth } from '../components/AuthContext';
 import { useProgressManager } from '../components/progress';
+import { useInterviewProgress } from '../components/useInterviewProgress';
 import Facts from '../components/facts';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
@@ -52,7 +53,6 @@ export default function Interview() {
   const [showInstructions, setShowInstructions] = useState(true);
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
   const pathname = usePathname();
-  const [noShow, setNoShow] = useState(false);
   const [donePopup, setDonePopup] = useState(false);
 
   // View mode state
@@ -63,18 +63,10 @@ export default function Interview() {
   const [resumeNumPages, setResumeNumPages] = useState<number | null>(null);
   const [resumePageNumber, setResumePageNumber] = useState(1);
 
-  // Rating states
-  const [overall, setOverall] = useState(5);
-  const [professionalPresence, setProfessionalPresence] = useState(5);
-  const [qualityOfAnswer, setQualityOfAnswer] = useState(5);
-  const [personality, setPersonality] = useState(5);
-
   // Video states
-  const [videoIndex, setVideoIndex] = useState(0);
   const [finished, setFinished] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [currentCandidateId, setCurrentCandidateId] = useState<number | null>(null);
   const [videosLoading, setVideosLoading] = useState(true);
 
   const [interviews, setInterviews] = useState<
@@ -88,6 +80,22 @@ export default function Interview() {
       file_path?: string;
     }>
   >([]);
+  const {
+    videoIndex,
+    setVideoIndex,
+    noShow,
+    setNoShow,
+    overall,
+    setOverall,
+    professionalPresence,
+    setProfessionalPresence,
+    qualityOfAnswer,
+    setQualityOfAnswer,
+    personality,
+    setPersonality,
+    resetRatings,
+    clearSavedProgress,
+  } = useInterviewProgress(interviews);
 
   const interviewInstructions = [
     "Watch each candidate's interview video carefully.",
@@ -175,59 +183,10 @@ export default function Interview() {
     }
   };
 
-  useEffect(() => {
-    const savedVideoIndex = localStorage.getItem('interviewStage_videoIndex');
-    const savedCandidateId = localStorage.getItem('interviewStage_candidateId');
-    const savedOverall = localStorage.getItem('interviewStage_overall');
-    const savedProfessionalPresence = localStorage.getItem('interviewStage_professionalPresence');
-    const savedQualityOfAnswer = localStorage.getItem('interviewStage_qualityOfAnswer');
-    const savedPersonality = localStorage.getItem('interviewStage_personality');
-    const savedNoShow = localStorage.getItem('interviewStage_noShow');
-
-    if (savedVideoIndex) setVideoIndex(Number(savedVideoIndex));
-    if (savedCandidateId) setCurrentCandidateId(Number(savedCandidateId));
-    if (savedOverall) setOverall(Number(savedOverall));
-    if (savedProfessionalPresence) setProfessionalPresence(Number(savedProfessionalPresence));
-    if (savedQualityOfAnswer) setQualityOfAnswer(Number(savedQualityOfAnswer));
-    if (savedPersonality) setPersonality(Number(savedPersonality));
-    if (savedNoShow) setNoShow(savedNoShow === 'true');
-  }, []);
-
-  // Save state to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('interviewStage_videoIndex', String(videoIndex));
-  }, [videoIndex]);
-
-  useEffect(() => {
-    localStorage.setItem('interviewStage_overall', String(overall));
-  }, [overall]);
-
-  useEffect(() => {
-    localStorage.setItem('interviewStage_professionalPresence', String(professionalPresence));
-  }, [professionalPresence]);
-
-  useEffect(() => {
-    localStorage.setItem('interviewStage_qualityOfAnswer', String(qualityOfAnswer));
-  }, [qualityOfAnswer]);
-
-  useEffect(() => {
-    localStorage.setItem('interviewStage_personality', String(personality));
-  }, [personality]);
-
-  useEffect(() => {
-    localStorage.setItem('interviewStage_noShow', String(noShow));
-  }, [noShow]);
-
   // Clear state when finished
   useEffect(() => {
     if (finished) {
-      localStorage.removeItem('interviewStage_videoIndex');
-      localStorage.removeItem('interviewStage_candidateId');
-      localStorage.removeItem('interviewStage_overall');
-      localStorage.removeItem('interviewStage_professionalPresence');
-      localStorage.removeItem('interviewStage_qualityOfAnswer');
-      localStorage.removeItem('interviewStage_personality');
-      localStorage.removeItem('interviewStage_noShow');
+      clearSavedProgress();
     }
   }, [finished]);
 
@@ -333,28 +292,6 @@ export default function Interview() {
   }, [user]);
 
   const currentVid = interviews[videoIndex];
-
-  // Save candidate ID whenever video changes
-  useEffect(() => {
-    if (currentVid) {
-      setCurrentCandidateId(currentVid.resume_id);
-      localStorage.setItem('interviewStage_candidateId', String(currentVid.resume_id));
-    }
-  }, [currentVid]);
-
-  // Verify ratings match current candidate after interviews load
-  useEffect(() => {
-    if (interviews.length > 0 && currentCandidateId !== null) {
-      const currentVideoCandidate = interviews[videoIndex]?.resume_id;
-
-      if (currentVideoCandidate !== currentCandidateId) {
-        resetRatings();
-        setNoShow(false);
-        setCurrentCandidateId(currentVideoCandidate);
-        localStorage.setItem('interviewStage_candidateId', String(currentVideoCandidate));
-      }
-    }
-  }, [interviews, videoIndex, currentCandidateId]);
 
   useEffect(() => {
     if (!socket || !user) return;
@@ -554,13 +491,7 @@ export default function Interview() {
     // Just update progress and navigate
     await updateProgress(user, 'offer');
     localStorage.setItem('progress', 'offer');
-    localStorage.removeItem('interviewStage_videoIndex');
-    localStorage.removeItem('interviewStage_candidateId');
-    localStorage.removeItem('interviewStage_overall');
-    localStorage.removeItem('interviewStage_professionalPresence');
-    localStorage.removeItem('interviewStage_qualityOfAnswer');
-    localStorage.removeItem('interviewStage_personality');
-    localStorage.removeItem('interviewStage_noShow');
+    clearSavedProgress();
     window.location.href = '/makeOffer';
     socket.emit('moveGroup', {
       groupId: user.group_id,
@@ -584,14 +515,6 @@ export default function Interview() {
 
   const handlePersonalitySliderChange = (value: number) => {
     setPersonality(value);
-  };
-
-  // Reset all ratings
-  const resetRatings = () => {
-    setOverall(5);
-    setProfessionalPresence(5);
-    setQualityOfAnswer(5);
-    setPersonality(5);
   };
 
   const handleSubmit = async () => {
