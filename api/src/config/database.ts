@@ -223,6 +223,7 @@ export class DatabaseService {
       } catch (error) {
         retryCount++;
         console.error(`❌ Database pool creation attempt ${retryCount} failed:`, error);
+        await this.closeFailedAttempt();
 
         if (retryCount < this.maxRetries) {
           const delay = Math.min(10000, retryCount * 1000);
@@ -236,6 +237,22 @@ export class DatabaseService {
     }
 
     throw new Error('Failed to establish database connection pool');
+  }
+
+  /**
+   * An attempt can fail after the mysql2 pool or the Prisma client is already
+   * open. Each holds connections, and thirty retries against a flapping server
+   * would otherwise leave thirty of each behind.
+   */
+  private async closeFailedAttempt(): Promise<void> {
+    const pool = this.pool;
+    const prisma = this.prisma;
+    this.pool = null;
+    this.prisma = null;
+    await prisma?.$disconnect().catch(() => undefined);
+    if (pool) {
+      await new Promise<void>((resolve) => pool.end(() => resolve()));
+    }
   }
 
   private createPool(): Promise<Pool> {
@@ -307,7 +324,12 @@ export class DatabaseService {
       connectTimeoutMs: this.connectTimeoutMs,
       queryTimeoutMs: this.queryTimeoutMs,
     });
-    await prisma.$connect();
+    try {
+      await prisma.$connect();
+    } catch (error) {
+      await prisma.$disconnect().catch(() => undefined);
+      throw error;
+    }
     return prisma;
   }
 

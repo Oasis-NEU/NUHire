@@ -2,7 +2,7 @@
 import { Response } from 'express';
 import { Server as SocketIOServer } from 'socket.io';
 import { AuthRequest } from '../models/AuthRequest';
-import { PrismaDb } from '../config/database';
+import { dbErrorStatus, PrismaDb } from '../config/database';
 
 // Nine digits keep it inside MySQL's INT.
 const CLASS_ID = /^\d{1,9}$/;
@@ -39,7 +39,7 @@ export class FactsController {
       res.json(facts ?? []);
     } catch (error) {
       console.error('Error fetching facts:', error);
-      res.status(500).json({ error: 'Failed to fetch facts' });
+      res.status(dbErrorStatus(error)).json({ error: 'Failed to fetch facts' });
     }
   };
 
@@ -62,7 +62,7 @@ export class FactsController {
       res.status(200).json({ message: 'Facts saved successfully' });
     } catch (error) {
       console.error('Error saving facts:', error);
-      res.status(500).json({ error: 'Failed to save facts' });
+      res.status(dbErrorStatus(error)).json({ error: 'Failed to save facts' });
     }
   };
 }

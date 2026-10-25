@@ -4,6 +4,7 @@
   "description": "",
   "main": "dist/server.js",
   "scripts": {
+    "pretest": "prisma generate",
     "test": "vitest run",
     "build": "prisma generate && tsc",
     "db:migrate": "dbmate --migrations-dir ../database-files/migrations --no-dump-schema --wait migrate",
