@@ -91,6 +91,17 @@ function positiveIntFromEnv(name: string, fallback: number): number {
   return parsed;
 }
 
+function connectionFromEnv() {
+  const url = new URL(process.env.DATABASE_URL!);
+  return {
+    host: url.hostname,
+    port: parseInt(url.port) || 3306,
+    user: url.username,
+    password: url.password,
+    database: url.pathname.slice(1),
+  };
+}
+
 export class DatabaseService {
   private pool: Pool | null = null;
   private readonly maxRetries = 30;
@@ -146,13 +157,8 @@ export class DatabaseService {
       );
       this.queryTimeoutMs = positiveIntFromEnv('DB_QUERY_TIMEOUT_MS', POOL_DEFAULTS.queryTimeoutMs);
 
-      const url = new URL(process.env.DATABASE_URL!);
       const poolConfig: PoolOptions = {
-        host: url.hostname,
-        port: parseInt(url.port) || 3306,
-        user: url.username,
-        password: url.password,
-        database: url.pathname.slice(1),
+        ...connectionFromEnv(),
         connectionLimit: this.connectionLimit,
         waitForConnections: true,
         // `queueLimit: 0` meant an unbounded acquire queue with no timeout: once
