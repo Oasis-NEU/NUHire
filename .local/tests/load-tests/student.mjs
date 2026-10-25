@@ -440,9 +440,6 @@ export class Student {
     for (const candidate of this.candidates) {
       await think(THINK.interview);
       const vote = {
-        student_id: String(id),
-        group_id,
-        studentClass: classId,
         question1: rating(),
         question2: rating(),
         question3: rating(),
@@ -452,10 +449,7 @@ export class Student {
       await this.call('POST', '/interview/batch-vote', '/interview/batch-vote', { votes: [vote] });
     }
     await this.call('POST', '/interview/status/finished', '/interview/status/finished', {
-      student_id: id,
       finished: 1,
-      group_id,
-      class: classId,
     });
     socket.emit('interviewStageFinished', { group_id, class_id: classId, student_id: id });
     if (NEEDS_TEACHER.has(group_id)) this.h.waiting(this, 'interview');
