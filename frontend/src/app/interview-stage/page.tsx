@@ -82,6 +82,7 @@ export default function Interview() {
   const {
     videoIndex,
     setVideoIndex,
+    allRated,
     noShow,
     setNoShow,
     overall,
@@ -187,7 +188,7 @@ export default function Interview() {
     if (finished) {
       clearSavedProgress();
     }
-  }, [finished]);
+  }, [finished, clearSavedProgress]);
 
   useEffect(() => {
     const handleShowInstructions = () => {
@@ -573,27 +574,37 @@ export default function Interview() {
       resetRatings();
       setNoShow(false);
     } else {
-      try {
-        const res = await fetch(`${API_BASE_URL}/interview/status/finished`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ finished: 1 }),
-        });
-        if (!res.ok) throw new Error(`Marking interviews finished failed with ${res.status}`);
-
-        setFinished(true);
-      } catch (err) {
-        console.error('Error marking interviews finished:', err);
-        setPopup({
-          headline: 'Error Saving Ratings',
-          message: 'Failed to save your interview ratings. Please try again.',
-        });
-      }
+      await markFinished();
     }
 
     setSubmitting(false);
   };
+
+  const markFinished = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/interview/status/finished`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ finished: 1 }),
+      });
+      if (!res.ok) throw new Error(`Marking interviews finished failed with ${res.status}`);
+
+      setFinished(true);
+    } catch (err) {
+      console.error('Error marking interviews finished:', err);
+      setPopup({
+        headline: 'Error Saving Ratings',
+        message:
+          'Your ratings are saved, but marking you finished failed. Refresh the page to try again.',
+      });
+    }
+  };
+
+  // Every candidate is already rated, e.g. after a refresh once finished.
+  useEffect(() => {
+    if (allRated && !finished) markFinished();
+  }, [allRated, finished]);
 
   // Loading state
   if (userloading) {

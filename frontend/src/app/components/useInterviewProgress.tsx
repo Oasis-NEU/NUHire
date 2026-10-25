@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { API_BASE_URL } from '../../lib/api';
 import { dropOtherUsersKeys, userScope } from '../../lib/userStorage';
+import type { InterviewRating } from '../../types';
 
 const STORAGE_PREFIX = 'interviewStage';
 
@@ -16,6 +18,14 @@ const storageKeys = (userId: string) => {
     personality: `${scope}personality`,
     noShow: `${scope}noShow`,
   };
+};
+
+// The position of the first candidate not yet rated, or interviews.length when
+// every one is.
+export const firstUnratedIndex = (interviews: { resume_id: number }[], rated: number[]) => {
+  const ratedIds = new Set(rated);
+  const index = interviews.findIndex((candidate) => !ratedIds.has(candidate.resume_id));
+  return index === -1 ? interviews.length : index;
 };
 
 // Where a student is in the interview stage and the ratings they have entered
@@ -35,6 +45,8 @@ export const useInterviewProgress = (
   // the save effect writing the initial values over the saved ones, or writing
   // under nobody's key before login.
   const [storageUserId, setStorageUserId] = useState<string | null>(null);
+  const [allRated, setAllRated] = useState(false);
+  const serverRestoreDoneRef = useRef(false);
 
   // Waits for the user because the keys are per user. The shared keys these
   // replace handed a previous student's position on a lab browser to the next.
@@ -85,6 +97,30 @@ export const useInterviewProgress = (
     currentCandidateId,
   ]);
 
+  // localStorage is a cache; the saved ratings are the record. Without this a
+  // student on another browser, or who refreshes after finishing, starts again
+  // at the first video and overwrites ratings they already gave.
+  useEffect(() => {
+    if (!storageUserId || interviews.length === 0 || serverRestoreDoneRef.current) return;
+    serverRestoreDoneRef.current = true;
+
+    fetch(`${API_BASE_URL}/interview/my-votes`, { credentials: 'include' })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Loading saved ratings failed with ${res.status}`);
+        return res.json();
+      })
+      .then((rows: Pick<InterviewRating, 'candidate_id'>[]) => {
+        const next = firstUnratedIndex(
+          interviews,
+          rows.map((row) => row.candidate_id)
+        );
+        if (next === interviews.length) setAllRated(true);
+        else setVideoIndex(next);
+      })
+      // The position saved in this browser still applies, so the student can carry on.
+      .catch((error) => console.error('Error loading saved interview ratings:', error));
+  }, [storageUserId, interviews]);
+
   const currentVid = interviews[videoIndex];
 
   // Save candidate ID whenever video changes
@@ -115,14 +151,15 @@ export const useInterviewProgress = (
     setPersonality(5);
   };
 
-  const clearSavedProgress = () => {
+  const clearSavedProgress = useCallback(() => {
     if (!storageUserId) return;
     Object.values(storageKeys(storageUserId)).forEach((key) => localStorage.removeItem(key));
-  };
+  }, [storageUserId]);
 
   return {
     videoIndex,
     setVideoIndex,
+    allRated,
     noShow,
     setNoShow,
     overall,
