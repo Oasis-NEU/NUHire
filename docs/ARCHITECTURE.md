@@ -217,9 +217,9 @@ A deadlocked group no longer needs someone editing the database mid-class.
 
 - `io.use` reads the login session off the handshake and refuses a socket with
   none (`SOCKET_AUTH_REQUIRED`, on unless set to `false`). A student cannot join
-  another group's room, teacher events are refused from anyone but a teacher
-  (`onTeacher`), and student events act on the sender's own group from `Users`,
-  never one named in the payload (`onStudent`).
+  another group's room, teacher events are refused from anyone but a teacher of
+  that class (`onTeacher`), and student events act on the sender's own group
+  from `Users`, never one named in the payload (`onStudent`).
 - Zero bare `io.emit` calls remain. Everything is room-scoped. The advisor
   dashboard is not in the group room, so use `emitToClassModerators` to reach a
   class's teachers.

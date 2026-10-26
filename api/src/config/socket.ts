@@ -223,9 +223,9 @@ export async function connectedEmails(io: SocketIOServer): Promise<Set<string>> 
 
 // A socket with no login is refused. Every event handler below decides what a
 // socket may do from who is logged in, and a sessionless socket would otherwise
-// be the one client none of those checks can see. On unless set to 'false',
-// so a deploy that never sets it is protected, and turning it off in an
-// emergency is a config change rather than a release.
+// be the one client none of those checks can see. On unless set to exactly
+// 'false', so a deploy that never sets it is protected. Turning it off is not a
+// rollback: student events still need a login (see api/.env.example).
 const SOCKET_AUTH_REQUIRED = process.env.SOCKET_AUTH_REQUIRED !== 'false';
 
 export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<string, string> {
