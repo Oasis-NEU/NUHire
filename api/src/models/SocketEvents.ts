@@ -1,5 +1,8 @@
 // src/models/SocketEvents.ts
 
+// What the server reads from each client event. Student events carry no group,
+// class or student id: the server takes those from the sender's login, and
+// anything else the browser sends is ignored.
 export interface SocketEvents {
   // Connection events
   adminOnline: { adminEmail: string };
@@ -9,12 +12,10 @@ export interface SocketEvents {
 
   // Checkbox events
   check: {
-    group_id: string;
     resume_number: number;
     checked: boolean;
   };
   checkint: {
-    group_id: string;
     interview_number: number;
     checked: boolean;
   };
@@ -30,7 +31,7 @@ export interface SocketEvents {
     groups: number[];
     headline: string;
     message: string;
-    class?: number;
+    class: number;
     candidateId?: number;
   };
 
@@ -45,8 +46,6 @@ export interface SocketEvents {
 
   // Offer events
   makeOfferRequest: {
-    classId: number;
-    groupId: number;
     candidateId: number;
   };
   makeOfferResponse: {
@@ -58,76 +57,20 @@ export interface SocketEvents {
 
   // Navigation events
   moveGroup: {
-    classId: number;
-    groupId: number;
     targetPage: string;
   };
 
-  // Interview events
-  submitInterview: {
-    currentVideoIndex: number;
-    nextVideoIndex: number;
-    isLastInterview: boolean;
-    groupId: number;
-    classId: number;
-  };
-
-  // Selection events
-  offerSelected: {
-    candidateId: number;
-    groupId: number;
-    classId: number;
-    roomId: string;
-    checked: boolean;
-  };
-  offerSubmitted: {
-    candidateId: number;
-    groupId: number;
-    classId: number;
-    roomId: string;
-  };
-
   // Completion events
-  userCompletedResReview: { groupId: number };
   confirmOffer: {
-    groupId: number;
-    classId: number;
     candidateId: number;
-    studentId: string;
-    roomId: string;
-  };
-  teamConfirmSelection: {
-    groupId: number;
-    classId: number;
-    studentId: string;
-    roomId: string;
-  };
-  teamUnconfirmSelection: {
-    groupId: number;
-    classId: number;
-    studentId: string;
-    roomId: string;
   };
 
   // Preset votes
   sentPresetVotes: {
-    student_id: number;
-    group_id: number;
-    class: number;
     question1: number;
     question2: number;
     question3: number;
     question4: number;
     candidate_id: number;
-  };
-
-  // Group assignment
-  allowGroupAssignment: {
-    classId: number;
-    message: string;
-  };
-  groupAssignmentClosed: {
-    classId: number;
-    message: string;
   };
 }

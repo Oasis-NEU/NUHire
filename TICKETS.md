@@ -280,8 +280,8 @@ Every refactor below is unsafe without these. Split across three people by domai
 **INFRA-9 [HARD] 20h — Playwright smoke test of the full journey** — deps: INFRA-3, INFRA-8
 The single highest-value guardrail. Catches the only failure that matters: a
 student cannot finish the simulation. **It is also the missing verification for
-everything socket-shaped** — no part of the barrier or room scoping has ever been
-exercised by two real browsers at once.
+everything socket-shaped** — the barrier has never been exercised by two real
+browsers at once.
 
 - [ ] Advisor starts a group; student completes every step
 - [ ] A second spec covers the group barrier with 3 parallel browser contexts
@@ -348,17 +348,17 @@ The session now runs over the handshake, `socket.data.user` is populated, and
 `joinGroup` / `joinClass` / `adminOnline` refuse rooms that do not belong to the
 caller. Two things remain.
 
-- [ ] Flip `SOCKET_AUTH_REQUIRED=true` after staging confirms the API has stopped logging "connected with no session". It is off because turning it on is the change most able to disconnect every client at once, and nobody has tested it with two real browsers
+- [x] Flip `SOCKET_AUTH_REQUIRED=true`. On unless set to `false`; tested with real sessions, an API restart and `npm run load` (OAS-157)
 - [ ] `socket.data` re-reads group and class from the DB on connect rather than trusting the serialized session, so a reassigned student is not stuck in their old room for the rest of the class
 
 **SEC-8 [HARD] [SPEC] 18h — Authorize socket events by role** — deps: SEC-7
-Room scoping is in. Event-level authorization is not: `makeOfferResponse` still
-lets any client fake an advisor's accept, `moveGroup` yanks any group to any
-page, `sendPopupToGroups` spams any class.
+Done in OAS-157. Teacher events are refused unless the sender teaches the
+event's class, and student events act only on the sender's own group.
 
-- [ ] Admin-only: `sendPopupToGroups`, `moveGroup`, `makeOfferResponse`, `allowGroupAssignment`, `groupAssignmentClosed`
-- [ ] Student events derive group and class from `socket.data.user`, never the payload
-- [ ] Test: a student socket emitting an admin event is rejected and logged
+- [x] Admin-only: `sendPopupToGroups`, `makeOfferResponse`, `updateRatingsWithPresetBackend`. `allowGroupAssignment` and `groupAssignmentClosed` had no sender or listener and were deleted with five other dead relays. `moveGroup` stays student-sent, because finishing a step moves the student's own group; it can no longer move any other (OAS-156, OAS-157)
+- [x] Teacher events also require a `Moderator` row for the event's class, read when the event arrives, so a professor cannot act on a section they do not teach (OAS-157)
+- [x] Student events derive group and class from `Users` for the logged-in sender, never the payload
+- [x] Test: a student socket emitting an admin event is rejected and logged
 
 **SEC-11b [MED] [SEC] 5h — Scope admin reads to the classes the caller owns** — deps: SEC-6
 `GET /users` is admin-only now, but an admin for CRN 1 still reads every student
@@ -845,9 +845,10 @@ authorization to someone in their first month.
 
 ## Untested ground
 
-Honest note for whoever picks up the socket work. No part of the barrier, the
-room scoping or the group-confirmation flow has ever been exercised by **two real
-browsers at once**. Every socket fix to date has been verified by typecheck,
-build, targeted request and headless socket client. `INFRA-9` is what closes that
-gap, and until it lands treat anything socket-shaped as unverified no matter how
+Honest note for whoever picks up the socket work. OAS-157 ran room scoping, the
+socket event checks and the Make Offer confirmation flow with real Keycloak
+sessions, two students in one group. The barrier has still only been exercised by
+headless clients (`npm run load`), never by **two real browsers at once**, and
+none of the real-session runs is repeatable. `INFRA-9` is what closes that gap,
+and until it lands treat anything socket-shaped as unverified no matter how
 confident the commit message sounds.

@@ -355,12 +355,12 @@ beyond imports. Mixing a move with a behaviour change makes review impossible.
 
 Do not treat these as examples to follow:
 
-| File                                   | Problem                                                                                                                                            |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `components/ManageGroupsTab.tsx`       | 2,051 lines, ~40 `useState` in one component                                                                                                       |
-| `api/src/config/socket.ts`             | `onlineStudents` is still in memory; the barrier moved to `Step_Completion`. Auth and room scoping are in, but `SOCKET_AUTH_REQUIRED` is still off |
-| `api/src/controller/job.controller.ts` | destructive deletes (see rule 5); transactions are fixed                                                                                           |
-| `components/useProgress.tsx`           | client-side-only gating, redirects to a 404                                                                                                        |
-| `frontend/src/app/employerPanel/`      | stub; the final step does not work                                                                                                                 |
+| File                                   | Problem                                                                                                                                       |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `components/ManageGroupsTab.tsx`       | 2,051 lines, ~40 `useState` in one component                                                                                                  |
+| `api/src/config/socket.ts`             | `onlineStudents` is still in memory; the barrier moved to `Step_Completion`. Use `onTeacher` / `onStudent` for any new event, never bare `on` |
+| `api/src/controller/job.controller.ts` | destructive deletes (see rule 5); transactions are fixed                                                                                      |
+| `components/useProgress.tsx`           | client-side-only gating, redirects to a 404                                                                                                   |
+| `frontend/src/app/employerPanel/`      | stub; the final step does not work                                                                                                            |
 
 `TICKETS.md` has the full backlog with file references if you want the detail.

@@ -1426,11 +1426,7 @@ grep -n "useState<any\[\]>" frontend/src/app/makeOffer/page.tsx   # :53-56
 These need a spec, a decision, or a pair. They live in [TICKETS.md](TICKETS.md)
 or on the board:
 
-- Anything touching `SOCKET_AUTH_REQUIRED` or socket authorization. For the
-  socket lockdown pair: seven server handlers have no client that emits them
-  (`submitInterview`, `offerSelected`, `offerSubmitted`, `teamConfirmSelection`,
-  `teamUnconfirmSelection`, `allowGroupAssignment`, `groupAssignmentClosed`).
-  Deleting them is cheaper than locking them down.
+- Anything touching `SOCKET_AUTH_REQUIRED` or socket authorization.
 - The group barrier's design, a migration runner, Assign Job safety, splitting
   `ManageGroupsTab`, the professor's unstick button. All pair tickets.
 - `/employerPanel`: a stub, but also the unbuilt final step of the simulation.
