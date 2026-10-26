@@ -7,6 +7,7 @@ import Footer from '../components/footer';
 import Slideshow from '../components/slideshow';
 import Popup from '../components/popup';
 import { useRouter } from 'next/navigation';
+import { PageLoader } from '../components/spinner';
 
 interface ModeratorInfo {
   id: number;
@@ -108,14 +109,7 @@ const ModDashboard = () => {
   }, [submitting, deletingCRN, user, router]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-sand">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Loading...</h2>
-          <div className="w-16 h-16 border-t-4 border-navy border-solid rounded-full animate-spin mx-auto"></div>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (!user) {

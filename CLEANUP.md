@@ -1341,8 +1341,8 @@ it. These are wrong today.
 
 ### Done when
 
-- [ ] Every item above is fixed
-- [ ] `git diff` shows comment and string changes only
+- [x] Every item above is fixed
+- [x] `git diff` shows comment and string changes only
 
 ---
 
