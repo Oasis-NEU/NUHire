@@ -288,12 +288,15 @@ checkboxes, professor popups, step transitions, and offer approvals.
 populates the authenticated user. It refuses to join a student to another
 group's room.
 
-The last step — **dropping** unauthenticated sockets rather than letting them
-connect unpoliced — is behind `SOCKET_AUTH_REQUIRED`, which is **off by
-default**. Per the comment in `api/.env.example`, it is off because flipping it
-is the one change that can disconnect every client at once and **nobody has run
-two real browser sessions against it yet.** That is a real task, not a
-formality.
+A socket with no login is refused (`SOCKET_AUTH_REQUIRED`, on unless set to
+`false`). Every event a browser can send is checked against the login: teacher
+events go through `onTeacher`, and student events through `onStudent`, which
+acts on the sender's own group as `Users` has it and ignores any group, class or
+student id in the payload. Teacher events also need the sender to teach the
+event's class. `SOCKET_AUTH_REQUIRED=false` (that exact string) lets sockets with
+no login connect, but student events still need one, so it does not bring live
+group features back. If the login cookie stops reaching the handshake, redeploy
+the previous version; see `api/.env.example`.
 
 ### The barrier
 
@@ -429,7 +432,7 @@ example. `DATABASE_URL` is always set by compose there.
 | `DB_CONNECT_TIMEOUT_MS`  | `10000`                                        |                                                                                                                                                                                           |
 | `DB_QUERY_TIMEOUT_MS`    | `15000`                                        | MySQL `max_execution_time`; caps read-only SELECTs only                                                                                                                                   |
 | `INSTANCE_COUNT`         | `1`                                            | Leave at 1. See the barrier section                                                                                                                                                       |
-| `SOCKET_AUTH_REQUIRED`   | `false`                                        | Drop unauthenticated sockets. Off until someone tests it with two real sessions                                                                                                           |
+| `SOCKET_AUTH_REQUIRED`   | `true`                                         | Refuse sockets with no login. Only `false` turns it off, and that is not a rollback; see `api/.env.example`                                                                               |
 
 **`frontend/.env.local`** — likewise an optional override under `npm run all`.
 
