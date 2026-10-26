@@ -18,6 +18,12 @@ type Emit = { room: string; event: string; payload: unknown };
 type Handler = (payload?: unknown) => void;
 
 const advisor: User = { id: 1, email: 'advisor@northeastern.edu', affiliation: 'admin' };
+// A teacher too, but only of class 9001. Every teacher event below is for class 1.
+const otherTeacher: User = { id: 2, email: 'prof9001@northeastern.edu', affiliation: 'admin' };
+const moderators = [
+  { admin_email: advisor.email, crn: 1 },
+  { admin_email: otherTeacher.email, crn: 9001 },
+];
 // Group 2 in class 1. Every attack below names group 1 in the payload.
 const student: User = {
   id: 10,
@@ -27,8 +33,8 @@ const student: User = {
   class: 1,
 };
 
-// Answers the roster lookup from `roster`; every other query is recorded. A
-// query whose params match `slow` takes a little longer, to show ordering.
+// Answers the roster and class-teacher lookups; every other query is recorded.
+// A query whose params match `slow` takes a little longer, to show ordering.
 function fakeDb(roster: User[], slow?: unknown) {
   const writes: { sql: string; params: unknown[] }[] = [];
   const db = {
@@ -37,6 +43,10 @@ function fakeDb(roster: User[], slow?: unknown) {
         if (sql.includes('present_at = CURRENT_TIMESTAMP')) return [{ affectedRows: 0 }];
         if (sql.includes('FROM Users') && sql.includes('email = ?')) {
           return [roster.filter((u) => u.email === params[0] && u.affiliation === 'student')];
+        }
+        if (sql.includes('FROM Moderator')) {
+          const [crn, email] = params;
+          return [moderators.filter((m) => m.crn === crn && m.admin_email === email)];
         }
         if (slow !== undefined && params.includes(slow)) {
           await new Promise((resolve) => setTimeout(resolve, 20));
@@ -87,7 +97,7 @@ function fakeServer(db: Pool) {
   return { emitted, connect };
 }
 
-// Student handlers run through an async queue; let it drain.
+// Handlers look the sender up in the database first; let them finish.
 const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
 
 describe('socket identity', () => {
@@ -112,19 +122,26 @@ describe('socket identity', () => {
       'updateRatingsWithPresetBackend',
       { classId: 1, groupId: 1, candidateId: 3, vote: 'yes', isNoShow: false },
     ],
-  ])('drops and logs teacher-only %s from a student', async (event, payload) => {
-    const { db, writes } = fakeDb([student]);
-    const { emitted, connect } = fakeServer(db);
+  ])(
+    'drops and logs teacher-only %s from a student or a teacher of another class',
+    async (event, payload) => {
+      for (const sender of [student, otherTeacher]) {
+        const { db, writes } = fakeDb([student]);
+        const { emitted, connect } = fakeServer(db);
 
-    connect(student).send(event, payload);
-    await settle();
+        connect(sender).send(event, payload);
+        await settle();
 
-    expect(emitted).toEqual([]);
-    expect(writes).toEqual([]);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining(`teacher-only "${event}"`));
-  });
+        expect(emitted).toEqual([]);
+        expect(writes).toEqual([]);
+        expect(warn).toHaveBeenCalledWith(
+          expect.stringContaining(`teacher-only "${event}" for class 1`)
+        );
+      }
+    }
+  );
 
-  it('lets an advisor answer an offer', () => {
+  it('lets an advisor answer an offer in their own class', async () => {
     const { emitted, connect } = fakeServer(fakeDb([]).db);
 
     connect(advisor).send('makeOfferResponse', {
@@ -133,6 +150,7 @@ describe('socket identity', () => {
       candidateId: 3,
       accepted: true,
     });
+    await settle();
 
     expect(emitted.map((e) => [e.room, e.event])).toEqual([
       ['group_1_class_1', 'makeOfferResponse'],

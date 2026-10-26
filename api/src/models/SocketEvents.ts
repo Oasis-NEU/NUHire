@@ -31,7 +31,7 @@ export interface SocketEvents {
     groups: number[];
     headline: string;
     message: string;
-    class?: number;
+    class: number;
     candidateId?: number;
   };
 

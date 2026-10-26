@@ -309,26 +309,48 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       return false;
     };
 
-    // Whether this socket may send a teacher-only event.
-    //
-    // These handlers used to relay whatever arrived, so a student could type
-    // socket.emit('makeOfferResponse', { accepted: true, ... }) into devtools
-    // and their whole group would see their offer accepted. A socket with no
-    // session is refused too, unlike mayJoin above: a student can open one on
-    // purpose, and letting it through would leave the hole exactly as it was.
-    const fromTeacher = (event: string): boolean => {
+    // Whether this socket's user teaches this class. Teacher events act on one
+    // section, so being a teacher somewhere is not enough; the same rule as
+    // requireClassModerator on HTTP. Read from the database rather than the
+    // session cached at connect, so a mid-class promotion counts. A socket with
+    // no session is refused, unlike mayJoin above: a student can open one on
+    // purpose.
+    const teachesClass = async (classId: unknown): Promise<boolean> => {
       const user = socket.data.user as SocketUser | undefined;
-      if (user?.affiliation === 'admin') return true;
+      const crn = Number(classId);
+      if (!user || !Number.isInteger(crn)) return false;
 
-      console.warn(
-        `Refusing teacher-only "${event}" from socket ${socket.id} (${user?.email ?? 'no session'}).`
+      const [rows] = await db.promise().query<RowDataPacket[]>(
+        `SELECT 1 FROM Moderator m
+           JOIN Users u ON u.email = m.admin_email
+          WHERE m.crn = ? AND m.admin_email = ? AND u.affiliation = 'admin'
+          LIMIT 1`,
+        [crn, user.email]
       );
-      return false;
+      return rows.length > 0;
     };
 
-    const onTeacher = <T>(event: string, handler: (payload: T) => void): void => {
+    const onTeacher = <T>(
+      event: string,
+      classOf: (payload: T) => unknown,
+      handler: (payload: T) => void
+    ): void => {
       on<T>(event, (payload) => {
-        if (fromTeacher(event)) handler(payload);
+        const classId = classOf(payload);
+        teachesClass(classId)
+          .then((allowed) => {
+            if (allowed) {
+              handler(payload);
+              return;
+            }
+            const user = socket.data.user as SocketUser | undefined;
+            console.warn(
+              `Refusing teacher-only "${event}" for class ${String(classId)} from socket ${socket.id} (${user?.email ?? 'no session'}).`
+            );
+          })
+          .catch((err) => {
+            console.error(`Socket handler "${event}" failed; dropping this message:`, err);
+          });
       });
     };
 
@@ -445,8 +467,9 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       socket.to(student.room).emit('checkboxUpdated', { interview_number, checked });
     });
 
-    onTeacher(
+    onTeacher<SocketEvents['sendPopupToGroups']>(
       'sendPopupToGroups',
+      (payload) => payload.class,
       ({
         groups,
         headline,
@@ -454,8 +477,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
         class: classId,
         candidateId,
       }: SocketEvents['sendPopupToGroups']) => {
-        // Without a class, these group numbers matched groups in every section.
-        if (!groups || groups.length === 0 || !classId) return;
+        if (!groups || groups.length === 0) return;
 
         const query =
           "SELECT email FROM Users WHERE group_id IN (?) AND class = ? AND affiliation = 'student'";
@@ -476,8 +498,9 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       }
     );
 
-    onTeacher(
+    onTeacher<SocketEvents['updateRatingsWithPresetBackend']>(
       'updateRatingsWithPresetBackend',
+      (payload) => payload.classId,
       ({
         classId,
         groupId,
@@ -525,8 +548,9 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       }
     );
 
-    onTeacher(
+    onTeacher<SocketEvents['makeOfferResponse']>(
       'makeOfferResponse',
+      (payload) => payload.classId,
       ({ classId, groupId, candidateId, accepted }: SocketEvents['makeOfferResponse']) => {
         // The group hears the decision; the class's advisors hear it so their
         // own pending-offer views update. Nobody else.
