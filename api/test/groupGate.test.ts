@@ -97,6 +97,11 @@ describe('GET /interview/group-size', () => {
   });
 });
 
+// Student 8 in group 3 of class 42, as the session has them.
+const student8 = { id: 8, group_id: 3, class: 42 };
+const finishReq = (body: Row = { finished: true }) =>
+  ({ body, user: student8 }) as unknown as AuthRequest;
+
 describe('interview finished count', () => {
   it('counts only present members, so the count cannot pass the total', async () => {
     // 10 is on the roster and finished on some earlier visit but is not
@@ -104,8 +109,7 @@ describe('interview finished count', () => {
     const { db, calls } = fakeDb({ present: [8, 9], roster: [8, 9, 10], finished: [7, 8, 10] });
     const { io, emits } = fakeIo();
     const { res } = fakeRes();
-    const body = { student_id: 8, finished: true, group_id: 3, class: 42 };
-    await new InterviewController(db, io).updateFinishedStatus({ body } as AuthRequest, res);
+    await new InterviewController(db, io).updateFinishedStatus(finishReq(), res);
 
     expect(emits).toEqual([
       {
@@ -132,10 +136,67 @@ describe('interview finished count', () => {
     const { db, calls } = fakeDb({});
     const { io, emits } = fakeIo();
     const { res } = fakeRes();
-    const body = { student_id: 8, finished: true, group_id: 3, class: 42 };
-    await new InterviewController(db, io).updateFinishedStatus({ body } as AuthRequest, res);
+    await new InterviewController(db, io).updateFinishedStatus(finishReq(), res);
     expect(emits[0].payload).toEqual({ count: 0, total: 0 });
     expect(calls.some((c) => c.sql.includes('finishedCount'))).toBe(false);
+  });
+});
+
+describe('interview writes take the student from the session', () => {
+  // The body used to name the student, group and class, so a student could
+  // file a finish or a rating under a classmate.
+  const classmate = { student_id: 9, group_id: 5, class: 77, studentClass: 77 };
+
+  it('records the finish for the session student, not the one in the body', async () => {
+    const { db, calls } = fakeDb({ present: [8, 9] });
+    const { io, emits } = fakeIo();
+    const { res } = fakeRes();
+    await new InterviewController(db, io).updateFinishedStatus(
+      finishReq({ ...classmate, finished: true }),
+      res
+    );
+    const insert = calls.find((c) => c.sql.includes('INSERT INTO Interview_Status'))!;
+    expect(insert.params).toEqual([8, true, 3, 42]);
+    expect(emits[0].room).toBe('group_3_class_42');
+  });
+
+  it('saves ratings under the session student, group and class', async () => {
+    const { db, calls } = fakeDb({});
+    const { res, out } = fakeRes();
+    const vote = {
+      ...classmate,
+      question1: 7,
+      question2: 6,
+      question3: 5,
+      question4: 4,
+      candidate_id: 11,
+    };
+    const req = { body: { votes: [vote] }, user: student8 } as unknown as AuthRequest;
+    await new InterviewController(db, fakeIo().io).batchVote(req, res);
+    const insert = calls.find((c) => c.sql.includes('INSERT INTO InterviewPage'))!;
+    expect(insert.params).toEqual([[[8, 3, 42, 7, 6, 5, 4, 11]]]);
+    // A student moved between groups keeps one row per candidate; it has to
+    // follow them or the new group never sees the rating.
+    expect(insert.sql).toMatch(/group_id = VALUES\(group_id\)/);
+    expect(out.status).toBe(200);
+  });
+
+  it('refuses a caller with no group instead of writing a row', async () => {
+    const { db, calls } = fakeDb({});
+    const { res, out } = fakeRes();
+    const req = { body: { finished: true }, user: { id: 1 } } as unknown as AuthRequest;
+    await new InterviewController(db, fakeIo().io).updateFinishedStatus(req, res);
+    expect(out.status).toBe(409);
+    expect(calls).toEqual([]);
+  });
+
+  it("lists only the caller's own ratings in their current group", async () => {
+    const { db, calls } = fakeDb({});
+    const { res } = fakeRes();
+    const req = { user: student8 } as unknown as AuthRequest;
+    await new InterviewController(db, fakeIo().io).getMyVotes(req, res);
+    expect(calls[0].sql).toMatch(/student_id = \? AND group_id = \? AND class = \?/);
+    expect(calls[0].params).toEqual([8, 3, 42]);
   });
 });
 
