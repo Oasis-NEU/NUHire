@@ -1,5 +1,7 @@
 // src/models/SocketEvents.ts
 
+import type { DbBool } from './DbBool';
+
 // What the server reads from each client event. Student events carry no group,
 // class or student id: the server takes those from the sender's login, and
 // anything else the browser sends is ignored.
@@ -13,7 +15,8 @@ export interface SocketEvents {
   // Checkbox events
   check: {
     resume_number: number;
-    checked: boolean;
+    // Written straight into `Resume.checked`; res-review-group sends 1 or 0.
+    checked: DbBool;
   };
   checkint: {
     interview_number: number;
