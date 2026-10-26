@@ -1,5 +1,5 @@
 // ============================================
-// src/controllers/auth.controller.ts
+// src/controller/auth.controller.ts
 // ============================================
 
 import { Response, NextFunction } from 'express';

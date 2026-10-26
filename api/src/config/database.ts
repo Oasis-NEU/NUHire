@@ -1,11 +1,11 @@
 // src/config/database.ts
 //
 // SINGLE REPLICA ONLY (API-1). This API cannot be scaled horizontally:
-// config/socket.ts keeps `onlineStudents` and the "has every group member
-// finished" barrier in plain process memory, and Socket.IO is running without a
-// room adapter. Run two replicas and a group's students land on different
-// processes, each of which sees only part of the group, so the group NEVER
-// reaches its completion count and is stuck mid-class with no way out. The pool
+// config/socket.ts keeps `onlineStudents` in process memory, and Socket.IO is
+// running without a room adapter. Run two replicas and a group's students land
+// on different processes, so an emit to the group's room reaches only the
+// students connected to the process that sent it. The barrier itself is in
+// Step_Completion and is not the problem. The pool
 // sizing below is also per-process, so N replicas open N * DB_POOL_SIZE
 // connections against the same MySQL server.
 //

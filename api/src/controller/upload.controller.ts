@@ -1,4 +1,4 @@
-// src/controllers/upload.controller.ts
+// src/controller/upload.controller.ts
 
 import { Response } from 'express';
 import path from 'path';
