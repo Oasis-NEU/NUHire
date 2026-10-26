@@ -7,6 +7,7 @@ import NavbarAdmin from '../components/navbar-admin'; // Importing the admin nav
 import Slideshow from '../components/slideshow'; // Importing slideshow component for background
 import { useSocket } from '../components/socketContext'; // Importing custom hook to use socket context
 import { useAuth } from '../components/AuthContext'; // Importing custom hook to use authentication context
+import { PageLoader } from '../components/spinner';
 
 const Dashboard = () => {
   const router = useRouter();
@@ -25,14 +26,7 @@ const Dashboard = () => {
   }, [socket, user?.email]);
 
   if (userloading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-sand">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Loading...</h2>
-          <div className="w-16 h-16 border-t-4 border-navy border-solid rounded-full animate-spin mx-auto"></div>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (!user || user.affiliation !== 'admin') {

@@ -1,5 +1,5 @@
 // ============================================
-// src/controllers/resume.controller.ts
+// src/controller/resume.controller.ts
 // ============================================
 
 import { Response } from 'express';
@@ -13,16 +13,6 @@ export class ResumeController {
     private db: Pool,
     private io: any
   ) {}
-
-  getAllResumes = (req: AuthRequest, res: Response): void => {
-    this.db.query('SELECT * FROM Resume', (err, results) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json(results);
-    });
-  };
 
   getFinishedCount = (req: AuthRequest, res: Response): void => {
     const { group_id, class_id } = req.params;
@@ -121,17 +111,6 @@ export class ResumeController {
     });
   };
 
-  deleteResumeByStudent = (req: AuthRequest, res: Response): void => {
-    const { student_id } = req.params;
-    this.db.query('DELETE FROM Resume WHERE student_id = ?', [student_id], (err) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ message: 'Resume deleted successfully' });
-    });
-  };
-
   getResumesByGroup = (req: AuthRequest, res: Response): void => {
     const { group_id } = req.params;
     const { class: studentClass } = req.query;
@@ -161,21 +140,6 @@ export class ResumeController {
 
       res.json(votes); // Return ALL votes, not merged
     });
-  };
-
-  getCheckedResumes = (req: AuthRequest, res: Response): void => {
-    const { group_id } = req.params;
-    this.db.query(
-      'SELECT vote, resume_number FROM Resume WHERE group_id = ? AND checked = 1',
-      [group_id],
-      (err, results) => {
-        if (err) {
-          res.status(500).json({ error: err.message });
-          return;
-        }
-        res.json(results);
-      }
-    );
   };
 
   getAllResumePdfs = (req: AuthRequest, res: Response): void => {
@@ -408,7 +372,7 @@ export class ResumeController {
     }
 
     try {
-      // Insert all votes in a single transaction
+      // Insert all votes in one multi-row INSERT
       const values = votes.map((vote) => [
         vote.student_id,
         vote.group_id,

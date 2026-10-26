@@ -8,6 +8,7 @@ import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { pdfSource } from '../../lib/pdfSource';
+import { dropOtherUsersKeys, userScope } from '../../lib/userStorage';
 import Footer from '../components/footer';
 import Popup from '../components/popup';
 import { usePathname } from 'next/navigation';
@@ -16,6 +17,7 @@ import { useProgressManager } from '../components/progress';
 import { useSocket } from '../components/socketContext';
 import Facts from '../components/facts';
 import { useAuth } from '../components/AuthContext';
+import { PageLoader, Spinner } from '../components/spinner';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -49,9 +51,8 @@ type SavedDecision = {
 const STORAGE_PREFIX = 'resumeReview';
 
 const storageKeys = (userId: string) => {
-  const scope = `${STORAGE_PREFIX}:${userId}:`;
+  const scope = userScope(STORAGE_PREFIX, userId);
   return {
-    scope,
     index: `${scope}index`,
     accepted: `${scope}accepted`,
     rejected: `${scope}rejected`,
@@ -69,19 +70,6 @@ const clearSavedProgress = (userId: string) => {
   [keys.index, keys.accepted, keys.rejected, keys.noResponse].forEach((key) =>
     localStorage.removeItem(key)
   );
-};
-
-// Removes this page's keys for any other user, and the legacy unscoped keys
-// from before scoping existed, so nothing left behind by a previous login on
-// this browser can be mistaken for the current student's progress.
-const dropForeignProgress = (userId: string) => {
-  const own = storageKeys(userId).scope;
-  for (let i = localStorage.length - 1; i >= 0; i -= 1) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith(STORAGE_PREFIX) && !key.startsWith(own)) {
-      localStorage.removeItem(key);
-    }
-  }
 };
 
 export default function ResumesPage() {
@@ -249,7 +237,7 @@ export default function ResumesPage() {
 
     // Another student's counters must never seed this one. Before this, a
     // shared lab browser carried the previous student's 10/10 across logins.
-    dropForeignProgress(userId);
+    dropOtherUsersKeys(STORAGE_PREFIX, userId);
 
     const savedIndex = localStorage.getItem(keys.index);
     const savedAccepted = localStorage.getItem(keys.accepted);
@@ -895,14 +883,7 @@ export default function ResumesPage() {
   }, [jobDescPath]);
 
   if (userloading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-sand">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Loading...</h2>
-          <div className="w-16 h-16 border-t-4 border-navy border-solid rounded-full animate-spin mx-auto"></div>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -1162,7 +1143,7 @@ export default function ResumesPage() {
                   <br />
                   Waiting for other group members to finish...
                 </p>
-                <div className="w-16 h-16 border-t-4 border-navy border-solid rounded-full animate-spin mx-auto mb-4"></div>
+                <Spinner className="mb-4" />
                 <Facts />
               </div>
             )}

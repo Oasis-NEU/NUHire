@@ -1,5 +1,5 @@
 // ============================================
-// src/controllers/candidate.controller.ts
+// src/controller/candidate.controller.ts
 // ============================================
 
 import { Response } from 'express';

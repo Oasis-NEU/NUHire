@@ -84,6 +84,7 @@ verified; the detail is in git history.
 | `UI-3`                 | stray literal 't' removed from the notes textarea                                                                                                                             |
 | `UI-8`                 | pending-offers and sendpopups deleted, 1,106 unreachable lines                                                                                                                |
 | `TCH-10`               | pending-offers deleted; ManageGroupsTab is the one implementation                                                                                                             |
+| `STU-12`               | the interview stage saves each rating as it is submitted, resumes at the first candidate the server has no rating for, and per-user keys stop a lab browser leaking position  |
 
 Also landed, previously untracked:
 
@@ -544,12 +545,6 @@ while loading, so a failed PDF locks the student out entirely.
 
 - [ ] Timeout always advances; PDF failure shows a message with working Skip and Retry
 - [ ] Test: block the PDF URL in devtools, confirm the student can finish
-
-**STU-12 [MED] 5h — Give the interview stage crash-resistance**
-Persists `videoIndex` but not the votes array, and only POSTs on the last
-interview. Refresh at candidate 3 of 4 and exactly one rating reaches the DB, but
-the student is **still marked finished**, so nothing looks wrong. `makeOffer` then
-shows the group wrong averages to decide on.
 
 **STU-13 [MED] 5h — Handle a YouTube video that does not load**
 Submit is disabled on `!videoLoaded`, set only by the iframe's `onLoad`. Region

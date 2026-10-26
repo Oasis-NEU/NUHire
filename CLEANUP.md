@@ -63,7 +63,7 @@ symbol names over the numbers.
 | `CU-7`  | The shortlist checkbox is typed boolean but carries 0 or 1   | GFI   | 2h  |
 | `CU-8`  | A student who misses the release event stays stuck           | MED   | 4h  |
 | `CU-9`  | 33 error paths still send raw MySQL text to the browser      | GFI   | 3h  |
-| `CU-10` | The next student on a lab machine inherits interview state   | MED   | 3h  |
+| `CU-10` | The next student on a lab machine inherits Make Offer state  | MED   | 2h  |
 | `CU-11` | Login failures show nothing                                  | GFI   | 2h  |
 | `CU-12` | A duplicate job title says "uploaded successfully"           | GFI   | 1h  |
 
@@ -506,46 +506,43 @@ moderator 8, progress 7, resume 7, offer 4, job 3, user 3, group 1.
 
 ---
 
-## CU-10 — The next student on a lab machine inherits interview state
+## CU-10 — The next student on a lab machine inherits Make Offer state
 
-**MED · 3h · `frontend/src/app/interview-stage/page.tsx`, `frontend/src/app/makeOffer/page.tsx`**
+**MED · 2h · `frontend/src/app/makeOffer/page.tsx`**
 
 ### What & why
 
-`res-review` scopes every `localStorage` key by user id, because a second
-student on the same lab machine used to inherit the first one's counters. The
-interview and offer pages still use shared keys. On a shared machine the next
-student opens the interview stage at the previous student's video with their
-sliders, or opens Make Offer with the previous student's selections and offer
-state.
+`res-review` and the interview stage scope every `localStorage` key by user id,
+because a second student on the same lab machine used to inherit the first
+one's progress. Make Offer still uses shared keys, so on a shared machine the
+next student opens it with the previous student's selections and offer state.
 
 ### Evidence
 
 ```
-frontend/src/app/interview-stage/page.tsx:191-197  localStorage.getItem('interviewStage_videoIndex') ...
-frontend/src/app/makeOffer/page.tsx:185-189        localStorage.getItem('makeOffer_existingOffer') ...
-frontend/src/app/res-review/page.tsx:43-52         the per-user version, with the reason
+frontend/src/app/makeOffer/page.tsx:183-192                 localStorage.getItem('makeOffer_existingOffer') ...
+frontend/src/app/components/useInterviewProgress.tsx:8-21   the per-user version
+frontend/src/lib/userStorage.ts                             the shared helpers, with the reason
 ```
 
 ```bash
-grep -rn "localStorage.getItem('interviewStage_\|localStorage.getItem('makeOffer_" frontend/src
+grep -rn "localStorage.getItem('makeOffer_" frontend/src
 ```
 
 ### For an agent
 
-- Copy the `storageKeys(userId)` pattern from `res-review`. Read nothing until
-  `user` has loaded.
-- Drop keys that belong to another user on load, as `res-review` does.
-- `STU-12` (interview crash resistance) touches the same keys. If someone has
-  it, fold this in there.
+- Build the keys with `userScope` from `lib/userStorage.ts`, as
+  `useInterviewProgress` does. Read nothing until `user` has loaded.
+- Call `dropOtherUsersKeys` on load so keys left by another user are removed.
 - `localStorage.setItem('progress', ...)` is a different problem (`STU-16`).
   Leave it.
 
 ### Done when
 
-- [ ] Every `interviewStage_*` and `makeOffer_*` key includes the user id
-- [ ] Log in as student A, rate two interviews, log out, log in as B on the
-      same browser: B starts at the first interview
+- [x] Every `interviewStage_*` key includes the user id
+- [ ] Every `makeOffer_*` key includes the user id
+- [ ] Log in as student A, select a candidate in Make Offer, log out, log in as
+      B on the same browser: B sees no selection
 
 ---
 
@@ -1205,7 +1202,7 @@ grep -rn "https://nuhire-api" frontend/src
 
 ### What & why
 
-Two pages use axios for seven calls; the other twenty files use `fetch`. Both
+Two pages use axios for five calls; the other twenty files use `fetch`. Both
 of those pages use `fetch` too. One HTTP client means one way to send
 credentials and one way to read an error.
 
@@ -1215,8 +1212,8 @@ credentials and one way to read an error.
 grep -rn "axios" frontend/src
 ```
 
-`interview-stage:149, 279, 302, 424, 652, 666` and `makeOffer:265`. The call at
-`:302` is split across two lines.
+`interview-stage:145, 226, 249, 355` and `makeOffer:271`. The call at `:249`
+is split across two lines.
 
 ### For an agent
 
@@ -1292,7 +1289,7 @@ assignment twice in one file.
 grep -rn "jobs/assignment" frontend/src/app
 ```
 
-`jobdes:155`, `interview-stage:124`, `res-review:214`, `res-review-group:112`,
+`jobdes:155`, `interview-stage:120`, `res-review:201`, `res-review-group:112`,
 `dashboard:83` and `:112`.
 
 ### For an agent
@@ -1344,8 +1341,8 @@ it. These are wrong today.
 
 ### Done when
 
-- [ ] Every item above is fixed
-- [ ] `git diff` shows comment and string changes only
+- [x] Every item above is fixed
+- [x] `git diff` shows comment and string changes only
 
 ---
 
