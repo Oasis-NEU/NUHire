@@ -315,26 +315,33 @@ of the existing code does not look like this yet; do not copy it.
 
 ## Verifying a change
 
-There are no automated tests yet, so verification is manual and you are expected
-to actually do it, not assume:
+Both packages have vitest suites, `api/test/` and the `*.test.ts` files beside
+the code in `frontend/src/`. CI runs them along with the typecheck, build,
+Prettier, and ESLint and cspell on changed files, so run the same before you
+push:
 
 ```
 cd api && npx tsc --noEmit
 cd frontend && npx tsc --noEmit
 npm run build
+npm test --prefix api
+npm test --prefix frontend
+npm run format:check
 ```
 
-Then walk the affected flow against the local stack. Test accounts are in
+The tests cover pure logic and controllers against a fake pool, not the browser,
+so verification is still partly manual and you are expected to actually do it,
+not assume. Walk the affected flow against the local stack. Test accounts are in
 `.local/README.md`; password is `nuhire` for all of them. Anything touching
-groups, barriers, or sockets needs **two browser sessions in the same group**, or
-you have not tested it. The built-in accounts only go as far as three students;
-`npm run seed` builds a 30-student class when you need the real size, and
-`npm run load` walks that whole class through the activity at once, which is
+groups, barriers, or sockets needs **two browser sessions in the same group**,
+or you have not tested it. The built-in accounts only go as far as three
+students; `npm run seed` builds a 30-student class when you need the real size,
+and `npm run load` walks that whole class through the activity at once, which is
 the check for barrier and socket changes (see `.local/tests/README.md`).
 
 ## Before you open a PR
 
-- [ ] Both packages typecheck and build
+- [ ] Both packages typecheck, build and pass `npm test`
 - [ ] You walked the affected flow locally
 - [ ] Group or socket changes tested with two sessions in one group
 - [ ] No new `console.log`, no new `any`, no new env var missing from `.env.example`
