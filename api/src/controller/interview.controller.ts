@@ -8,6 +8,17 @@ import { Pool, RowDataPacket } from 'mysql2';
 import { dbErrorStatus } from '../config/database';
 import { gateMemberIds } from '../config/socket';
 
+type SessionStudent = { id: number; groupId: number; classId: number };
+
+// Who a rating or a finish belongs to, from the session rather than the request
+// body, so a student cannot file one under a classmate. requireStep already
+// refuses a student with no group; an admin skips that check and has none.
+const sessionStudent = (req: AuthRequest): SessionStudent | null => {
+  const user = req.user;
+  if (!user?.group_id || !user.class) return null;
+  return { id: user.id, groupId: user.group_id, classId: user.class };
+};
+
 export class InterviewController {
   constructor(
     private db: Pool,
@@ -114,17 +125,19 @@ export class InterviewController {
   }
 
   updateFinishedStatus = async (req: AuthRequest, res: Response): Promise<void> => {
-    const { student_id, finished, group_id, class: class_id } = req.body;
+    const { finished } = req.body;
 
-    if (
-      typeof student_id === 'undefined' ||
-      typeof finished === 'undefined' ||
-      typeof group_id === 'undefined' ||
-      typeof class_id === 'undefined'
-    ) {
-      res.status(400).json({ error: 'student_id, finished, group_id, and class are required' });
+    if (typeof finished === 'undefined') {
+      res.status(400).json({ error: 'finished is required' });
       return;
     }
+
+    const student = sessionStudent(req);
+    if (!student) {
+      res.status(409).json({ error: 'You are not assigned to a group yet' });
+      return;
+    }
+    const { id, groupId, classId } = student;
 
     try {
       const promiseDb = this.db.promise();
@@ -132,12 +145,12 @@ export class InterviewController {
         `INSERT INTO Interview_Status (student_id, finished, group_id, class)
          VALUES (?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE finished = VALUES(finished), group_id = VALUES(group_id), class = VALUES(class)`,
-        [student_id, !!finished, group_id, class_id]
+        [id, !!finished, groupId, classId]
       );
-      const { count, total } = await this.interviewProgress(class_id, group_id);
+      const { count, total } = await this.interviewProgress(classId, groupId);
 
       this.io
-        .to(`group_${group_id}_class_${class_id}`)
+        .to(`group_${groupId}_class_${classId}`)
         .emit('interviewStatusUpdated', { count, total });
       res.json({ success: true });
     } catch (err) {
@@ -229,45 +242,68 @@ export class InterviewController {
       return;
     }
 
+    const student = sessionStudent(req);
+    if (!student) {
+      res.status(409).json({ error: 'You are not assigned to a group yet' });
+      return;
+    }
+
+    // Insert all votes in one multi-row INSERT
+    const values = votes.map((vote) => [
+      student.id,
+      student.groupId,
+      student.classId,
+      vote.question1,
+      vote.question2,
+      vote.question3,
+      vote.question4,
+      vote.candidate_id,
+    ]);
+
+    // The unique key is (student_id, candidate_id), so a student moved to
+    // another group updates their old row. Moving group_id and class with it
+    // keeps the rating visible to the group they are in now.
+    const query = `
+      INSERT INTO InterviewPage (student_id, group_id, class, question1, question2, question3, question4, candidate_id)
+      VALUES ?
+      ON DUPLICATE KEY UPDATE
+        group_id = VALUES(group_id),
+        class = VALUES(class),
+        question1 = VALUES(question1),
+        question2 = VALUES(question2),
+        question3 = VALUES(question3),
+        question4 = VALUES(question4)
+    `;
+
     try {
-      // Insert all votes in one multi-row INSERT
-      const values = votes.map((vote) => [
-        vote.student_id,
-        vote.group_id,
-        vote.studentClass,
-        vote.question1,
-        vote.question2,
-        vote.question3,
-        vote.question4,
-        vote.candidate_id,
-      ]);
+      await this.db.promise().query(query, [values]);
+      res.json({ success: true, votesCount: votes.length });
+    } catch (err) {
+      console.error('Error saving batch interview votes:', err, 'Values:', values);
+      res.status(dbErrorStatus(err)).json({ error: 'Failed to save votes' });
+    }
+  };
 
-      const query = `
-        INSERT INTO InterviewPage (student_id, group_id, class, question1, question2, question3, question4, candidate_id)
-        VALUES ?
-        ON DUPLICATE KEY UPDATE
-          question1 = VALUES(question1),
-          question2 = VALUES(question2),
-          question3 = VALUES(question3),
-          question4 = VALUES(question4)
-      `;
+  // The candidates the caller has rated in their current group, so the
+  // interview page resumes at the first one they have not.
+  getMyVotes = async (req: AuthRequest, res: Response): Promise<void> => {
+    const student = sessionStudent(req);
+    if (!student) {
+      res.status(409).json({ error: 'You are not assigned to a group yet' });
+      return;
+    }
 
-      this.db.query(query, [values], (err) => {
-        if (err) {
-          // `details` put the raw MySQL message, table and column names into
-          // the response body. The same information is still logged here.
-          console.error('Error saving batch interview votes:', err);
-          console.error('SQL:', query);
-          console.error('Values:', values);
-          res.status(dbErrorStatus(err)).json({ error: 'Failed to save votes' });
-          return;
-        }
-
-        res.json({ success: true, votesCount: votes.length });
-      });
-    } catch (error) {
-      console.error('Error in batchVote:', error);
-      res.status(500).json({ error: 'Internal server error' });
+    try {
+      const [rows] = await this.db
+        .promise()
+        .query<RowDataPacket[]>(
+          'SELECT candidate_id FROM InterviewPage WHERE student_id = ? AND group_id = ? AND class = ?',
+          [student.id, student.groupId, student.classId]
+        );
+      res.json(rows);
+    } catch (err) {
+      console.error('Error fetching own interview votes:', err);
+      res.status(dbErrorStatus(err)).json({ error: 'Failed to load your saved ratings' });
     }
   };
 }
