@@ -299,6 +299,9 @@ of the existing code does not look like this yet; do not copy it.
   No axios. Read the base URL from one module, not a new `const` per file.
 - **The second copy becomes a hook.** If you are about to paste an effect from
   another page, move it to `frontend/src/app/components/` and use it from both.
+- **Saved progress is per user.** Lab browsers are shared, so a `localStorage`
+  key a student page saves progress under is built with `userScope` from
+  `lib/userStorage.ts`, and the page calls `dropOtherUsersKeys` on load.
 - **A failure the user depends on shows up on screen.** A `catch` that only
   logs leaves a student staring at an empty page. Use the existing `Popup`.
 - **Keep files small.** Aim for under 300 lines. Do not grow a file that is
