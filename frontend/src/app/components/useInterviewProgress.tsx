@@ -123,14 +123,15 @@ export const useInterviewProgress = (
 
   const currentVid = interviews[videoIndex];
 
-  // Save candidate ID whenever video changes
+  // currentCandidateId records which candidate the saved slider values belong
+  // to. When the restored position lands on a different candidate, the values
+  // were given to another candidate and are reset below.
   useEffect(() => {
     if (currentVid) {
       setCurrentCandidateId(currentVid.resume_id);
     }
   }, [currentVid]);
 
-  // Verify ratings match current candidate after interviews load
   useEffect(() => {
     if (interviews.length > 0 && currentCandidateId !== null) {
       const currentVideoCandidate = interviews[videoIndex]?.resume_id;
@@ -143,7 +144,6 @@ export const useInterviewProgress = (
     }
   }, [interviews, videoIndex, currentCandidateId]);
 
-  // Reset all ratings
   const resetRatings = () => {
     setOverall(5);
     setProfessionalPresence(5);
