@@ -3,6 +3,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Pool, ResultSetHeader, RowDataPacket } from 'mysql2';
 import { SocketEvents } from '../models/SocketEvents';
+import { isAdmin } from '../models/User';
 import { BarrierStatus, PresentMember, StepCompletion } from '../models/Barrier';
 
 // Advisors join a room named after their own email (see 'adminOnline' below),
@@ -296,7 +297,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       const user = socket.data.user as SocketUser | undefined;
       if (!user) return true;
       // Advisors move between groups to help them; that is the job.
-      if (user.affiliation === 'admin') return true;
+      if (isAdmin(user)) return true;
 
       const ownRoom = `group_${user.group_id}_class_${user.class}`;
       if (room === ownRoom || room === String(user.group_id) || room === `class_${user.class}`) {
@@ -404,7 +405,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       // This room receives offer requests and every group's progress, so
       // joining it by sending someone else's address was a way to watch a whole
       // class. Trust the session over the payload where there is one.
-      if (user && (user.affiliation !== 'admin' || adminEmail !== user.email)) {
+      if (user && (!isAdmin(user) || adminEmail !== user.email)) {
         console.warn(`Socket ${socket.id} (${user.email}) tried to join admin room ${adminEmail}.`);
         return;
       }
