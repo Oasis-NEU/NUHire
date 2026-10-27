@@ -1,11 +1,11 @@
 // ============================================
-// src/controllers/auth.controller.ts
+// src/controller/auth.controller.ts
 // ============================================
 
 import { Response, NextFunction } from 'express';
 import passport from 'passport';
 import { AuthRequest } from '../models/AuthRequest';
-import { User } from '../models/User';
+import { User, isAdmin } from '../models/User';
 import { Pool, RowDataPacket } from 'mysql2';
 
 // Pre-fills the signup form for someone who is not set up yet.
@@ -33,7 +33,7 @@ export async function postLoginPath(
 
   const fullName = encodeURIComponent(`${dbUser.f_name || ''} ${dbUser.l_name || ''}`.trim());
 
-  if (dbUser.affiliation === 'admin') return `/advisor-dashboard?name=${fullName}`;
+  if (isAdmin(dbUser)) return `/advisor-dashboard?name=${fullName}`;
   if (!dbUser.f_name || !dbUser.l_name || dbUser.affiliation === 'none') return signupPath;
 
   try {

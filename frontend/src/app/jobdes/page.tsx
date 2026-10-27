@@ -143,7 +143,6 @@ export default function JobDescriptionPage() {
     };
   }, [socket]);
 
-  // Update your fetchJob useEffect in jobdes/page.tsx
   useEffect(() => {
     const fetchJob = async () => {
       if (!user?.group_id || !user?.class) {

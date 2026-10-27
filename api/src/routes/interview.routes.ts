@@ -28,6 +28,12 @@ export default (db: Pool, io: SocketIOServer): Router => {
     requireStep(db, 'interview'),
     interviewController.batchVote
   );
+  router.get(
+    '/my-votes',
+    requireAuth,
+    requireStep(db, 'interview'),
+    interviewController.getMyVotes
+  );
 
   return router;
 };

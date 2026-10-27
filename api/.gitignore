@@ -44,3 +44,6 @@ next-env.d.ts
 
 # certs
 /certs
+
+# Prisma client, generated from prisma/schema.prisma by `npm run build`
+/src/generated/

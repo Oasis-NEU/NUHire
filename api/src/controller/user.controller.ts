@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
+import { isAdmin } from '../models/User';
 import { Pool, RowDataPacket } from 'mysql2';
 import { emitToClassModerators, markPresent } from '../config/socket';
 
@@ -191,7 +192,7 @@ export class UserController {
 
       const { email, class: classId } = req.body;
 
-      if (req.user?.email !== email && req.user?.affiliation !== 'admin') {
+      if (req.user?.email !== email && !isAdmin(req.user)) {
         res.status(403).json({ message: 'Forbidden: You can only update your own profile' });
         return;
       }

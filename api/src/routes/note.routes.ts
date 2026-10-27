@@ -1,12 +1,12 @@
 // src/routes/note.routes.ts
 import { Router } from 'express';
-import { Pool } from 'mysql2';
+import { PrismaDb } from '../config/database';
 import { NoteController } from '../controller/note.controller';
 import { requireAuth } from '../middleware/auth.middleware';
 
-export default (db: Pool): Router => {
+export default (prisma: PrismaDb): Router => {
   const router = Router();
-  const noteController = new NoteController(db);
+  const noteController = new NoteController(prisma);
 
   router.get('/', requireAuth, noteController.getNotes);
   router.post('/', requireAuth, noteController.createNote);

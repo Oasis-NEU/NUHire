@@ -110,8 +110,8 @@ request unanswered after 10s, no stuck student, class-start burst under 2s.
 `npm run load -- --restart` also crashes the API for 5s halfway through resume
 review.
 
-Set `SOCKET_AUTH_REQUIRED=true` in `api/.env` and recreate `api` first; the
-report says which mode it saw.
+`SOCKET_AUTH_REQUIRED` is on by default; an `api/.env` copied from an older
+example may still set it to `false`. The report says which mode it saw.
 
 Each method in `load-tests/student.mjs` copies one page's requests and socket
 events, bugs included. When a page changes, change its method. `journey.mjs`

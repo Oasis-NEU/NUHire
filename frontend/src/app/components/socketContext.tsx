@@ -16,7 +16,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       // origin from this app (separate hosts in deploy, different ports
       // locally), and a cross-origin handshake sends no cookie unless asked.
       // Without this every socket arrives anonymous, the room checks cannot
-      // police it, and SOCKET_AUTH_REQUIRED would disconnect the whole class.
+      // police it, and the API refuses a socket with no login.
       withCredentials: true,
       reconnection: true,
       // Five attempts at one second apart meant a student on bad campus wifi
@@ -29,9 +29,21 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       transports: ['websocket', 'polling'],
     });
 
+    // socket.io retries a dropped connection but not one the API refused, and
+    // the API refuses a socket whose login it cannot find. Keep retrying that
+    // too, slowly, so a student whose login comes back is never left on a page
+    // that has silently stopped hearing their group.
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    newSocket.on('connect_error', () => {
+      if (newSocket.active) return;
+      clearTimeout(retry);
+      retry = setTimeout(() => newSocket.connect(), 10000);
+    });
+
     setSocket(newSocket);
 
     return () => {
+      clearTimeout(retry);
       newSocket.disconnect();
     };
   }, []);

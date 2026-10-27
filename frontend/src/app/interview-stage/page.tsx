@@ -12,15 +12,15 @@ import Popup from '../components/popup';
 import axios from 'axios';
 import { useAuth } from '../components/AuthContext';
 import { useProgressManager } from '../components/progress';
+import { useInterviewProgress } from '../components/useInterviewProgress';
 import Facts from '../components/facts';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { Document, Page, pdfjs } from 'react-pdf';
+import { API_BASE_URL } from '../../lib/api';
 import { pdfSource } from '../../lib/pdfSource';
 import { PageLoader, Spinner } from '../components/spinner';
 import { CURVEBALL_COLUMN, NO_SHOW_SCORE, RATING_COLUMN, RATING_LABEL } from '../../lib/ratings';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -53,21 +53,7 @@ export default function Interview() {
   const [showInstructions, setShowInstructions] = useState(true);
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
   const pathname = usePathname();
-  const [noShow, setNoShow] = useState(false);
   const [donePopup, setDonePopup] = useState(false);
-
-  const [votes, setVotes] = useState<
-    {
-      student_id: string;
-      group_id: number;
-      studentClass: number;
-      question1: number;
-      question2: number;
-      question3: number;
-      question4: number;
-      candidate_id: number;
-    }[]
-  >([]);
 
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>('video');
@@ -77,17 +63,10 @@ export default function Interview() {
   const [resumeNumPages, setResumeNumPages] = useState<number | null>(null);
   const [resumePageNumber, setResumePageNumber] = useState(1);
 
-  // Rating states
-  const [overall, setOverall] = useState(5);
-  const [professionalPresence, setProfessionalPresence] = useState(5);
-  const [qualityOfAnswer, setQualityOfAnswer] = useState(5);
-  const [personality, setPersonality] = useState(5);
-
   // Video states
-  const [videoIndex, setVideoIndex] = useState(0);
   const [finished, setFinished] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
-  const [currentCandidateId, setCurrentCandidateId] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [videosLoading, setVideosLoading] = useState(true);
 
   const [interviews, setInterviews] = useState<
@@ -101,6 +80,23 @@ export default function Interview() {
       file_path?: string;
     }>
   >([]);
+  const {
+    videoIndex,
+    setVideoIndex,
+    allRated,
+    noShow,
+    setNoShow,
+    overall,
+    setOverall,
+    professionalPresence,
+    setProfessionalPresence,
+    qualityOfAnswer,
+    setQualityOfAnswer,
+    personality,
+    setPersonality,
+    resetRatings,
+    clearSavedProgress,
+  } = useInterviewProgress(user?.id, interviews);
 
   const interviewInstructions = [
     "Watch each candidate's interview video carefully.",
@@ -188,61 +184,12 @@ export default function Interview() {
     }
   };
 
-  useEffect(() => {
-    const savedVideoIndex = localStorage.getItem('interviewStage_videoIndex');
-    const savedCandidateId = localStorage.getItem('interviewStage_candidateId');
-    const savedOverall = localStorage.getItem('interviewStage_overall');
-    const savedProfessionalPresence = localStorage.getItem('interviewStage_professionalPresence');
-    const savedQualityOfAnswer = localStorage.getItem('interviewStage_qualityOfAnswer');
-    const savedPersonality = localStorage.getItem('interviewStage_personality');
-    const savedNoShow = localStorage.getItem('interviewStage_noShow');
-
-    if (savedVideoIndex) setVideoIndex(Number(savedVideoIndex));
-    if (savedCandidateId) setCurrentCandidateId(Number(savedCandidateId));
-    if (savedOverall) setOverall(Number(savedOverall));
-    if (savedProfessionalPresence) setProfessionalPresence(Number(savedProfessionalPresence));
-    if (savedQualityOfAnswer) setQualityOfAnswer(Number(savedQualityOfAnswer));
-    if (savedPersonality) setPersonality(Number(savedPersonality));
-    if (savedNoShow) setNoShow(savedNoShow === 'true');
-  }, []);
-
-  // Save state to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('interviewStage_videoIndex', String(videoIndex));
-  }, [videoIndex]);
-
-  useEffect(() => {
-    localStorage.setItem('interviewStage_overall', String(overall));
-  }, [overall]);
-
-  useEffect(() => {
-    localStorage.setItem('interviewStage_professionalPresence', String(professionalPresence));
-  }, [professionalPresence]);
-
-  useEffect(() => {
-    localStorage.setItem('interviewStage_qualityOfAnswer', String(qualityOfAnswer));
-  }, [qualityOfAnswer]);
-
-  useEffect(() => {
-    localStorage.setItem('interviewStage_personality', String(personality));
-  }, [personality]);
-
-  useEffect(() => {
-    localStorage.setItem('interviewStage_noShow', String(noShow));
-  }, [noShow]);
-
   // Clear state when finished
   useEffect(() => {
     if (finished) {
-      localStorage.removeItem('interviewStage_videoIndex');
-      localStorage.removeItem('interviewStage_candidateId');
-      localStorage.removeItem('interviewStage_overall');
-      localStorage.removeItem('interviewStage_professionalPresence');
-      localStorage.removeItem('interviewStage_qualityOfAnswer');
-      localStorage.removeItem('interviewStage_personality');
-      localStorage.removeItem('interviewStage_noShow');
+      clearSavedProgress();
     }
-  }, [finished]);
+  }, [finished, clearSavedProgress]);
 
   useEffect(() => {
     const handleShowInstructions = () => {
@@ -346,28 +293,6 @@ export default function Interview() {
   }, [user]);
 
   const currentVid = interviews[videoIndex];
-
-  // Save candidate ID whenever video changes
-  useEffect(() => {
-    if (currentVid) {
-      setCurrentCandidateId(currentVid.resume_id);
-      localStorage.setItem('interviewStage_candidateId', String(currentVid.resume_id));
-    }
-  }, [currentVid]);
-
-  // Verify ratings match current candidate after interviews load
-  useEffect(() => {
-    if (interviews.length > 0 && currentCandidateId !== null) {
-      const currentVideoCandidate = interviews[videoIndex]?.resume_id;
-
-      if (currentVideoCandidate !== currentCandidateId) {
-        resetRatings();
-        setNoShow(false);
-        setCurrentCandidateId(currentVideoCandidate);
-        localStorage.setItem('interviewStage_candidateId', String(currentVideoCandidate));
-      }
-    }
-  }, [interviews, videoIndex, currentCandidateId]);
 
   useEffect(() => {
     if (!socket || !user) return;
@@ -567,13 +492,7 @@ export default function Interview() {
     // Just update progress and navigate
     await updateProgress(user, 'offer');
     localStorage.setItem('progress', 'offer');
-    localStorage.removeItem('interviewStage_videoIndex');
-    localStorage.removeItem('interviewStage_candidateId');
-    localStorage.removeItem('interviewStage_overall');
-    localStorage.removeItem('interviewStage_professionalPresence');
-    localStorage.removeItem('interviewStage_qualityOfAnswer');
-    localStorage.removeItem('interviewStage_personality');
-    localStorage.removeItem('interviewStage_noShow');
+    clearSavedProgress();
     window.location.href = '/makeOffer';
     socket.emit('moveGroup', {
       groupId: user.group_id,
@@ -599,14 +518,6 @@ export default function Interview() {
     setPersonality(value);
   };
 
-  // Reset all ratings
-  const resetRatings = () => {
-    setOverall(5);
-    setProfessionalPresence(5);
-    setQualityOfAnswer(5);
-    setPersonality(5);
-  };
-
   const handleSubmit = async () => {
     if (!currentVid) {
       console.error('No current video selected');
@@ -618,85 +529,83 @@ export default function Interview() {
       return;
     }
 
-    // Add current vote to the queue
-    let updatedVotes;
-    if (noShow) {
-      const voteData = {
-        student_id: String(user!.id),
-        group_id: user!.group_id,
-        studentClass: user!.class,
-        question1: 1,
-        question2: 1,
-        question3: 1,
-        question4: 1,
-        candidate_id: currentVid.resume_id,
-      };
-      updatedVotes = [...votes, voteData];
-      setVotes(updatedVotes);
-    } else {
-      const voteData = {
-        student_id: String(user!.id),
-        group_id: user!.group_id,
-        studentClass: user!.class,
-        [RATING_COLUMN.overall]: overall,
-        [RATING_COLUMN.professionalPresence]: professionalPresence,
-        [RATING_COLUMN.qualityOfAnswer]: qualityOfAnswer,
-        [RATING_COLUMN.personality]: personality,
-        candidate_id: currentVid.resume_id,
-      };
-      updatedVotes = [...votes, voteData];
-      setVotes(updatedVotes);
+    if (submitting) return;
+    setSubmitting(true);
+
+    const voteData = noShow
+      ? {
+          question1: 1,
+          question2: 1,
+          question3: 1,
+          question4: 1,
+          candidate_id: currentVid.resume_id,
+        }
+      : {
+          [RATING_COLUMN.overall]: overall,
+          [RATING_COLUMN.professionalPresence]: professionalPresence,
+          [RATING_COLUMN.qualityOfAnswer]: qualityOfAnswer,
+          [RATING_COLUMN.personality]: personality,
+          candidate_id: currentVid.resume_id,
+        };
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/interview/batch-vote`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ votes: [voteData] }),
+      });
+      if (!res.ok) throw new Error(`Saving the rating failed with ${res.status}`);
+    } catch (err) {
+      console.error('Error saving interview vote:', err);
+      setPopup({
+        headline: 'Error Saving Ratings',
+        message: 'Failed to save your interview ratings. Please try again.',
+      });
+      setSubmitting(false);
+      return;
     }
 
     const nextVideoIndex = videoIndex + 1;
     const isLastInterview = nextVideoIndex >= interviews.length;
 
     if (!isLastInterview) {
-      // Not the last interview - just move to next video
       setVideoIndex(nextVideoIndex);
       setVideoLoaded(false);
       resetRatings();
       setNoShow(false);
     } else {
-      // This is the last interview - submit all votes to database
-      try {
-        const response = await axios.post(
-          `${API_BASE_URL}/interview/batch-vote`,
-          {
-            votes: updatedVotes,
-          },
-          { withCredentials: true }
-        );
+      await markFinished();
+    }
 
-        if (response.status !== 200) {
-          console.error('❌ [BATCH-INTERVIEW-VOTE] Error response from backend');
-          throw new Error('Failed to save interview votes');
-        }
+    setSubmitting(false);
+  };
 
-        // Mark as finished in the database
-        await axios.post(
-          `${API_BASE_URL}/interview/status/finished`,
-          {
-            student_id: user?.id,
-            finished: 1,
-            group_id: user?.group_id,
-            class: user?.class,
-          },
-          {
-            withCredentials: true,
-          }
-        );
+  const markFinished = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/interview/status/finished`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ finished: 1 }),
+      });
+      if (!res.ok) throw new Error(`Marking interviews finished failed with ${res.status}`);
 
-        setFinished(true);
-      } catch (err) {
-        console.error('❌ [BATCH-INTERVIEW-VOTE] Error saving votes:', err);
-        setPopup({
-          headline: 'Error Saving Ratings',
-          message: 'Failed to save your interview ratings. Please try again.',
-        });
-      }
+      setFinished(true);
+    } catch (err) {
+      console.error('Error marking interviews finished:', err);
+      setPopup({
+        headline: 'Error Saving Ratings',
+        message:
+          'Your ratings are saved, but marking you finished failed. Refresh the page to try again.',
+      });
     }
   };
+
+  // Every candidate is already rated, e.g. after a refresh once finished.
+  useEffect(() => {
+    if (allRated && !finished) markFinished();
+  }, [allRated, finished]);
 
   // Loading state
   if (userloading) {
@@ -947,9 +856,9 @@ export default function Interview() {
           {/* Submit button */}
           <button
             onClick={handleSubmit}
-            disabled={finished || !videoLoaded}
+            disabled={finished || !videoLoaded || submitting}
             className={`px-3 py-2 rounded-lg shadow-md transition duration-300 font-rubik text-xs mt-2 ${
-              finished || !videoLoaded
+              finished || !videoLoaded || submitting
                 ? 'bg-gray-400 text-white opacity-50 cursor-not-allowed'
                 : 'bg-blue-500 text-white hover:bg-blue-900'
             }`}

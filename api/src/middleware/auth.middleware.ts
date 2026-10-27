@@ -3,6 +3,7 @@
 import { Response, NextFunction } from 'express';
 import { Pool, RowDataPacket } from 'mysql2';
 import { AuthRequest } from '../models/AuthRequest';
+import { isAdmin } from '../models/User';
 
 export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction): void => {
   if (!req.isAuthenticated || !req.isAuthenticated()) {
@@ -18,7 +19,7 @@ export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction
     return;
   }
 
-  if (req.user?.affiliation !== 'admin') {
+  if (!isAdmin(req.user)) {
     res.status(403).json({ message: 'Forbidden: Admin access required' });
     return;
   }

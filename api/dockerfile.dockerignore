@@ -6,6 +6,8 @@
 !api/package.json
 !api/package-lock.json
 !api/tsconfig.json
+!api/prisma7.config.ts
+!api/prisma/
 !api/src/
 !api/uploads/
 !database-files/migrations/

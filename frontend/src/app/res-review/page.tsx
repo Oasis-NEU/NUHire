@@ -8,6 +8,7 @@ import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { pdfSource } from '../../lib/pdfSource';
+import { dropOtherUsersKeys, userScope } from '../../lib/userStorage';
 import Footer from '../components/footer';
 import Popup from '../components/popup';
 import { usePathname } from 'next/navigation';
@@ -50,9 +51,8 @@ type SavedDecision = {
 const STORAGE_PREFIX = 'resumeReview';
 
 const storageKeys = (userId: string) => {
-  const scope = `${STORAGE_PREFIX}:${userId}:`;
+  const scope = userScope(STORAGE_PREFIX, userId);
   return {
-    scope,
     index: `${scope}index`,
     accepted: `${scope}accepted`,
     rejected: `${scope}rejected`,
@@ -70,19 +70,6 @@ const clearSavedProgress = (userId: string) => {
   [keys.index, keys.accepted, keys.rejected, keys.noResponse].forEach((key) =>
     localStorage.removeItem(key)
   );
-};
-
-// Removes this page's keys for any other user, and the legacy unscoped keys
-// from before scoping existed, so nothing left behind by a previous login on
-// this browser can be mistaken for the current student's progress.
-const dropForeignProgress = (userId: string) => {
-  const own = storageKeys(userId).scope;
-  for (let i = localStorage.length - 1; i >= 0; i -= 1) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith(STORAGE_PREFIX) && !key.startsWith(own)) {
-      localStorage.removeItem(key);
-    }
-  }
 };
 
 export default function ResumesPage() {
@@ -250,7 +237,7 @@ export default function ResumesPage() {
 
     // Another student's counters must never seed this one. Before this, a
     // shared lab browser carried the previous student's 10/10 across logins.
-    dropForeignProgress(userId);
+    dropOtherUsersKeys(STORAGE_PREFIX, userId);
 
     const savedIndex = localStorage.getItem(keys.index);
     const savedAccepted = localStorage.getItem(keys.accepted);
