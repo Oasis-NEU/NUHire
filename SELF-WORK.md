@@ -43,6 +43,18 @@ start.** Those break in ways you won't see until a full class is on it.
 
 ## In progress
 
+### Index Resume by group, class and resume
+
+- **Who:** Audrey
+- **What:** migration 007 adds `KEY (group_id, class, resume_number)` on `Resume`, so the vote INSERT from #65 and the `check` socket UPDATE stop scanning and locking the whole table.
+- **Why it matters:** every vote in a class locked every vote row, so votes from different groups waited on each other
+- **Files:** `database-files/migrations/007-resume-group-lookup-index.sql`, `database-files/Pandployer.sql`, `database-files/migrations/README.md`, `api/prisma/schema.prisma`
+- **Touches auth / sockets / schema / deploy?** schema (an index only)
+- **Size:** hours
+- **Status:** in review
+- **Branch:** `audreyng/resume-group-lookup-index`
+- **Linear:**
+
 ### Absent students no longer block their group
 
 - **Who:** Audrey

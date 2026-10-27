@@ -175,6 +175,7 @@ model Resume {
 
   @@unique([student_id, group_id, class, resume_number], map: "uniq_resume_vote")
   @@index([student_id], map: "student_id")
+  @@index([group_id, class, resume_number], map: "group_resume")
 }
 
 model Resume_pdfs {
