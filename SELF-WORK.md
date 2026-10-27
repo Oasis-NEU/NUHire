@@ -52,7 +52,7 @@ start.** Those break in ways you won't see until a full class is on it.
 - **Touches auth / sockets / schema / deploy?** schema (an index only)
 - **Size:** hours
 - **Status:** in review
-- **Branch:** `audreyng/resume-group-lookup-index`
+- **Branch:** see [#71](https://github.com/Oasis-NEU/NUHire/pull/71)
 - **Linear:**
 
 ### Absent students no longer block their group
