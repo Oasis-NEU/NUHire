@@ -370,7 +370,7 @@ CREATE TABLE `Resume` (
   `checked` tinyint(1) NOT NULL DEFAULT '0',
   `id` int NOT NULL AUTO_INCREMENT,
   PRIMARY KEY (`id`),
-  -- One row per student per resume. Both vote writers use ON DUPLICATE KEY
+  -- One row per student per resume. The vote writer uses ON DUPLICATE KEY
   -- UPDATE, which silently did nothing without this: the only keys were the
   -- auto-increment id and a non-unique index, so every submission appended a
   -- row and the group's tally counted the same student repeatedly.
