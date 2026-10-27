@@ -3,6 +3,7 @@
 import { Response, NextFunction } from 'express';
 import { Pool, RowDataPacket } from 'mysql2';
 import { AuthRequest } from '../models/AuthRequest';
+import { isAdmin } from '../models/User';
 import { STEP_ORDER } from '../config/steps';
 
 const ORDER: readonly string[] = STEP_ORDER;
@@ -12,7 +13,7 @@ const ORDER: readonly string[] = STEP_ORDER;
 export const requireStep =
   (db: Pool, minStep: string) =>
   (req: AuthRequest, res: Response, next: NextFunction): void => {
-    if (req.user?.affiliation === 'admin') {
+    if (isAdmin(req.user)) {
       next();
       return;
     }

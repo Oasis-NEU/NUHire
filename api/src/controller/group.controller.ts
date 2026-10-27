@@ -1,8 +1,8 @@
-// src/controllers/group.controller.ts
+// src/controller/group.controller.ts
 
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
-import { User } from '../models/User';
+import { User, isAdmin } from '../models/User';
 import { Pool, RowDataPacket } from 'mysql2';
 import { PoolConnection } from 'mysql2/promise';
 import {
@@ -666,6 +666,7 @@ export class GroupController {
   // recover on its own.
   getBarrierStatus = async (req: AuthRequest, res: Response): Promise<void> => {
     const { classId, groupId } = req.params;
+    const user: User = req.user!;
     const step = typeof req.query.step === 'string' ? req.query.step : RES_REVIEW_BARRIER_STEP;
 
     if (!(STEP_ORDER as readonly string[]).includes(step)) {
@@ -676,10 +677,9 @@ export class GroupController {
     // A student may only read their own group. The params are client-supplied,
     // and without this check anyone could walk another section's group numbers
     // and watch who in it has finished.
-    if (req.user?.affiliation !== 'admin') {
+    if (!isAdmin(user)) {
       const ownGroup =
-        String(req.user?.group_id) === String(groupId) &&
-        String(req.user?.class) === String(classId);
+        String(user.group_id) === String(groupId) && String(user.class) === String(classId);
       if (!ownGroup) {
         res.status(403).json({ error: 'Forbidden: that is not your group' });
         return;

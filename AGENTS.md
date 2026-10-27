@@ -299,6 +299,9 @@ of the existing code does not look like this yet; do not copy it.
   No axios. Read the base URL from one module, not a new `const` per file.
 - **The second copy becomes a hook.** If you are about to paste an effect from
   another page, move it to `frontend/src/app/components/` and use it from both.
+- **Saved progress is per user.** Lab browsers are shared, so a `localStorage`
+  key a student page saves progress under is built with `userScope` from
+  `lib/userStorage.ts`, and the page calls `dropOtherUsersKeys` on load.
 - **A failure the user depends on shows up on screen.** A `catch` that only
   logs leaves a student staring at an empty page. Use the existing `Popup`.
 - **Keep files small.** Aim for under 300 lines. Do not grow a file that is
@@ -312,26 +315,33 @@ of the existing code does not look like this yet; do not copy it.
 
 ## Verifying a change
 
-There are no automated tests yet, so verification is manual and you are expected
-to actually do it, not assume:
+Both packages have vitest suites, `api/test/` and the `*.test.ts` files beside
+the code in `frontend/src/`. CI runs them along with the typecheck, build,
+Prettier, and ESLint and cspell on changed files, so run the same before you
+push:
 
 ```
 cd api && npx tsc --noEmit
 cd frontend && npx tsc --noEmit
 npm run build
+npm test --prefix api
+npm test --prefix frontend
+npm run format:check
 ```
 
-Then walk the affected flow against the local stack. Test accounts are in
+The tests cover pure logic and controllers against a fake pool, not the browser,
+so verification is still partly manual and you are expected to actually do it,
+not assume. Walk the affected flow against the local stack. Test accounts are in
 `.local/README.md`; password is `nuhire` for all of them. Anything touching
-groups, barriers, or sockets needs **two browser sessions in the same group**, or
-you have not tested it. The built-in accounts only go as far as three students;
-`npm run seed` builds a 30-student class when you need the real size, and
-`npm run load` walks that whole class through the activity at once, which is
+groups, barriers, or sockets needs **two browser sessions in the same group**,
+or you have not tested it. The built-in accounts only go as far as three
+students; `npm run seed` builds a 30-student class when you need the real size,
+and `npm run load` walks that whole class through the activity at once, which is
 the check for barrier and socket changes (see `.local/tests/README.md`).
 
 ## Before you open a PR
 
-- [ ] Both packages typecheck and build
+- [ ] Both packages typecheck, build and pass `npm test`
 - [ ] You walked the affected flow locally
 - [ ] Group or socket changes tested with two sessions in one group
 - [ ] No new `console.log`, no new `any`, no new env var missing from `.env.example`
@@ -345,12 +355,12 @@ beyond imports. Mixing a move with a behaviour change makes review impossible.
 
 Do not treat these as examples to follow:
 
-| File                                   | Problem                                                                                                                                            |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `components/ManageGroupsTab.tsx`       | 2,051 lines, ~40 `useState` in one component                                                                                                       |
-| `api/src/config/socket.ts`             | `onlineStudents` is still in memory; the barrier moved to `Step_Completion`. Auth and room scoping are in, but `SOCKET_AUTH_REQUIRED` is still off |
-| `api/src/controller/job.controller.ts` | destructive deletes (see rule 5); transactions are fixed                                                                                           |
-| `components/useProgress.tsx`           | client-side-only gating, redirects to a 404                                                                                                        |
-| `frontend/src/app/employerPanel/`      | stub; the final step does not work                                                                                                                 |
+| File                                   | Problem                                                                                                                                       |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `components/ManageGroupsTab.tsx`       | 2,051 lines, ~40 `useState` in one component                                                                                                  |
+| `api/src/config/socket.ts`             | `onlineStudents` is still in memory; the barrier moved to `Step_Completion`. Use `onTeacher` / `onStudent` for any new event, never bare `on` |
+| `api/src/controller/job.controller.ts` | destructive deletes (see rule 5); transactions are fixed                                                                                      |
+| `components/useProgress.tsx`           | client-side-only gating, redirects to a 404                                                                                                   |
+| `frontend/src/app/employerPanel/`      | stub; the final step does not work                                                                                                            |
 
 `TICKETS.md` has the full backlog with file references if you want the detail.

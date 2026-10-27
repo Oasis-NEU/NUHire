@@ -16,42 +16,41 @@ import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { pdfSource } from '../../lib/pdfSource';
 import { PageLoader } from '../components/spinner';
+import type { DbBool, Resume } from '../../types';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url
 ).toString();
 
+interface VoteData {
+  yes: number;
+  no: number;
+  undecided: number;
+}
+
+/** What `GET /resume/group/:group_id` selects from each `Resume` row. */
+type ResumeVote = Pick<Resume, 'resume_number' | 'vote' | 'checked'>;
+
+// The shortlist lives in `checkedState` only, so a card carries no copy of it
+// that the live `checkboxUpdated` events would leave stale.
+interface ResumeCard {
+  resume_number: number;
+  file_path: string;
+  first_name: string;
+  last_name: string;
+  vote: 'yes' | 'no' | 'unanswered';
+}
+
 export default function ResReviewGroup() {
   useProgress();
-
-  interface VoteData {
-    yes: number;
-    no: number;
-    undecided: number;
-  }
-
-  interface ResumeData {
-    resume_number: number;
-    vote: 'yes' | 'no' | 'unanswered';
-    checked: boolean;
-  }
-
-  interface Resume {
-    resume_number: number;
-    file_path: string;
-    checked: boolean;
-    first_name: string;
-    last_name: string;
-    vote: 'yes' | 'no' | 'unanswered';
-  }
 
   const { updateProgress } = useProgressManager();
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
   const [checkedState, setCheckedState] = useState<{ [key: number]: boolean }>({});
   const [voteCounts, setVoteCounts] = useState<{ [key: number]: VoteData }>({});
   const [showInstructions, setShowInstructions] = useState(true);
-  const [resumes, setResumes] = useState<Resume[]>([]);
+  const [resumes, setResumes] = useState<ResumeCard[]>([]);
   const router = useRouter();
   const pathname = usePathname();
   const [selectedResumeNumber, setSelectedResumeNumber] = useState<number | ''>('');
@@ -181,7 +180,7 @@ export default function ResReviewGroup() {
           `${API_BASE_URL}/resume/group/${user.group_id}?class=${user.class}`,
           { credentials: 'include' }
         );
-        const voteData: ResumeData[] = await voteResponse.json();
+        const voteData: ResumeVote[] = await voteResponse.json();
 
         // Process vote data
         const voteCounts: { [key: number]: VoteData } = {};
@@ -200,17 +199,16 @@ export default function ResReviewGroup() {
 
           // `checked` is a group-level flag stored on every vote row. Take the max
           // per resume, so one row left at 0 cannot un-tick it for the group.
-          checkboxData[resume_number] = Boolean(checkboxData[resume_number]) || Boolean(checked);
+          checkboxData[resume_number] = checkboxData[resume_number] || checked === 1;
         });
 
         setVoteCounts(voteCounts);
         setCheckedState(checkboxData);
 
         // Format resumes
-        const formatted: Resume[] = resumeData.map((item) => ({
+        const formatted: ResumeCard[] = resumeData.map((item) => ({
           resume_number: item.id,
           file_path: item.file_path,
-          checked: checkboxData[item.id] || false,
           vote: voteCounts[item.id]
             ? voteCounts[item.id].yes > voteCounts[item.id].no
               ? 'yes'
@@ -254,11 +252,11 @@ export default function ResReviewGroup() {
       checked,
     }: {
       resume_number: number;
-      checked: boolean;
+      checked: DbBool;
     }) => {
       setCheckedState((prev) => ({
         ...prev,
-        [resume_number]: checked,
+        [resume_number]: checked === 1,
       }));
     };
 
