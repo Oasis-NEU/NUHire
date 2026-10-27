@@ -3,6 +3,7 @@ import { Response } from 'express';
 import { Server as SocketIOServer } from 'socket.io';
 import { AuthRequest } from '../models/AuthRequest';
 import { dbErrorStatus, PrismaDb } from '../config/database';
+import { User, isAdmin } from '../models/User';
 
 // Nine digits keep it inside MySQL's INT.
 const CLASS_ID = /^\d{1,9}$/;
@@ -21,16 +22,31 @@ export class FactsController {
     private io: SocketIOServer
   ) {}
 
+  // checks if the admin with the given email is the professor for the given class
+  private moderates = async (email: string, classId: number): Promise<boolean> => {
+    const moderator = await this.prisma.moderator.findUnique({
+      where: { crn: classId },
+      select: { admin_email: true },
+    });
+    return moderator?.admin_email === email;
+  };
+
   getFacts = async (req: AuthRequest, res: Response): Promise<void> => {
-    const classId = parseClassId(req.params.class_id);
-    // The facts component asks for /facts/get/undefined before the user has
-    // loaded. MySQL matched no class for that, so it still finds nothing.
+    const user: User = req.user!;
+    // admin's class comes from the URL (can get any of their class), and student only sees their own class
+    const classId = isAdmin(user) ? parseClassId(req.params.class_id) : (user.class ?? null);
+
     if (classId === null) {
       res.json([]);
       return;
     }
 
     try {
+      // admin can't get a class that's not theirs
+      if (isAdmin(user) && !(await this.moderates(user.email, classId))) {
+        res.status(403).json({ error: 'Forbidden: not your class' });
+        return;
+      }
       const facts = await this.prisma.waitingFacts.findUnique({
         where: { class_id: classId },
         select: { one: true, two: true, three: true },
@@ -44,6 +60,7 @@ export class FactsController {
   };
 
   newFacts = async (req: AuthRequest, res: Response): Promise<void> => {
+    const user: User = req.user!;
     const classId = parseClassId(req.params.class_id);
     const { one = null, two = null, three = null } = req.body;
     if (classId === null) {
@@ -52,6 +69,10 @@ export class FactsController {
     }
 
     try {
+      if (!(await this.moderates(user.email, classId))) {
+        res.status(403).json({ error: 'Forbidden: not your class' });
+        return;
+      }
       // One statement, as before. On MySQL Prisma's upsert is a SELECT and then
       // an INSERT or UPDATE, so two first saves for a class can both insert and
       // one fails on the primary key.

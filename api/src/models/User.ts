@@ -17,3 +17,7 @@ export interface User {
   present_at?: Date | null;
   keycloakProfile?: any;
 }
+
+export function isAdmin(user: User | undefined): boolean {
+  return user?.affiliation === 'admin';
+}
