@@ -126,4 +126,14 @@ describe('newFacts', () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(moderator.findUnique).not.toHaveBeenCalled();
   });
+
+  it('rejects a fact that is not text', async () => {
+    const { prisma, moderator, executeRaw } = fakePrisma(PROF);
+    const res = fakeRes();
+    const body = { one: { x: 1 }, two: 'b', three: 'c' };
+    await new FactsController(prisma, fakeIo().io).newFacts(fakeReq(admin, '101', body), res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(moderator.findUnique).not.toHaveBeenCalled();
+    expect(executeRaw).not.toHaveBeenCalled();
+  });
 });

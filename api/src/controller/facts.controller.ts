@@ -67,6 +67,10 @@ export class FactsController {
       res.status(400).json({ error: 'Invalid class id' });
       return;
     }
+    if ([one, two, three].some((fact) => fact !== null && typeof fact !== 'string')) {
+      res.status(400).json({ error: 'Facts must be text' });
+      return;
+    }
 
     try {
       if (!(await this.moderates(user.email, classId))) {
