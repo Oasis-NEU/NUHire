@@ -5,6 +5,7 @@
 import { Response, NextFunction } from 'express';
 import passport from 'passport';
 import { AuthRequest } from '../models/AuthRequest';
+import { isAdmin } from '../models/User';
 import { Pool } from 'mysql2';
 
 export class AuthController {
@@ -38,7 +39,7 @@ export class AuthController {
                 `${dbUser.f_name || ''} ${dbUser.l_name || ''}`.trim()
               );
 
-              if (dbUser.affiliation === 'admin') {
+              if (isAdmin(dbUser)) {
                 res.redirect(`${FRONT_URL}/advisor-dashboard?name=${fullName}`);
               } else {
                 res.redirect(`${FRONT_URL}/dashboard?name=${fullName}`);
@@ -123,7 +124,7 @@ export class AuthController {
                 `${dbUser.f_name || ''} ${dbUser.l_name || ''}`.trim()
               );
 
-              if (dbUser.affiliation === 'admin') {
+              if (isAdmin(dbUser)) {
                 setCookieAndRedirect(`${FRONT_URL}/advisor-dashboard?name=${fullName}`);
                 return;
               }
@@ -249,7 +250,7 @@ export class AuthController {
       const dbUser = results[0];
       const fullName = encodeURIComponent(`${dbUser.f_name || ''} ${dbUser.l_name || ''}`.trim());
 
-      if (dbUser.affiliation === 'admin') {
+      if (isAdmin(dbUser)) {
         res.redirect(`${FRONT_URL}/advisor-dashboard?name=${fullName}`);
         return;
       }

@@ -4,9 +4,12 @@
   "description": "",
   "main": "dist/server.js",
   "scripts": {
+    "pretest": "prisma generate",
     "test": "vitest run",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "db:migrate": "dbmate --migrations-dir ../database-files/migrations --no-dump-schema --wait migrate",
+    "db:pull": "prisma db pull",
+    "db:generate": "prisma generate",
     "start": "npm run db:migrate && node dist/server.js",
     "dev": "ts-node src/server.ts"
   },
@@ -14,6 +17,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@prisma/adapter-mariadb": "7.10.1",
+    "@prisma/client": "7.10.1",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "dbmate": "^2.36.0",
@@ -38,6 +43,7 @@
     "@types/multer": "^2.0.0",
     "@types/node": "^22.13.10",
     "@types/passport": "^1.0.17",
+    "prisma": "7.10.1",
     "vitest": "^5.0.2"
   }
 }

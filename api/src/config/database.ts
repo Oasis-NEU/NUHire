@@ -13,6 +13,8 @@
 // service at 1 replica until that state lives in MySQL (rule 2).
 
 import mysql, { Pool, PoolOptions } from 'mysql2';
+import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+import { PrismaClient } from '../generated/prisma/client';
 
 /**
  * mysql2 keeps its pool bookkeeping in these three queues. They are not in the
@@ -49,6 +51,39 @@ const UNAVAILABLE_CODES = new Set([
 ]);
 
 /**
+ * The same failures, numbered the way the mariadb driver behind Prisma numbers
+ * them: MySQL's connection limits, a socket that closed or timed out, and
+ * 45028, the pool failing to hand out a connection because it is full or the
+ * server is unreachable.
+ */
+const PRISMA_UNAVAILABLE_CODES = new Set([
+  '1040',
+  '1203',
+  '45001',
+  '45009',
+  '45012',
+  '45026',
+  '45028',
+]);
+
+/** Where Prisma keeps the driver's errno on a failed query. */
+interface PrismaDriverError {
+  meta?: { driverAdapterError?: { cause?: { originalCode?: string } } };
+}
+
+/**
+ * Thrown instead of queueing once DB_POOL_SIZE + DB_POOL_QUEUE_LIMIT Prisma
+ * queries are already running or waiting: Prisma's version of mysql2's
+ * 'Queue limit reached.'.
+ */
+export class PrismaQueueFullError extends Error {
+  constructor() {
+    super('Prisma queue limit reached.');
+    this.name = 'PrismaQueueFullError';
+  }
+}
+
+/**
  * Status code for a failed query (API-15). Handlers must log the real error and
  * send a generic message: `err.message` from mysql2 names the table and column,
  * which is a free schema map for anyone with a browser.
@@ -58,10 +93,15 @@ const UNAVAILABLE_CODES = new Set([
  */
 export function dbErrorStatus(err: unknown): number {
   const asError = err as { code?: string; message?: string } | null | undefined;
-  if (asError?.message === 'Queue limit reached.') {
+  if (asError?.message === 'Queue limit reached.' || err instanceof PrismaQueueFullError) {
     return 503;
   }
   if (asError?.code && UNAVAILABLE_CODES.has(asError.code)) {
+    return 503;
+  }
+  const driverCode = (err as PrismaDriverError | null | undefined)?.meta?.driverAdapterError?.cause
+    ?.originalCode;
+  if (driverCode && PRISMA_UNAVAILABLE_CODES.has(driverCode)) {
     return 503;
   }
   return 500;
@@ -91,8 +131,69 @@ function positiveIntFromEnv(name: string, fallback: number): number {
   return parsed;
 }
 
+function connectionFromEnv() {
+  const url = new URL(process.env.DATABASE_URL!);
+  return {
+    host: url.hostname,
+    port: parseInt(url.port) || 3306,
+    user: url.username,
+    password: url.password,
+    database: url.pathname.slice(1),
+  };
+}
+
+/**
+ * The Prisma client, on its own mariadb pool with the same limits as the mysql2
+ * pool. While Prisma is on trial only the notes and waiting-room facts
+ * endpoints use it.
+ */
+function createPrismaClient(settings: typeof POOL_DEFAULTS) {
+  const client = new PrismaClient({
+    adapter: new PrismaMariaDb({
+      ...connectionFromEnv(),
+      connectionLimit: settings.connectionLimit,
+      // The driver's default opens the whole pool at boot. This pool sits beside
+      // the mysql2 one, which opens connections only as they are needed, so it
+      // does the same.
+      minimumIdle: 0,
+      connectTimeout: settings.connectTimeoutMs,
+      // The same server-side cap as the mysql2 pool. The driver's own
+      // `queryTimeout` is MariaDB syntax that MySQL rejects. The value is an
+      // integer from positiveIntFromEnv, so building the statement is safe.
+      initSql: `SET SESSION max_execution_time = ${settings.queryTimeoutMs}`,
+      ssl: {
+        rejectUnauthorized: false,
+      },
+    }),
+  });
+
+  // The mariadb pool has no queueLimit. It queues every acquire and fails each
+  // one only after its 10s acquireTimeout, which is the slow failure API-7 got
+  // rid of. Counting the queries in flight gives the same immediate 503 instead.
+  const maxInFlight = settings.connectionLimit + settings.queueLimit;
+  let inFlight = 0;
+  return client.$extends({
+    query: {
+      async $allOperations({ args, query }) {
+        if (inFlight >= maxInFlight) {
+          throw new PrismaQueueFullError();
+        }
+        inFlight++;
+        try {
+          return await query(args);
+        } finally {
+          inFlight--;
+        }
+      },
+    },
+  });
+}
+
+export type PrismaDb = ReturnType<typeof createPrismaClient>;
+
 export class DatabaseService {
   private pool: Pool | null = null;
+  private prisma: PrismaDb | null = null;
   private readonly maxRetries = 30;
 
   // Filled in by createPool(), deliberately not by a field initialiser: those
@@ -115,12 +216,14 @@ export class DatabaseService {
     while (retryCount < this.maxRetries) {
       try {
         this.pool = await this.createPool();
+        this.prisma = await this.connectPrisma();
         await this.initializeDatabase();
         console.log('✅ Database connection pool established successfully');
         return this.pool;
       } catch (error) {
         retryCount++;
         console.error(`❌ Database pool creation attempt ${retryCount} failed:`, error);
+        await this.closeFailedAttempt();
 
         if (retryCount < this.maxRetries) {
           const delay = Math.min(10000, retryCount * 1000);
@@ -136,6 +239,22 @@ export class DatabaseService {
     throw new Error('Failed to establish database connection pool');
   }
 
+  /**
+   * An attempt can fail after the mysql2 pool or the Prisma client is already
+   * open. Each holds connections, and thirty retries against a flapping server
+   * would otherwise leave thirty of each behind.
+   */
+  private async closeFailedAttempt(): Promise<void> {
+    const pool = this.pool;
+    const prisma = this.prisma;
+    this.pool = null;
+    this.prisma = null;
+    await prisma?.$disconnect().catch(() => undefined);
+    if (pool) {
+      await new Promise<void>((resolve) => pool.end(() => resolve()));
+    }
+  }
+
   private createPool(): Promise<Pool> {
     return new Promise((resolve, reject) => {
       this.connectionLimit = positiveIntFromEnv('DB_POOL_SIZE', POOL_DEFAULTS.connectionLimit);
@@ -146,13 +265,8 @@ export class DatabaseService {
       );
       this.queryTimeoutMs = positiveIntFromEnv('DB_QUERY_TIMEOUT_MS', POOL_DEFAULTS.queryTimeoutMs);
 
-      const url = new URL(process.env.DATABASE_URL!);
       const poolConfig: PoolOptions = {
-        host: url.hostname,
-        port: parseInt(url.port) || 3306,
-        user: url.username,
-        password: url.password,
-        database: url.pathname.slice(1),
+        ...connectionFromEnv(),
         connectionLimit: this.connectionLimit,
         waitForConnections: true,
         // `queueLimit: 0` meant an unbounded acquire queue with no timeout: once
@@ -196,6 +310,27 @@ export class DatabaseService {
         }
       });
     });
+  }
+
+  /**
+   * Runs after createPool(), which has read the pool settings. Connecting here
+   * makes a bad setting fail the boot retry loop rather than a student's first
+   * note.
+   */
+  private async connectPrisma(): Promise<PrismaDb> {
+    const prisma = createPrismaClient({
+      connectionLimit: this.connectionLimit,
+      queueLimit: this.queueLimit,
+      connectTimeoutMs: this.connectTimeoutMs,
+      queryTimeoutMs: this.queryTimeoutMs,
+    });
+    try {
+      await prisma.$connect();
+    } catch (error) {
+      await prisma.$disconnect().catch(() => undefined);
+      throw error;
+    }
+    return prisma;
   }
 
   private setupErrorHandling(pool: Pool): void {
@@ -396,6 +531,13 @@ export class DatabaseService {
       throw new Error('Database pool not established');
     }
     return this.pool;
+  }
+
+  getPrisma(): PrismaDb {
+    if (!this.prisma) {
+      throw new Error('Prisma client not established');
+    }
+    return this.prisma;
   }
 
   /**

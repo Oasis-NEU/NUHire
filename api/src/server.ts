@@ -67,7 +67,7 @@ async function bootstrap() {
 
     const db = await databaseService.connect();
     configurePassport(db);
-    const app = new App(db);
+    const app = new App(db, databaseService.getPrisma());
 
     // Mounted here, not in app.ts, because the pool and its limits belong to
     // databaseService. Express only dispatches the four-argument error handler
