@@ -111,7 +111,6 @@ const Dashboard = () => {
     if (!user) return;
 
     try {
-      // Inline the job description fetch
       const jobResponse = await fetch(
         `${API_BASE_URL}/jobs/assignment/${user.group_id}/${user.class}`,
         { credentials: 'include' }
@@ -121,7 +120,6 @@ const Dashboard = () => {
         setJobDescription(jobData.job);
       }
 
-      // Inline the progress fetch
       const progressResponse = await fetch(`${API_BASE_URL}/progress/user/${user.email}`, {
         credentials: 'include',
       });
@@ -136,7 +134,7 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error refreshing dashboard UI:', error);
     }
-  }, [user?.group_id, user?.class]); // ✅ Only depends on user
+  }, [user?.group_id, user?.class]);
 
   useEffect(() => {
     if (!user) return;
@@ -149,7 +147,7 @@ const Dashboard = () => {
     };
 
     loadDashboardData();
-  }, [user]); // ✅ Only depends on user
+  }, [user]);
 
   useEffect(() => {
     if (!socket || !user) return;
@@ -179,7 +177,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (!socket || !user?.email) return;
 
-    // Emit socket events (these are fine to run multiple times)
+    // Fine to emit on every run, unlike the database update below.
     socket.emit('studentOnline', { studentId: user.email });
     socket.emit('studentPageChanged', { studentId: user.email, currentPage: pathname });
 
@@ -194,7 +192,7 @@ const Dashboard = () => {
           body: JSON.stringify({ page: 'dashboard', user_email: user.email }),
           credentials: 'include',
         });
-        hasUpdatedPageRef.current = true; // Mark as updated
+        hasUpdatedPageRef.current = true;
       } catch (error) {
         console.error('Error updating current page:', error);
       }
@@ -207,7 +205,6 @@ const Dashboard = () => {
     if (!socket || !user) return;
 
     const handleJobUpdated = async ({ job, reset }: { job: string; reset?: boolean }) => {
-      // Show popup with the job title (job is an array, so use job[0])
       setPopup({
         headline: 'You have been assigned a new job!',
         message: `You are an employer for ${job}!`,
@@ -223,10 +220,8 @@ const Dashboard = () => {
         localStorage.setItem('progress', 'job_description');
       }
 
-      // Refresh the entire dashboard (this will fetch the new job description)
       await refreshDashboardUI();
 
-      // Reset all flipped cards
       setFlipped(Array(steps.length).fill(false));
     };
 
@@ -244,17 +239,14 @@ const Dashboard = () => {
   }, [socket, user?.email, user?.group_id, user?.class, updateProgress]);
 
   const isStepUnlocked = (stepKey: string) => {
-    // If no job description assigned, block all steps except job_description
     if (!jobDescription && stepKey !== 'job_description') {
       return false;
     }
 
-    // If it's the job_description step but no job assigned, block it
     if (stepKey === 'job_description' && !jobDescription) {
       return false;
     }
 
-    // If progress is "none", only allow job_description step if job is assigned
     if (progress === 'none') {
       return stepKey === 'job_description' && jobDescription;
     }
@@ -321,7 +313,6 @@ const Dashboard = () => {
                     className={`relative w-full h-full transition-transform duration-500 ${flipped[idx] ? 'rotate-y-180' : ''}`}
                     style={{ transformStyle: 'preserve-3d' }}
                   >
-                    {/* Front Side */}
                     <div
                       className={`absolute w-full h-full ${!unlocked ? 'bg-gray-300' : 'bg-northeasternWhite'} border-2 border-northeasternRed text-white rounded-xl shadow-lg flex flex-col justify-center items-center font-semibold text-lg backface-hidden p-4`}
                     >
@@ -333,7 +324,6 @@ const Dashboard = () => {
                         </span>
                       )}
                     </div>
-                    {/* Back Side */}
                     <div className="absolute w-full h-full bg-northeasternWhite text-northeasternRed border-2 border-northeasternRed bg-opacity-50 rounded-xl shadow-lg flex flex-col justify-center items-center font-extrabold text-xl rotate-y-180 backface-hidden p-4">
                       <a
                         href={unlocked ? step.path : undefined}
