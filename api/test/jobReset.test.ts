@@ -62,7 +62,7 @@ describe('updateJob (one group)', () => {
     const { db, calls } = fakeDb();
     const { io, emits } = fakeIo();
     const { res, out } = fakeRes();
-    await new JobController(db, io, {}).updateJob({ body } as AuthRequest, res);
+    await new JobController(db, io).updateJob({ body } as AuthRequest, res);
 
     expect(out.status).toBe(200);
     expect(deletes(calls)).toHaveLength(0);
@@ -79,7 +79,7 @@ describe('updateJob (one group)', () => {
   it('treats a truthy non-boolean reset as false', async () => {
     const { db, calls } = fakeDb();
     const { res } = fakeRes();
-    await new JobController(db, fakeIo().io, {}).updateJob(
+    await new JobController(db, fakeIo().io).updateJob(
       { body: { ...body, reset: 'true' } } as AuthRequest,
       res
     );
@@ -89,7 +89,7 @@ describe('updateJob (one group)', () => {
   it('with reset: true, clears every work table and the offer, scoped by class and group', async () => {
     const { db, calls } = fakeDb();
     const { res, out } = fakeRes();
-    await new JobController(db, fakeIo().io, {}).updateJob(
+    await new JobController(db, fakeIo().io).updateJob(
       { body: { ...body, reset: true } } as AuthRequest,
       res
     );
@@ -114,7 +114,7 @@ describe('assignJobToAllGroups', () => {
     const { db, calls } = fakeDb();
     const { io, emits } = fakeIo();
     const { res, out } = fakeRes();
-    await new JobController(db, io, {}).assignJobToAllGroups({ body } as AuthRequest, res);
+    await new JobController(db, io).assignJobToAllGroups({ body } as AuthRequest, res);
 
     expect(out.status).toBe(200);
     expect(deletes(calls)).toHaveLength(0);
@@ -124,7 +124,7 @@ describe('assignJobToAllGroups', () => {
   it('with reset: true, resets every group in the class', async () => {
     const { db, calls } = fakeDb();
     const { res } = fakeRes();
-    await new JobController(db, fakeIo().io, {}).assignJobToAllGroups(
+    await new JobController(db, fakeIo().io).assignJobToAllGroups(
       { body: { ...body, reset: true } } as AuthRequest,
       res
     );

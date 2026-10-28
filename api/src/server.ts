@@ -96,7 +96,7 @@ async function bootstrap() {
       });
     });
 
-    app.onlineStudents = initializeSocketHandlers(app.io, db);
+    initializeSocketHandlers(app.io, db);
 
     const PORT = parseInt(process.env.BACKEND_PORT || '10000', 10);
     app.listen(PORT);

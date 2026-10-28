@@ -124,8 +124,7 @@ const CLEARED_TABLES = [...GROUP_WORK_TABLES.map(({ table }) => table), 'Notes']
 export class JobController {
   constructor(
     private db: Pool,
-    private io: any,
-    private onlineStudents: Record<string, string>
+    private io: any
   ) {}
 
   getAllJobs = (req: AuthRequest, res: Response): void => {

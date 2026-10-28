@@ -238,7 +238,8 @@ export class ResumeController {
   deleteResumeFile = (req: AuthRequest, res: Response): void => {
     // Express matches the route before decoding, so "..%2F..%2Fconfig" arrives
     // here as a param containing separators and the fs.unlinkSync below would
-    // follow it out of uploads/resumes. Same containment as getResumeFile.
+    // follow it out of uploads/resumes. Same containment as
+    // upload.controller.serveUploadedFile.
     const fileName = path.basename(req.params.fileName ?? '');
     const classId = req.query.class_id;
 
@@ -333,38 +334,6 @@ export class ResumeController {
         );
       }
     );
-  };
-
-  // `fileName` is attacker-controlled and used to be joined straight onto the
-  // resumes directory. `path.join` resolves `../` before anything inspects the
-  // result, and `res.sendFile` with an absolute path and no `root` does no
-  // containment check of its own, so `..%2f..%2f.env` resolved to the API's own
-  // .env and returned it to any logged-in student. The percent-encoded form was
-  // needed only because `:fileName` will not match a literal slash; Express
-  // decodes the parameter before this runs.
-  //
-  // `path.basename` discards every directory component, so what reaches disk is
-  // always a bare name. `root` is then a second, independent check.
-  getResumeFile = (req: AuthRequest, res: Response): void => {
-    const { fileName } = req.params;
-    const resumesDir = path.join(__dirname, '../../uploads/resumes');
-    const safeName = path.basename(fileName);
-
-    if (!safeName || safeName === '.' || safeName === '..') {
-      res.status(400).json({ error: 'Invalid file name' });
-      return;
-    }
-
-    if (!fs.existsSync(path.join(resumesDir, safeName))) {
-      res.status(404).json({ error: `Resume not found: ${safeName}` });
-      return;
-    }
-
-    res.sendFile(safeName, { root: resumesDir }, (err) => {
-      if (err && !res.headersSent) {
-        res.status(404).json({ error: `Resume not found: ${safeName}` });
-      }
-    });
   };
 
   getResumePdfById = (req: AuthRequest, res: Response): void => {

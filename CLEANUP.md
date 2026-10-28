@@ -81,7 +81,6 @@ symbol names over the numbers.
 | `CU-20` | Merge the two identical "group started" endpoints | GFI   | 1h  |
 | `CU-21` | Decide the post-login page in one place           | MED   | 4h  |
 | `CU-22` | One key for error messages                        | GFI   | 1h  |
-| `CU-23` | Delete dead API code                              | GFI   | 2h  |
 | `CU-24` | Delete dead frontend files                        | GFI   | 1h  |
 | `CU-25` | Stop emitting socket events nothing handles       | GFI   | 1h  |
 | `CU-26` | Read the API URL in one place                     | GFI   | 2h  |
@@ -1044,44 +1043,6 @@ reader is `signupform/page.tsx:162`, which reads `errorData.message`.
 
 - [ ] The grep above returns nothing
 - [ ] Signing up as a student with an instructor email still shows the warning
-
----
-
-## CU-23 — Delete dead API code
-
-**GFI · 2h · `api/src/`**
-
-### What & why
-
-Code with no reader, left behind by earlier fixes. Each one makes a newcomer
-wonder what depends on it.
-
-### Evidence
-
-| What                                   | Where                                  | Proof                                                                                                |
-| -------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| types for `@exlinc/keycloak-passport`  | `api/src/types/keycloak-passport.d.ts` | package not installed; `grep -rn exlinc api/src api/package.json`                                    |
-| `ResumeController.getResumeFile`       | `resume.controller.ts:369`             | no route; `/uploads` replaced it                                                                     |
-| `JobController`'s `onlineStudents` arg | `job.controller.ts:15`                 | never read; plumbed through `job.routes.ts`, `delete.routes.ts`, `app.ts:41,204,218`, `server.ts:99` |
-| `DatabaseService.getConnection()`      | `database.ts:394`                      | `grep -rn "databaseService\." api/src`                                                               |
-| ejs view engine                        | `app.ts:108-110`                       | no ejs dependency, no views directory                                                                |
-| `FRONT_URL` in `logout`                | `auth.controller.ts:183`               | declared, never used                                                                                 |
-
-### For an agent
-
-- `getResumeFile` is named in comments at `resume.controller.ts:262` and
-  `upload.controller.ts:48`. Point them at `serveUploadedFile`.
-- After removing `onlineStudents` from `App`, `server.ts:99` still needs to
-  call `initializeSocketHandlers`; only the assignment goes.
-- Drop `path` from `app.ts` imports only if nothing else uses it.
-- Remove `exlinc` from `cspell.json` with the `.d.ts`.
-- `job.controller.ts` is in the Assign Job pair's area; the change there is one
-  constructor line. Tell them.
-
-### Done when
-
-- [ ] Everything in the table is gone
-- [ ] API typechecks, builds and boots
 
 ---
 

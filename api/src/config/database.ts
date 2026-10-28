@@ -526,13 +526,6 @@ export class DatabaseService {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  getConnection(): Pool {
-    if (!this.pool) {
-      throw new Error('Database pool not established');
-    }
-    return this.pool;
-  }
-
   getPrisma(): PrismaDb {
     if (!this.prisma) {
       throw new Error('Prisma client not established');

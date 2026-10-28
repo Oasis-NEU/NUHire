@@ -5,7 +5,6 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import session from 'express-session';
 import passport from 'passport';
-import path from 'path';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer, Server as HTTPServer } from 'http';
 import MySQLStore from 'express-mysql-session';
@@ -39,7 +38,6 @@ export class App {
   public server: HTTPServer;
   public io: SocketIOServer;
   private sessionStore: any;
-  public onlineStudents: Record<string, string> = {};
 
   constructor(
     private db: Pool,
@@ -108,10 +106,6 @@ export class App {
     // Body parser
     this.app.use(bodyParser.json());
     this.app.use(bodyParser.urlencoded({ extended: true }));
-
-    // View engine setup
-    this.app.set('view engine', 'ejs');
-    this.app.set('views', path.join(__dirname, '../views'));
 
     // Passport initialization
     this.app.use(passport.initialize());
@@ -205,7 +199,7 @@ export class App {
     this.app.use('/resume', resumeRoutes(this.db, this.io));
     this.app.use('/resume_pdf', resumePdfRoutes(this.db, this.io));
     this.app.use('/interview', interviewRoutes(this.db, this.io));
-    this.app.use('/jobs', jobRoutes(this.db, this.io, this.onlineStudents));
+    this.app.use('/jobs', jobRoutes(this.db, this.io));
     this.app.use('/groups', groupRoutes(this.db, this.io));
     this.app.use('/moderator', moderatorRoutes(this.db));
     this.app.use('/notes', noteRoutes(this.prisma));
@@ -219,7 +213,7 @@ export class App {
     this.app.use('/uploads', uploadedFileRoutes());
     this.app.use('/csv', csvRoutes(this.db, this.io));
     this.app.use('/facts', factsRoutes(this.prisma, this.io));
-    this.app.use('/delete', deleteRoutes(this.db, this.io, this.onlineStudents));
+    this.app.use('/delete', deleteRoutes(this.db, this.io));
 
     // Last. A throw inside a route used to become an unhandled rejection with
     // the request left hanging. Express only treats a handler as an error
