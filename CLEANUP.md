@@ -82,7 +82,6 @@ symbol names over the numbers.
 | `CU-21` | Decide the post-login page in one place           | MED   | 4h  |
 | `CU-22` | One key for error messages                        | GFI   | 1h  |
 | `CU-23` | Delete dead API code                              | GFI   | 2h  |
-| `CU-24` | Delete dead frontend files                        | GFI   | 1h  |
 | `CU-25` | Stop emitting socket events nothing handles       | GFI   | 1h  |
 | `CU-26` | Read the API URL in one place                     | GFI   | 2h  |
 | `CU-27` | Drop axios                                        | GFI   | 2h  |
@@ -1082,41 +1081,6 @@ wonder what depends on it.
 
 - [ ] Everything in the table is gone
 - [ ] API typechecks, builds and boots
-
----
-
-## CU-24 — Delete dead frontend files
-
-**GFI · 1h · `frontend/`**
-
-### What & why
-
-Files nothing imports, plus a Next config in a folder Next never reads it from.
-
-### Evidence
-
-| What                                                | Proof                                                                                        |
-| --------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `src/app/components/adminReactionPopup.tsx`         | `grep -rn "adminReactionPopup'" frontend/src` (no importer)                                  |
-| `src/app/components/tabsTitle.tsx`                  | `grep -rn "tabsTitle'" frontend/src` (no importer)                                           |
-| `src/app/next.config.ts`                            | Next reads `next.config.*` from `frontend/` only; this one is an empty config                |
-| `src/app/empty-modules.ts`                          | `export default {}`, referenced nowhere                                                      |
-| `types/react-pdf-highlighter.d.ts`                  | package not installed or imported; the `"paths"` entry in `tsconfig.json` exists only for it |
-| `refetchUser` in `components/AuthContext.tsx:11,45` | `grep -rn refetchUser frontend/src`                                                          |
-| Geist fonts in `app/layout.tsx:2,7-15`              | `grep -rn "font-geist" frontend/src frontend/tailwind.config.js` finds only the definitions  |
-
-### For an agent
-
-- Delete `src/app/next.config.ts`. Do not move it to `frontend/`: that would
-  start applying a config that is not applied today.
-- Removing the `"paths"` entry from `tsconfig.json` is fine once the `.d.ts` is
-  gone; run `npx tsc --noEmit` and `npm run build` to prove it.
-- `lib/logger.ts` is also unimported. It belongs to `INFRA-12`. Leave it.
-
-### Done when
-
-- [ ] Everything in the table is gone
-- [ ] Frontend typechecks and builds; the landing page renders the same
 
 ---
 
