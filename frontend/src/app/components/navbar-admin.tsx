@@ -1,5 +1,5 @@
-'use client'; // Declares that this page is a client component
-import React from 'react'; // Importing React
+'use client';
+import React from 'react';
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -36,7 +36,6 @@ const NavbarAdmin = () => {
 
   return (
     <nav className="navbar w-full relative">
-      {/* Top bar */}
       <div className="bg-northeasternBlack text-northeasternWhite flex items-center justify-between px-6 py-4 font-rubik border-b-4 border-northeasternRed w-full">
         <button
           className="flex items-center gap-2 font-bold text-xl focus:outline-none"
