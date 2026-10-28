@@ -42,7 +42,7 @@ export default function Home() {
       <div className="absolute inset-0 bg-sand/70 z-[1]" />
 
       {/* Navigation Bar */}
-      <div className="w-full flex justify-end p-2 bg-navy shadow-md font-rubik text-2xl fixed top-0">
+      <div className="w-full flex justify-end p-2 bg-navy shadow-md font-rubik text-2xl fixed top-0 z-20">
         <button
           onClick={handleModeratorLogin}
           className="m-2 px-2 py-2 bg-northeasternWhite text-black border-4 border-northeasternRed rounded-md text-lg transition-opacity hover:opacity-60 active:opacity-30"

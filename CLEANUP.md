@@ -52,21 +52,19 @@ symbol names over the numbers.
 
 **Bugs.** Real defects, each verified against the current tree.
 
-| ID      | What                                                           | Level | Est |
-| ------- | -------------------------------------------------------------- | ----- | --- |
-| `CU-1`  | Dead endpoints let any student read or wipe classmates' data   | GFI   | 1h  |
-| `CU-2`  | A Keycloak account with no name crashes login                  | GFI   | 2h  |
-| `CU-3`  | Shortlist drift comes back after the next vote                 | MED   | 4h  |
-| `CU-4`  | CSV import picks the wrong email column                        | GFI   | 2h  |
-| `CU-5`  | Moving or deleting a student leaves their old group waiting    | MED   | 3h  |
-| `CU-6`  | Adding a student already in the class silently moves them      | GFI   | 1h  |
-| `CU-7`  | The shortlist checkbox is typed boolean but carries 0 or 1     | GFI   | 2h  |
-| `CU-8`  | A student who misses the release event stays stuck             | MED   | 4h  |
-| `CU-9`  | 33 error paths still send raw MySQL text to the browser        | GFI   | 3h  |
-| `CU-10` | The next student on a lab machine inherits Make Offer state    | MED   | 2h  |
-| `CU-12` | A duplicate job title says "uploaded successfully"             | GFI   | 1h  |
-| `CU-33` | The landing page's top bar is washed out under its own overlay | GFI   | 15m |
-| `CU-34` | Popups are cut off on a phone                                  | GFI   | 15m |
+| ID      | What                                                         | Level | Est |
+| ------- | ------------------------------------------------------------ | ----- | --- |
+| `CU-1`  | Dead endpoints let any student read or wipe classmates' data | GFI   | 1h  |
+| `CU-2`  | A Keycloak account with no name crashes login                | GFI   | 2h  |
+| `CU-3`  | Shortlist drift comes back after the next vote               | MED   | 4h  |
+| `CU-4`  | CSV import picks the wrong email column                      | GFI   | 2h  |
+| `CU-5`  | Moving or deleting a student leaves their old group waiting  | MED   | 3h  |
+| `CU-6`  | Adding a student already in the class silently moves them    | GFI   | 1h  |
+| `CU-7`  | The shortlist checkbox is typed boolean but carries 0 or 1   | GFI   | 2h  |
+| `CU-8`  | A student who misses the release event stays stuck           | MED   | 4h  |
+| `CU-9`  | 33 error paths still send raw MySQL text to the browser      | GFI   | 3h  |
+| `CU-10` | The next student on a lab machine inherits Make Offer state  | MED   | 2h  |
+| `CU-12` | A duplicate job title says "uploaded successfully"           | GFI   | 1h  |
 
 **Tidying.** No behaviour change.
 
@@ -578,70 +576,6 @@ The resume path a few lines down (`:343-359`) does check `dbResponse.ok`.
 
 - [ ] Uploading a duplicate title shows an error naming the title
 - [ ] A normal upload still shows success
-
----
-
-## CU-33 — The landing page's top bar is washed out under its own overlay
-
-**GFI · 15m · `frontend/src/app/page.tsx`**
-
-### What & why
-
-The landing page lays a light `bg-sand/70` overlay over the slideshow so the
-title stays readable. The top bar is `fixed` with no z-index, so the overlay
-(`z-[1]`) paints over it: the black bar shows as grey and the Admin button looks
-disabled. The footer has `z-20` and looks right.
-
-### Evidence
-
-```
-frontend/src/app/page.tsx:42    <div className="absolute inset-0 bg-sand/70 z-[1]" />
-frontend/src/app/page.tsx:45    ... bg-navy shadow-md font-rubik text-2xl fixed top-0">     // no z-index
-frontend/src/app/page.tsx:109   ... fixed bottom-0 z-20">
-```
-
-`signupform/page.tsx:178` uses the same overlay pattern with `z-20` on its top
-bar and does not have the problem.
-
-### For an agent
-
-- Add `z-20` to the top bar, matching the footer. Do not change the overlay.
-- The landing page is in the Figma redesign's area; a one-class change is
-  fine, but tell the pair.
-
-### Done when
-
-- [ ] The top bar on `/` is black and the Admin button is full opacity
-
----
-
-## CU-34 — Popups are cut off on a phone
-
-**GFI · 15m · `frontend/src/app/components/popup.tsx`**
-
-### What & why
-
-`Popup` is a fixed `w-96` (384px) with no maximum, so on a 375px phone its left
-and right edges, border included, run off the screen. Every page that shows a
-popup is affected, including the login-failure message on the landing page.
-
-### Evidence
-
-```
-frontend/src/app/components/popup.tsx:23   ... p-8 w-96 rounded-md shadow-lg z-50">
-grep -rln "components/popup'\|/popup'" frontend/src/app    # 13 files use it
-```
-
-### For an agent
-
-- Cap the width at the viewport, for example `w-96 max-w-[calc(100vw-2rem)]`.
-  Fix it here, not per page.
-- Check one popup at 375px and one at desktop width.
-
-### Done when
-
-- [ ] A popup at 375px wide has a visible border on both sides
-- [ ] Desktop popups look the same as before
 
 ---
 
