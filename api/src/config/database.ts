@@ -1,13 +1,11 @@
-// src/config/database.ts
-//
 // SINGLE REPLICA ONLY (API-1). This API cannot be scaled horizontally:
 // config/socket.ts keeps `onlineStudents` in process memory, and Socket.IO is
 // running without a room adapter. Run two replicas and a group's students land
 // on different processes, so an emit to the group's room reaches only the
 // students connected to the process that sent it. The barrier itself is in
-// Step_Completion and is not the problem. The pool
-// sizing below is also per-process, so N replicas open N * DB_POOL_SIZE
-// connections against the same MySQL server.
+// Step_Completion and is not the problem. The pool sizing below is also
+// per-process, so N replicas open N * DB_POOL_SIZE connections against the
+// same MySQL server.
 //
 // server.ts warns at boot when INSTANCE_COUNT is above 1. Keep the Coolify
 // service at 1 replica until that state lives in MySQL (rule 2).
@@ -168,8 +166,8 @@ function createPrismaClient(settings: typeof POOL_DEFAULTS) {
   });
 
   // The mariadb pool has no queueLimit. It queues every acquire and fails each
-  // one only after its 10s acquireTimeout, which is the slow failure API-7 got
-  // rid of. Counting the queries in flight gives the same immediate 503 instead.
+  // one only after its 10s acquireTimeout. Counting the queries in flight gives
+  // the same immediate 503 as the mysql2 pool's queueLimit (API-7).
   const maxInFlight = settings.connectionLimit + settings.queueLimit;
   let inFlight = 0;
   return client.$extends({
@@ -269,11 +267,9 @@ export class DatabaseService {
         ...connectionFromEnv(),
         connectionLimit: this.connectionLimit,
         waitForConnections: true,
-        // `queueLimit: 0` meant an unbounded acquire queue with no timeout: once
-        // all connections were busy every further request waited forever, so 30
-        // laptops spun while the logs stayed completely clean. A finite queue
-        // makes mysql2 fail the acquire immediately, and dbErrorStatus turns
-        // that into a 503 the frontend can actually surface (API-7).
+        // A finite queue makes mysql2 fail an acquire immediately once every
+        // connection is busy, rather than wait forever with clean logs.
+        // dbErrorStatus turns that into a 503 the frontend can surface (API-7).
         queueLimit: this.queueLimit,
         // Without this a MySQL host that accepts the TCP connection and then
         // stalls holds the boot retry loop, and later every acquire, open until
@@ -293,19 +289,16 @@ export class DatabaseService {
       const pool = mysql.createPool(poolConfig);
 
       // Before the test acquire below, not after. mysql2 emits 'connection'
-      // when a connection is created, so attaching afterwards missed the very
-      // first one entirely: under classroom load that connection is the one
-      // that gets reused, and it would have been the only one in the pool
-      // running without the query timeout set.
+      // when a connection is created, so attaching afterwards would miss the
+      // first one and leave it running without the query timeout.
       this.setupErrorHandling(pool);
 
-      // Test the pool with a connection
       pool.getConnection((err, connection) => {
         if (err) {
           console.error('❌ Database pool connection test failed:', err.message);
           reject(err);
         } else {
-          connection.release(); // Release test connection back to pool
+          connection.release();
           resolve(pool);
         }
       });
@@ -337,7 +330,7 @@ export class DatabaseService {
     pool.on('connection', (connection) => {
       // A server-side cap is the only query timeout mysql2 exposes. Without it
       // one pathological SELECT holds a pooled connection, and therefore a slot
-      // in the now-bounded queue, for as long as MySQL is willing to run it.
+      // in the bounded queue, for as long as MySQL is willing to run it.
       // Text protocol, not execute(), because MySQL rejects a placeholder in a
       // prepared SET; mysql2 escapes the value into the statement instead.
       // MySQL applies this to read-only SELECTs only, and a server that does
@@ -366,7 +359,6 @@ export class DatabaseService {
       "INSERT IGNORE INTO `Moderator` (`admin_email`, `crn`) VALUES ('labit.z@northeastern.edu', 1)",
     ];
 
-    // Execute initial queries
     for (const query of queries) {
       try {
         await this.executeQuery(query);
@@ -375,7 +367,6 @@ export class DatabaseService {
       }
     }
 
-    // Seed job descriptions
     const jobDescriptions = [
       { title: 'Carbonite', file_path: 'uploads/jobdescription/carbonite-jobdes.pdf' },
       {
@@ -405,7 +396,6 @@ export class DatabaseService {
       }
     }
 
-    // Seed resume PDFs
     const resumePdfs = [
       { title: 'sample1', file_path: 'uploads/resumes/sample1.pdf' },
       { title: 'sample2', file_path: 'uploads/resumes/sample2.pdf' },
@@ -535,8 +525,7 @@ export class DatabaseService {
 
   /**
    * Backs /health/db. `queued` above zero means requests are already waiting on
-   * a connection, which is the state that used to be invisible: the process
-   * looked healthy right up to the point where every student's page hung.
+   * a connection, which shows up here before every student's page hangs.
    */
   getPoolStats(): PoolStats {
     if (!this.pool) {
