@@ -42,12 +42,10 @@ type SavedDecision = {
   vote: 'yes' | 'no' | 'unanswered';
 };
 
-// Every localStorage key is scoped by user id. The old keys were shared
-// constants, so a second student on the same lab machine inherited the
-// previous student's 10/10 counters (and was announced finished with zero
-// rows saved), and their Retry button replayed the previous student's queued
-// votes under that student's student_id. Nothing is read or written until
-// `user` is loaded, and keys that belong to anyone else are dropped on load.
+// Every localStorage key is scoped by user id, because a shared lab machine
+// would otherwise hand one student's counters and queued votes to the next.
+// Nothing is read or written until `user` is loaded, and keys that belong to
+// anyone else are dropped on load.
 const STORAGE_PREFIX = 'resumeReview';
 
 const storageKeys = (userId: string) => {
@@ -222,11 +220,10 @@ export default function ResumesPage() {
     fetchJobDescription();
   }, [user?.group_id, user?.class]);
 
-  // The saved counters used to be wiped the moment the tenth decision landed,
-  // while the student was still sitting on this page waiting for teammates. A
-  // refresh at that point dropped them back to resume 1 with 0/10 and no way to
-  // reach the ten decisions the Next button requires. They are cleared when the
-  // student actually leaves the page instead.
+  // The saved counters are cleared when the student leaves the page, not when
+  // the tenth decision lands: a refresh while waiting for teammates would
+  // otherwise drop them to 0/10 with no way to reach the ten decisions the
+  // Next button requires.
   //
   // This waits for `user` rather than running on mount: the keys are scoped
   // by user id, so there is nothing to read until we know who is logged in.
@@ -235,8 +232,7 @@ export default function ResumesPage() {
     const userId = String(user.id);
     const keys = storageKeys(userId);
 
-    // Another student's counters must never seed this one. Before this, a
-    // shared lab browser carried the previous student's 10/10 across logins.
+    // Another student's counters must never seed this one.
     dropOtherUsersKeys(STORAGE_PREFIX, userId);
 
     const savedIndex = localStorage.getItem(keys.index);
@@ -408,9 +404,8 @@ export default function ResumesPage() {
           console.error('[handleMoveGroup] Error updating progress:', err);
         }
         localStorage.setItem('progress', 'res_2');
-        // The saved counters used to be dropped when the tenth decision landed.
-        // Now that they survive until the student leaves, this path has to
-        // clear them too or a return visit restores a finished review.
+        // The saved counters survive until the student leaves, so this path has
+        // to clear them too or a return visit restores a finished review.
         clearSavedProgress(String(user.id));
         window.location.href = targetPage;
       }
@@ -550,18 +545,15 @@ export default function ResumesPage() {
   }, [userId, userGroupId, userClass, resumesList, fetchSavedDecisions, applySavedDecisions]);
 
   // Announce completion only once every decision is actually in the database,
-  // and the database says so. Three things used to let the announce run early,
-  // and each one opens the server barrier (Step_Completion, which does not
-  // count Resume rows) with fewer than ten rows saved:
+  // and the database says so. The announce opens the server barrier
+  // (Step_Completion, which does not count Resume rows), and the on-screen
+  // counters can run ahead of the rows:
   //
-  //  1. The counters are bumped on the click, before the POST resolves, so the
-  //     tenth click hit 10/10 with the tenth row still in flight. `pendingCount`
+  //  1. They are bumped on the click, before the POST resolves. `pendingCount`
   //     holds the announce until every POST has settled.
-  //  2. A tab closed mid-POST persisted the counter but never reached the
-  //     unsaved queue, so a reload showed 10/10, an empty queue, and no row.
-  //  3. Counters restored from localStorage (a previous student on a shared
-  //     browser, the old batch flow, or devtools) drove the announce with
-  //     nothing behind them.
+  //  2. A tab closed mid-POST keeps the counter but never queues the vote, so
+  //     a reload shows 10/10, an empty queue, and no row.
+  //  3. Counters restored from localStorage can have nothing behind them.
   //
   // So the counters only decide when to ask; the server decides the answer.
   // If it holds fewer than ten rows, the screen is reconciled to what is
@@ -644,7 +636,6 @@ export default function ResumesPage() {
       }
     }
 
-    // Wait for progress update before navigating
     await updateProgress(user, 'res_2');
     localStorage.setItem('progress', 'res_2');
     clearSavedProgress(String(user.id));
@@ -672,9 +663,8 @@ export default function ResumesPage() {
     }
   }, [currentResumeIndex, showInstructions]);
 
-  // One decision, one POST. /resume/vote upserts a single row and has been
-  // genuinely idempotent since uniq_resume_vote was added, so replaying a
-  // decision is safe.
+  // One decision, one POST. /resume/vote upserts a single row on
+  // uniq_resume_vote, so replaying a decision is safe.
   const persistVote = useCallback(async (voteData: VoteRecord): Promise<boolean> => {
     try {
       const response = await fetch(`${API_BASE_URL}/resume/vote`, {
@@ -731,11 +721,8 @@ export default function ResumesPage() {
     return stillFailing.length;
   };
 
-  // Previously the votes accumulated in React state and only POSTed when the
-  // array hit exactly 10. The counters persisted to localStorage but the array
-  // did not, so a refresh mid-review meant the array never reached 10, the POST
-  // never fired, the student was never counted finished, and the whole group's
-  // barrier stayed shut. Each decision is written as it is cast instead.
+  // Each decision is written as it is cast, so a refresh mid-review cannot
+  // lose decisions the group barrier is waiting on.
   const sendVoteToBackend = async (vote: 'yes' | 'no' | 'unanswered') => {
     if (!user || !user.id || !user.group_id || !user.class) {
       console.error('❌ [VOTE] Missing user data');
