@@ -332,7 +332,9 @@ export default function ResReviewGroup() {
     }) => {
       if (!user) return;
 
-      if (groupId == user.group_id && classId == user.class) {
+      // The room also hears a teammate's late moveGroup for this page itself.
+      // Taking it wrote 'interview' and reloaded the page mid-shortlist.
+      if (groupId == user.group_id && classId == user.class && targetPage === '/interview-stage') {
         try {
           await updateProgress(user, 'interview');
           localStorage.setItem('progress', 'interview');
