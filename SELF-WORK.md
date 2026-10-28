@@ -76,7 +76,7 @@ start.** Those break in ways you won't see until a full class is on it.
 - **Touches auth / sockets / schema / deploy?** sockets: re-emits the existing `userCompletedResReview`
 - **Size:** hours
 - **Status:** in review
-- **Branch:** this PR
+- **Branch:** see [#106](https://github.com/Oasis-NEU/NUHire/pull/106)
 - **Linear:** OAS-236
 
 ## Done
