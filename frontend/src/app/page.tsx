@@ -1,11 +1,29 @@
 'use client';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Slideshow from './components/slideshow';
+import Popup from './components/popup';
+import { loginErrorPopup } from '../lib/loginError';
 import './globals.css';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 
 export default function Home() {
+  const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
+
+  // Read in an effect rather than with useSearchParams, which fails the build
+  // without a Suspense boundary. The code is then dropped from the URL so a
+  // refresh after dismissing does not show the same failure again.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const found = loginErrorPopup(params.get('error'));
+    if (!found) return;
+    setPopup(found);
+    params.delete('error');
+    const query = params.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
+  }, []);
+
   const handleKeycloakLogin = () => {
     const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
     window.location.href = `${apiUrl}/auth/keycloak`;
@@ -99,6 +117,10 @@ export default function Home() {
           <span className="ml-2">Join our Discord</span>
         </a>
       </footer>
+
+      {popup && (
+        <Popup headline={popup.headline} message={popup.message} onDismiss={() => setPopup(null)} />
+      )}
 
       {/* Custom styles for monospace font */}
       <style jsx>{`
