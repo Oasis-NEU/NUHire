@@ -67,6 +67,18 @@ start.** Those break in ways you won't see until a full class is on it.
 - **Branch:** stacked on #41
 - **Linear:** STU-21
 
+### An API restart no longer strands the resume review
+
+- **Who:** Audrey
+- **What:** `res-review` re-sends its completion on every reconnect and unlocks Next only on the barrier (event or poll); `res-review-group` ignores a `moveGroup` for its own page. Part 1 of OAS-231.
+- **Why it matters:** a 5s API crash stranded 4 to 21 of 29 students in load tests
+- **Files:** `frontend/src/app/res-review/page.tsx`, `frontend/src/app/res-review-group/page.tsx`, `frontend/src/types/index.ts`, `.local/tests/load-tests/student.mjs`, docs
+- **Touches auth / sockets / schema / deploy?** sockets: re-emits the existing `userCompletedResReview`
+- **Size:** hours
+- **Status:** in review
+- **Branch:** this PR
+- **Linear:** OAS-236
+
 ## Done
 
 _Move entries here when they merge or get dropped._
