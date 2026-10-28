@@ -146,3 +146,11 @@ export type LiveStudent = Pick<Student, 'id' | 'email' | 'f_name' | 'l_name'> & 
   confirmed_at: string | null;
   online: boolean;
 };
+
+/** `GET /groups/barrier-status/:classId/:groupId`: has every present member finished `step`? */
+export interface BarrierStatus {
+  step: string;
+  completedCount: number;
+  totalCount: number;
+  released: boolean;
+}

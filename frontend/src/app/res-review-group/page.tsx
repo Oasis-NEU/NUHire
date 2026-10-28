@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Instructions from '../components/instructions';
 import Navbar from '../components/navbar';
 import { usePathname, useRouter } from 'next/navigation';
-import { useProgress } from '../components/useProgress';
+import { STEP_TO_ROUTE, useProgress } from '../components/useProgress';
 import Footer from '../components/footer';
 import Popup from '../components/popup';
 import { useProgressManager } from '../components/progress';
@@ -332,7 +332,13 @@ export default function ResReviewGroup() {
     }) => {
       if (!user) return;
 
-      if (groupId == user.group_id && classId == user.class) {
+      // The room also hears a teammate's late moveGroup for this page itself.
+      // Taking it wrote 'interview' and reloaded the page mid-shortlist.
+      if (
+        groupId == user.group_id &&
+        classId == user.class &&
+        targetPage === STEP_TO_ROUTE.interview
+      ) {
         try {
           await updateProgress(user, 'interview');
           localStorage.setItem('progress', 'interview');

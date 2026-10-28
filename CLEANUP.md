@@ -61,7 +61,6 @@ symbol names over the numbers.
 | `CU-5`  | Moving or deleting a student leaves their old group waiting  | MED   | 3h  |
 | `CU-6`  | Adding a student already in the class silently moves them    | GFI   | 1h  |
 | `CU-7`  | The shortlist checkbox is typed boolean but carries 0 or 1   | GFI   | 2h  |
-| `CU-8`  | A student who misses the release event stays stuck           | MED   | 4h  |
 | `CU-9`  | 33 error paths still send raw MySQL text to the browser      | GFI   | 3h  |
 | `CU-10` | The next student on a lab machine inherits Make Offer state  | MED   | 2h  |
 | `CU-11` | Login failures show nothing                                  | GFI   | 2h  |
@@ -73,7 +72,7 @@ symbol names over the numbers.
 | ------- | ------------------------------------------------- | ----- | --- |
 | `CU-13` | Remove the last `console.log` calls and log emoji | GFI   | 1h  |
 | `CU-14` | Finish the shared types migration                 | GFI   | 3h  |
-| `CU-15` | Remove 14 endpoints nothing calls                 | GFI   | 3h  |
+| `CU-15` | Remove 15 endpoints nothing calls                 | GFI   | 3h  |
 | `CU-16` | Drop five tables nothing reads                    | MED   | 3h  |
 | `CU-17` | Pull one copy-pasted block out of a student page  | MED   | 4h  |
 | `CU-18` | Move `group.controller.ts` off nested callbacks   | MED   | 6h  |
@@ -415,54 +414,6 @@ frontend/src/app/res-review-group/page.tsx:455 checked: newChecked ? 1 : 0,
 
 ---
 
-## CU-8 — A student who misses the release event stays stuck
-
-**MED · 4h · `frontend/src/app/res-review/page.tsx`**
-
-### What & why
-
-After their tenth resume, a student waits on `res-review` until the whole group
-finishes. The only thing that releases them is the `groupCompletedResReview`
-socket event. `res-review` re-joins its room on `connect`, and the server
-re-sends the barrier on every join, which covers a dropped socket. It does not
-cover a socket that stayed up and missed the one event. That student needs to
-refresh and hope.
-
-`GET /groups/barrier-status/:classId/:groupId` answers the same question over
-HTTP and nothing calls it.
-
-### Evidence
-
-```bash
-grep -rn "barrier-status" frontend/src   # empty
-```
-
-```
-frontend/src/app/res-review/page.tsx:463   const handleGroupCompletedResReview = () => { setDisabled(false); };
-api/src/routes/group.routes.ts:39          router.get('/barrier-status/:classId/:groupId', requireAuth, ...);
-```
-
-The response is `{ step, completedCount, totalCount, released }`
-(`BarrierStatus` in `models/Barrier.ts`).
-
-### For an agent
-
-- Poll only while the student has finished and is still disabled. Stop on
-  `released: true` or on unmount. 30 students polling every second on every
-  page is 1,800 requests a minute.
-- Every 5 seconds is plenty. Treat `released` exactly like the socket event.
-- The professor's unstick button is the live class dashboard pair ticket. Do
-  not add one here, and do not change the endpoint.
-
-### Done when
-
-- [ ] A student who misses the release event is released within one poll
-- [ ] Polling starts only while waiting and stops once released
-- [ ] Two browsers in one group, with the `groupCompletedResReview` listener
-      commented out locally: both finish, and both are released by the poll
-
----
-
 ## CU-9 — 33 error paths still send raw MySQL text to the browser
 
 **GFI · 3h · `api/src/controller/`**
@@ -708,34 +659,35 @@ These need a one-line decision in the PR:
 
 ---
 
-## CU-15 — Remove 14 endpoints nothing calls
+## CU-15 — Remove 15 endpoints nothing calls
 
 **GFI · 3h · `api/src/routes/`, `api/src/controller/`**
 
 ### What & why
 
-Fourteen mounted endpoints have no caller in either package. They are surface
+Fifteen mounted endpoints have no caller in either package. They are surface
 area a reader has to understand and a reviewer has to check, and several take
 identity from the URL in ways `AGENTS.md` rule 1 forbids.
 
 ### Evidence
 
-| Endpoint                             | Route file:line          | Note                                          |
-| ------------------------------------ | ------------------------ | --------------------------------------------- |
-| `POST /interview/vote`               | `interview.routes.ts:12` |                                               |
-| `GET /interview/vids`                | `interview.routes.ts:18` |                                               |
-| `GET /users`                         | `user.routes.ts:15`      | signup POSTs to `/users`; nothing GETs it     |
-| `GET /users/students`                | `user.routes.ts:16`      |                                               |
-| `POST /users/update-user-class`      | `user.routes.ts:19`      |                                               |
-| `GET /offers/class/:class_id`        | `offer.routes.ts:16`     |                                               |
-| `GET /progress/group/:crn/:group_id` | `progress.routes.ts:12`  | do last; that file is in flight               |
-| `POST /groups/update-group`          | `group.routes.ts:15`     | its UPDATE has no `class` either              |
-| `GET /moderator/crns/:crn`           | `moderator.routes.ts:16` | only `DELETE` on that path is called          |
-| `POST /moderator/add-student`        | `moderator.routes.ts:19` | duplicate of `/groups/add-student`            |
-| `DELETE /moderator/del-student`      | `moderator.routes.ts:20` | duplicate of `/groups/delete-student`         |
-| `GET /candidates`                    | `candidate.routes.ts:17` |                                               |
-| `GET /candidates/:id`                | `candidate.routes.ts:18` |                                               |
-| `POST /upload`                       | `upload.routes.ts:40`    | `/upload/resume` and `/upload/job` are called |
+| Endpoint                                         | Route file:line          | Note                                          |
+| ------------------------------------------------ | ------------------------ | --------------------------------------------- |
+| `POST /interview/vote`                           | `interview.routes.ts:12` |                                               |
+| `GET /interview/vids`                            | `interview.routes.ts:18` |                                               |
+| `GET /users`                                     | `user.routes.ts:15`      | signup POSTs to `/users`; nothing GETs it     |
+| `GET /users/students`                            | `user.routes.ts:16`      |                                               |
+| `POST /users/update-user-class`                  | `user.routes.ts:19`      |                                               |
+| `GET /offers/class/:class_id`                    | `offer.routes.ts:16`     |                                               |
+| `GET /progress/group/:crn/:group_id`             | `progress.routes.ts:12`  | do last; that file is in flight               |
+| `POST /groups/update-group`                      | `group.routes.ts:15`     | its UPDATE has no `class` either              |
+| `GET /moderator/crns/:crn`                       | `moderator.routes.ts:16` | only `DELETE` on that path is called          |
+| `POST /moderator/add-student`                    | `moderator.routes.ts:19` | duplicate of `/groups/add-student`            |
+| `DELETE /moderator/del-student`                  | `moderator.routes.ts:20` | duplicate of `/groups/delete-student`         |
+| `GET /candidates`                                | `candidate.routes.ts:17` |                                               |
+| `GET /candidates/:id`                            | `candidate.routes.ts:18` |                                               |
+| `GET /resume/finished-count/:group_id/:class_id` | `resume.routes.ts:16`    | `res-review` asks the barrier instead         |
+| `POST /upload`                                   | `upload.routes.ts:40`    | `/upload/resume` and `/upload/job` are called |
 
 Every API path the frontend calls:
 
@@ -746,8 +698,8 @@ grep -rhoE 'API_BASE_URL\}/[a-z_]+(/[A-Za-z_-]+)?' frontend/src | sort -u
 ### For an agent
 
 - **Do NOT remove** `GET /auth/keycloak/callback` (Keycloak redirects to it, so
-  it has no in-repo caller by design), `GET /groups/barrier-status` (`CU-8`
-  will call it), `POST /groups/force-advance` (the live class dashboard pair
+  it has no in-repo caller by design), `GET /groups/barrier-status` (`res-review`
+  polls it), `POST /groups/force-advance` (the live class dashboard pair
   will call it), `GET /health`, `GET /health/db` (compose healthcheck) or
   `GET /stats` (ops).
 - **Re-verify before deleting.** The tree moves. Check the method too: a path

@@ -91,14 +91,16 @@ in each run, mostly at the resume barrier or the shortlist.
 
 ## Findings
 
-1. **A completion sent around the crash is lost.** Stuck groups had members
+Findings 1, 2 and 4 are fixed (OAS-236); see [After OAS-236](#after-oas-236).
+
+1. **Fixed. A completion sent around the crash is lost.** Stuck groups had members
    with all 10 votes saved and no `Step_Completion` row. HTTP is back the moment
    the API is, but the socket's reconnect backoff (`socketContext.tsx:28`, up to
    10s) keeps it down longer: sockets came back a median 7.5s after the kill,
    and up to 16s. `userCompletedResReview` (`res-review/page.tsx:611`) is sent
    once and never again on reconnect, so one emitted in that gap is most likely
    what goes missing.
-2. **Next unlocks without the barrier.** The page also enables Next once every
+2. **Fixed. Next unlocks without the barrier.** The page also enables Next once every
    member has 10 saved votes (`res-review/page.tsx:475`). A student whose
    completion was lost can leave, and the navigation (`:657`) throws away both
    the buffered completion and the `moveGroup` emitted after it. The group
@@ -110,7 +112,7 @@ in each run, mostly at the resume barrier or the shortlist.
    `interviewStatusUpdated` and `moveGroup`. Seen in the container-kill runs,
    when groups were already interviewing at the crash. This breaks rule 4 in
    AGENTS.md.
-4. **`/res-review-group` takes any `moveGroup` for its group**
+4. **Fixed. `/res-review-group` takes any `moveGroup` for its group**
    (`res-review-group/page.tsx:334`), including a teammate's late one meant for
    `/res-review-group` itself, and reloads. That happened 3 to 8 times per
    restart run.
@@ -119,7 +121,28 @@ in each run, mostly at the resume barrier or the shortlist.
    roster, and there is no override past makeOffer. Group 1 ends every run at
    `offer`. This breaks rule 3.
 
-Findings 1 and 2 together are the likely class-ender: a crash at the wrong
+## After OAS-236
+
+`/res-review` now re-sends its completion on every reconnect and unlocks Next
+only on the barrier (the release event, or polling `GET /groups/barrier-status`
+every 5s). `/res-review-group` ignores a `moveGroup` for any page but
+`/interview-stage`. Same machine, 2026-10-28:
+
+| Restart run  | Runs | API p95  | Stuck   |
+| ------------ | ---- | -------- | ------- |
+| `main`       | 2    | 63–84ms  | 4, 21   |
+| With OAS-236 | 3    | 89–311ms | 0, 0, 0 |
+
+The p95 is likely higher because the students now carry on after the crash instead of
+waiting out the run. In one run `GET /groups/barrier-status` was itself over
+500ms at p95, from the polls landing as the API came back.
+
+Separately, on today's `main` a plain run strands the dormant student04 at no
+step (expected `offer`) while force-advance answers 400 for group 1. It happens
+with and without this change; finding 5 is the open half (OAS-237), along with
+finding 3.
+
+Findings 1 and 2 together were the likely class-ender: a crash at the wrong
 moment strands groups until the teacher notices. Re-sending the completion on
 every `connect` (the server ignores a duplicate) would likely close both.
 
