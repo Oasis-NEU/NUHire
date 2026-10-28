@@ -1,7 +1,3 @@
-// ============================================
-// src/controller/progress.controller.ts
-// ============================================
-
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool, ResultSetHeader, RowDataPacket } from 'mysql2';
@@ -148,13 +144,9 @@ export class ProgressController {
     );
   };
 
-  // --- Group-selection confirmations (res-review-group) -------------------
-  //
-  // These used to live only in React state. A refresh reset the tally to 0 and
-  // left the already-confirmed student with a disabled Confirm button, so the
-  // group deadlocked unless every member reloaded in the same instant. The
-  // table is the record; the socket events below are only a live nudge, and the
-  // GET is the fallback a client can poll after a reconnect.
+  // Group-selection confirmations (res-review-group). The table is the record;
+  // the socket events below are only a live nudge, and the GET is the fallback
+  // a client can poll after a refresh or reconnect.
 
   // Identity comes from the session, never the request. A client-supplied
   // group_id or student_id would let one student confirm on a teammate's behalf
