@@ -146,3 +146,9 @@ export type LiveStudent = Pick<Student, 'id' | 'email' | 'f_name' | 'l_name'> & 
   confirmed_at: string | null;
   online: boolean;
 };
+
+/** What a `Popup` shows. */
+export interface PopupMessage {
+  headline: string;
+  message: string;
+}

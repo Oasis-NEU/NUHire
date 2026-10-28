@@ -4,24 +4,22 @@ import Image from 'next/image';
 import Slideshow from './components/slideshow';
 import Popup from './components/popup';
 import { loginErrorPopup } from '../lib/loginError';
+import type { PopupMessage } from '../types';
 import './globals.css';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 
 export default function Home() {
-  const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
+  const [popup, setPopup] = useState<PopupMessage | null>(null);
 
   // Read in an effect rather than with useSearchParams, which fails the build
   // without a Suspense boundary. The code is then dropped from the URL so a
   // refresh after dismissing does not show the same failure again.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const found = loginErrorPopup(params.get('error'));
+    const found = loginErrorPopup(new URLSearchParams(window.location.search).get('error'));
     if (!found) return;
     setPopup(found);
-    params.delete('error');
-    const query = params.toString();
-    window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
+    window.history.replaceState(null, '', window.location.pathname);
   }, []);
 
   const handleKeycloakLogin = () => {

@@ -2,21 +2,18 @@
 // Each message tells the student whether retrying can help, because otherwise
 // a room of them clicks "Get Started" again with no idea why it bounced.
 
-interface LoginErrorPopup {
-  headline: string;
-  message: string;
-}
+import type { PopupMessage } from '../types';
 
 const TRY_AGAIN = 'Try again, and tell your professor if it keeps happening.';
 
-const MESSAGES: Record<string, LoginErrorPopup> = {
+const MESSAGES: Record<string, PopupMessage> = {
   auth_failed: {
     headline: 'Login failed',
     message: `Your login didn't go through. ${TRY_AGAIN}`,
   },
   invalid_callback: {
-    headline: 'Login expired',
-    message: 'That login link has expired. Click "Get Started" to log in again.',
+    headline: 'Login failed',
+    message: 'Your login didn\'t complete. Click "Get Started" to log in again.',
   },
   not_authenticated: {
     headline: 'Login expired',
@@ -25,10 +22,6 @@ const MESSAGES: Record<string, LoginErrorPopup> = {
   no_user: {
     headline: 'Login failed',
     message: "We couldn't read your account details. Tell your professor.",
-  },
-  user_not_found: {
-    headline: 'Login failed',
-    message: "We couldn't find your account. Tell your professor.",
   },
   session_error: {
     headline: 'Login failed',
@@ -45,12 +38,12 @@ const MESSAGES: Record<string, LoginErrorPopup> = {
 };
 
 // A code added to the API later still gets a message instead of nothing.
-const FALLBACK: LoginErrorPopup = {
+const FALLBACK: PopupMessage = {
   headline: 'Login failed',
   message: `Something went wrong logging you in. ${TRY_AGAIN}`,
 };
 
-export const loginErrorPopup = (code: string | null): LoginErrorPopup | null => {
+export const loginErrorPopup = (code: string | null): PopupMessage | null => {
   if (!code) return null;
   return Object.hasOwn(MESSAGES, code) ? MESSAGES[code] : FALLBACK;
 };
