@@ -88,10 +88,9 @@ export const useProgress = () => {
     const currentPath = window.location.pathname;
     if (!(currentPath in allowedRoutes)) return;
 
-    // Nothing is decided until auth has resolved. This hook used to read
-    // localStorage on mount and redirect immediately, which bounced a student
-    // whose progress had not been cached on this device — a second browser, a
-    // cleared cache — off the page their group was actually on.
+    // Nothing is decided until auth has resolved, so a student with no progress
+    // cached on this device (a second browser, a cleared cache) is not bounced
+    // off the page their group is on.
     if (loading || !user) return;
 
     let cancelled = false;
@@ -110,9 +109,8 @@ export const useProgress = () => {
 
       if (allowedRoutes[currentPath].includes(progress)) return;
 
-      // Previously this did `replace('/' + progress)`, which produced paths
-      // like "/res_1" that are not routes, so the guard itself 404'd. Fall back
-      // to the dashboard for any step we do not recognise.
+      // Step names are not routes, so translate; an unrecognised step goes to
+      // the dashboard rather than a 404.
       window.location.replace(STEP_TO_ROUTE[progress] ?? '/dashboard');
     };
 
