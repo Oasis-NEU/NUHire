@@ -276,7 +276,7 @@ export class Student {
 
     await this.loadPage('res_1');
     const resumes = await this.call('GET', '/resume_pdf', `/resume_pdf?class_id=${classId}`);
-    const barrierStatus = () =>
+    const barrierReleased = () =>
       this.call(
         'GET',
         '/groups/barrier-status/:classId/:groupId',
@@ -310,7 +310,7 @@ export class Student {
     // The page also polls the barrier every 5s while it waits. A failure is
     // already counted by timedCall.
     const pollBarrier = async () => {
-      if (await barrierStatus().catch(() => false)) released = true;
+      if (await barrierReleased().catch(() => false)) released = true;
     };
     await pollBarrier();
     const poll = setInterval(pollBarrier, 5000);

@@ -302,6 +302,10 @@ export default function ResumesPage() {
     // for the rest of the class. Joining on 'connect' rather than once on
     // mount is what makes a wifi blip recoverable; the server re-evaluates the
     // barrier on every join, so a release missed while offline is re-sent.
+    //
+    // A completion emitted while the API was down is lost the same way, and
+    // without its Step_Completion row the group never releases, so it is sent
+    // again too. The server keeps the first completion time on a duplicate.
     const announce = () => {
       socket.emit('studentOnline', { studentId: user.email });
       socket.emit('joinGroup', roomId);
@@ -309,6 +313,9 @@ export default function ResumesPage() {
         studentId: user.email,
         currentPage: pathname,
       });
+      if (announcedFinishRef.current) {
+        socket.emit('userCompletedResReview', { groupId: user.group_id });
+      }
     };
 
     if (socket.connected) announce();
@@ -577,24 +584,6 @@ export default function ResumesPage() {
     applySavedDecisions,
   ]);
 
-  // An announce emitted while the API is down is lost, and without its
-  // Step_Completion row the group never releases. Send it again on every
-  // reconnect; the server keeps the first completion time on a duplicate.
-  useEffect(() => {
-    if (!socket || !user) return;
-
-    const resendCompletion = () => {
-      if (announcedFinishRef.current) {
-        socket.emit('userCompletedResReview', { groupId: user.group_id });
-      }
-    };
-
-    socket.on('connect', resendCompletion);
-    return () => {
-      socket.off('connect', resendCompletion);
-    };
-  }, [socket, user]);
-
   const completeResumes = async () => {
     if (!socket || !user) {
       console.error('Socket or user not available');
@@ -619,15 +608,13 @@ export default function ResumesPage() {
     await updateProgress(user, 'res_2');
     localStorage.setItem('progress', 'res_2');
     clearSavedProgress(String(user.id));
+    window.location.href = '/res-review-group';
 
-    // Emit before navigating: once the page starts unloading, an emit after it
-    // can be dropped and the teammates who have not clicked Next are left here.
     socket.emit('moveGroup', {
       groupId: user.group_id,
       classId: user.class,
       targetPage: '/res-review-group',
     });
-    window.location.href = '/res-review-group';
   };
 
   useEffect(() => {

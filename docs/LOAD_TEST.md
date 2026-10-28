@@ -123,10 +123,10 @@ Findings 1, 2 and 4 are fixed (OAS-236); see [After OAS-236](#after-oas-236).
 
 ## After OAS-236
 
-`/res-review` now re-sends its completion on every reconnect, unlocks Next only
-on the barrier (the release event, or polling `GET /groups/barrier-status` every
-5s), and emits `moveGroup` before it navigates. `/res-review-group` ignores a
-`moveGroup` for any page but `/interview-stage`. Same machine, 2026-10-28:
+`/res-review` now re-sends its completion on every reconnect and unlocks Next
+only on the barrier (the release event, or polling `GET /groups/barrier-status`
+every 5s). `/res-review-group` ignores a `moveGroup` for any page but
+`/interview-stage`. Same machine, 2026-10-28:
 
 | Restart run  | Runs | API p95  | Stuck   |
 | ------------ | ---- | -------- | ------- |
