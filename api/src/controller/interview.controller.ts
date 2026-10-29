@@ -1,7 +1,3 @@
-// ============================================
-// src/controller/interview.controller.ts
-// ============================================
-
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool, RowDataPacket } from 'mysql2';
@@ -249,7 +245,6 @@ export class InterviewController {
       return;
     }
 
-    // Insert all votes in one multi-row INSERT
     const values = votes.map((vote) => [
       student.id,
       student.groupId,
