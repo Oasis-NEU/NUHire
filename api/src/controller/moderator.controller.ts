@@ -1,7 +1,3 @@
-// ============================================
-// src/controller/moderator.controller.ts
-// ============================================
-
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool } from 'mysql2';
@@ -17,23 +13,18 @@ export class ModeratorController {
     }
 
     // Creating a class seeds job descriptions, resumes, candidates and
-    // interview videos. Sent through the pool these landed on whichever
-    // connection was free, so each INSERT committed on its own and the ROLLBACK
-    // below applied to a connection that had run nothing: a failure partway
-    // through left a half-seeded class that the professor could not delete or
-    // recreate, because the CRN row was already there.
+    // interview videos, all on one connection, so a failure partway rolls back
+    // instead of leaving a half-seeded class whose CRN blocks recreating it.
     const conn = await this.db.promise().getConnection();
 
     try {
       await conn.beginTransaction();
 
-      // Insert the new class
       await conn.query('INSERT INTO Moderator (admin_email, crn) VALUES (?, ?)', [
         admin_email,
         crn,
       ]);
 
-      // Seed job descriptions
       const jobDescriptions = [
         { title: 'Carbonite', file_path: 'uploads/jobdescription/carbonite-jobdes.pdf' },
         {
@@ -59,7 +50,6 @@ export class ModeratorController {
         );
       }
 
-      // Seed resume PDFs
       const resumePdfs = [
         { title: 'sample1', file_path: 'uploads/resumes/sample1.pdf' },
         { title: 'sample2', file_path: 'uploads/resumes/sample2.pdf' },
@@ -73,7 +63,6 @@ export class ModeratorController {
         { title: 'sample10', file_path: 'uploads/resumes/sample10.pdf' },
       ];
 
-      // Insert resumes and get their IDs
       const resumeIds: number[] = [];
       for (const resume of resumePdfs) {
         const [result] = (await conn.query(
@@ -81,7 +70,6 @@ export class ModeratorController {
           [resume.title, resume.file_path, crn]
         )) as any;
 
-        // Get the inserted ID
         if (result.insertId > 0) {
           resumeIds.push(result.insertId);
         } else {
@@ -237,7 +225,6 @@ export class ModeratorController {
         }
       }
 
-      // Commit transaction
       await conn.commit();
 
       res.status(201).json({
@@ -251,7 +238,6 @@ export class ModeratorController {
         },
       });
     } catch (err: any) {
-      // Rollback on error
       try {
         await conn.rollback();
       } catch (rollbackError) {
@@ -331,15 +317,6 @@ export class ModeratorController {
       res.json(results);
     });
   };
-
-  // `updateGroups` (POST /moderators/update-groups) is gone, route and handler.
-  // It wrote `Moderator.nom_groups`, a column in no schema file, no migration
-  // and not the live database, so it 500'd on every call and nothing ever
-  // called it. Group count comes from `num_groups` on create-groups
-  // (GroupController.createGroups). A 410 stub was briefly kept here with a
-  // comment saying the route was still registered; the route had already been
-  // removed in the same change, so the stub was unreachable and the comment
-  // sent readers looking for a route that did not exist.
 
   addStudent = (req: AuthRequest, res: Response): void => {
     const { class_id, group_id, email, f_name, l_name } = req.body;
