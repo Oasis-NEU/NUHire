@@ -1,7 +1,3 @@
-// ============================================
-// src/controller/auth.controller.ts
-// ============================================
-
 import { Response, NextFunction } from 'express';
 import passport from 'passport';
 import { AuthRequest } from '../models/AuthRequest';
@@ -14,10 +10,9 @@ interface SignupName {
   lastName?: string | null;
 }
 
-// The one place that decides where a user lands after logging in. The callback,
-// a repeat callback and the post-signup redirect all used to carry their own
-// copy, and the copies disagreed about who needs the signup form and whether a
-// student's group has started.
+// The one place that decides where a user lands after logging in, shared by the
+// callback, a repeat callback and the post-signup redirect so they cannot
+// disagree about who needs the signup form or whether a group has started.
 export async function postLoginPath(
   db: Pool,
   dbUser: User | undefined,
@@ -89,7 +84,6 @@ export class AuthController {
       if (!req.query.code) {
         const FRONT_URL = process.env.REACT_APP_FRONT_URL;
 
-        // If authenticated, check their role and redirect appropriately
         if (req.isAuthenticated && req.isAuthenticated() && req.user) {
           const user = req.user;
           void this.sendPostLoginRedirect(
@@ -148,7 +142,7 @@ export class AuthController {
           return;
         }
 
-        // Re-login the user after regeneration
+        // regenerate() drops the logged-in user, so log them back in.
         req.login(user, (loginErr) => {
           if (loginErr) {
             console.error('Login error:', loginErr);
