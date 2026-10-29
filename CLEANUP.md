@@ -73,7 +73,7 @@ symbol names over the numbers.
 | ------- | ------------------------------------------------- | ----- | --- |
 | `CU-13` | Remove the last `console.log` calls and log emoji | GFI   | 1h  |
 | `CU-14` | Finish the shared types migration                 | GFI   | 3h  |
-| `CU-15` | Remove 15 endpoints nothing calls                 | GFI   | 3h  |
+| `CU-15` | Remove 14 endpoints nothing calls                 | GFI   | 3h  |
 | `CU-16` | Drop five tables nothing reads                    | MED   | 3h  |
 | `CU-17` | Pull one copy-pasted block out of a student page  | MED   | 4h  |
 | `CU-18` | Move `group.controller.ts` off nested callbacks   | MED   | 6h  |
@@ -220,8 +220,8 @@ team, mid-activity, with no visible cause.
 ### Evidence
 
 The `check` handler in `api/src/config/socket.ts:339` writes `checked` for the
-whole group. The vote INSERTs at `resume.controller.ts:83` (`submitVote`) and
-`:426` (`batchVote`) never carry it forward. The reader overwrites per row:
+whole group. The vote INSERT at `resume.controller.ts:83` (`submitVote`) never
+carries it forward. The reader overwrites per row:
 
 ```
 frontend/src/app/res-review-group/page.tsx:200   checkboxData[resume_number] = checked;
@@ -238,8 +238,6 @@ frontend/src/app/res-review-group/page.tsx:200   checkboxData[resume_number] = c
   stopping new drift.
 - `interview-stage/page.tsx:286` already treats any row with `checked === 1`
   as shortlisted, so it is safe as it is.
-- `batchVote` has no caller (`CU-15`). If that lands first, there is one writer
-  to fix instead of two.
 
 ### Done when
 
@@ -710,13 +708,13 @@ These need a one-line decision in the PR:
 
 ---
 
-## CU-15 — Remove 15 endpoints nothing calls
+## CU-15 — Remove 14 endpoints nothing calls
 
 **GFI · 3h · `api/src/routes/`, `api/src/controller/`**
 
 ### What & why
 
-Fifteen mounted endpoints have no caller in either package. They are surface
+Fourteen mounted endpoints have no caller in either package. They are surface
 area a reader has to understand and a reviewer has to check, and several take
 identity from the URL in ways `AGENTS.md` rule 1 forbids.
 
@@ -724,7 +722,6 @@ identity from the URL in ways `AGENTS.md` rule 1 forbids.
 
 | Endpoint                             | Route file:line          | Note                                          |
 | ------------------------------------ | ------------------------ | --------------------------------------------- |
-| `POST /resume/batch-vote`            | `resume.routes.ts:18`    | the frontend uses `/interview/batch-vote`     |
 | `POST /interview/vote`               | `interview.routes.ts:12` |                                               |
 | `GET /interview/vids`                | `interview.routes.ts:18` |                                               |
 | `GET /users`                         | `user.routes.ts:15`      | signup POSTs to `/users`; nothing GETs it     |
@@ -1367,7 +1364,6 @@ grep -rn "^// =" api/src | wc -l                                                
 
 Worst offenders: `advisor-dashboard/page.tsx:1-9` labels every import;
 `app.ts:69`, `:84`, `:93` (`// Now this.sessionStore exists!`);
-`group.controller.ts:729-757`, a 29-line header on `forceAdvance`;
 `res-review/page.tsx:558-576`.
 
 ### For an agent

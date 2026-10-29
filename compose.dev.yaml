@@ -57,6 +57,9 @@ services:
           target: /apicode/src
         - action: rebuild
           path: ./api/package-lock.json
+        # A new schema.prisma from `npm run db:pull` needs a regenerated client.
+        - action: rebuild
+          path: ./api/prisma
 
   frontend:
     build:

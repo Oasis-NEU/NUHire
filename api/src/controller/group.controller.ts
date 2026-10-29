@@ -1,8 +1,6 @@
-// src/controller/group.controller.ts
-
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
-import { User } from '../models/User';
+import { User, isAdmin } from '../models/User';
 import { Pool, RowDataPacket } from 'mysql2';
 import { PoolConnection } from 'mysql2/promise';
 import {
@@ -199,7 +197,6 @@ export class GroupController {
         return;
       }
 
-      // Emit socket event to notify the NEW group
       const roomId = `group_${new_group_id}_class_${class_id}`;
       this.io.to(roomId).emit('studentAddedToGroup', {
         groupId: new_group_id,
@@ -257,7 +254,6 @@ export class GroupController {
       return;
     }
 
-    // First get the student's group_id before removing them
     const getGroupQuery = 'SELECT group_id FROM Users WHERE email = ? AND class = ?';
 
     this.db.query(getGroupQuery, [email, class_id], (err, results: any) => {
@@ -283,7 +279,6 @@ export class GroupController {
           return;
         }
 
-        // Emit socket event to notify the group
         if (studentGroupId && this.io) {
           const roomId = `group_${studentGroupId}_class_${class_id}`;
           this.io.to(roomId).emit('studentRemovedFromGroup', {
@@ -519,7 +514,6 @@ export class GroupController {
       return;
     }
 
-    // Check if the student exists in the database
     const checkStudentQuery = 'SELECT * FROM Users WHERE email = ?';
 
     this.db.query(checkStudentQuery, [email], (checkErr, checkResults: any[]) => {
@@ -529,7 +523,6 @@ export class GroupController {
         return;
       }
 
-      // If student doesn't exist, create them
       if (!checkResults || checkResults.length === 0) {
         const insertQuery = `
           INSERT INTO Users (email, affiliation, class, group_id)
@@ -543,7 +536,6 @@ export class GroupController {
             return;
           }
 
-          // Emit socket event to notify the group
           const roomId = `group_${group_id}_class_${class_id}`;
           this.io.to(roomId).emit('studentAddedToGroup', {
             groupId: group_id,
@@ -567,7 +559,6 @@ export class GroupController {
         return;
       }
 
-      // Student exists, check if they're already in this specific class
       const existingStudent = checkResults[0];
 
       if (existingStudent.class === class_id) {
@@ -575,7 +566,6 @@ export class GroupController {
         return;
       }
 
-      // Student exists but not in this class, update their class and group
       const updateQuery = `UPDATE Users SET class = ?, group_id = ?, ${RESTAMP_ON_MOVE} WHERE email = ?`;
 
       this.db.query(updateQuery, [class_id, group_id, email], (updateErr, updateResult: any) => {
@@ -590,7 +580,6 @@ export class GroupController {
           return;
         }
 
-        // Emit socket event to notify the group
         const roomId = `group_${group_id}_class_${class_id}`;
         this.io.to(roomId).emit('studentAddedToGroup', {
           groupId: group_id,
@@ -657,15 +646,12 @@ export class GroupController {
     });
   };
 
-  // How many members of this group have finished a step, answered over HTTP.
-  //
-  // The release used to reach a client as one socket event at one instant. A
-  // student whose socket had dropped — the client gives up after five retries —
-  // never got it and had no other way to ask, so they sat on a page their group
-  // had left. This is that question without a socket: a client can poll it and
-  // recover on its own.
+  // How many members of this group have finished a step, answered over HTTP,
+  // so a client that missed the release event while its socket was down can
+  // poll and recover on its own.
   getBarrierStatus = async (req: AuthRequest, res: Response): Promise<void> => {
     const { classId, groupId } = req.params;
+    const user: User = req.user!;
     const step = typeof req.query.step === 'string' ? req.query.step : RES_REVIEW_BARRIER_STEP;
 
     if (!(STEP_ORDER as readonly string[]).includes(step)) {
@@ -676,10 +662,9 @@ export class GroupController {
     // A student may only read their own group. The params are client-supplied,
     // and without this check anyone could walk another section's group numbers
     // and watch who in it has finished.
-    if (req.user?.affiliation !== 'admin') {
+    if (!isAdmin(user)) {
       const ownGroup =
-        String(req.user?.group_id) === String(groupId) &&
-        String(req.user?.class) === String(classId);
+        String(user.group_id) === String(groupId) && String(user.class) === String(classId);
       if (!ownGroup) {
         res.status(403).json({ error: 'Forbidden: that is not your group' });
         return;
@@ -746,35 +731,23 @@ export class GroupController {
     });
   };
 
-  // The professor's way past a stuck group.
+  // The professor's way past a stuck group. Writes the step for every member,
+  // records the barrier behind it as satisfied so nothing pulls them back, and
+  // emits moveGroup to the room.
   //
-  // `moveGroup` is otherwise emitted only by students, so when a group
-  // deadlocked the only recourse was editing the database mid-class. This
-  // writes the step for every member, records the barrier behind it as
-  // satisfied so nothing pulls them back, and then emits moveGroup to the room.
+  // `target_step` must be the step right after the group's current one (its
+  // slowest member's, the number getProgress shows the professor). That is the
+  // only move the clients can follow: each page's moveGroup handler navigates
+  // only to its own successor, and useProgress redirects only a student who is
+  // ahead of their server step. A group pushed two steps would ignore the emit
+  // and stay put, while the professor got a 200 saying it worked.
   //
-  // `target_step` must be the step immediately after the group's current one
-  // (its slowest member's, the same number getProgress shows the professor).
-  // That is not a policy choice; it is the only move the clients can follow.
-  // Each page's moveGroup handler navigates only to ITS OWN successor and
-  // drops any other targetPage (res-review takes /res-review-group,
-  // res-review-group takes the next page and writes 'interview', interview-
-  // stage takes /makeOffer), and useProgress redirects only a student who is
-  // AHEAD of their server step, never one who is behind. So a group pushed two
-  // steps at once would sit on a page that ignored the emit, with a 200 in the
-  // professor's hand saying it worked, and a reload would not move them
-  // either. Refusing anything but the next step keeps what was written and
-  // what the room will do in agreement.
+  // /jobdes and /makeOffer have no moveGroup listener, so job_description ->
+  // res_1 and offer -> employer write the rows but nobody navigates.
   //
-  // Two next-step moves still land silently: /jobdes and /makeOffer register
-  // no moveGroup listener at all, so job_description -> res_1 and offer ->
-  // employer write the rows and nobody navigates. That is a frontend gap this
-  // handler cannot close from here.
-  //
-  // Works with nobody connected: the Progress and Step_Completion rows are
-  // what the barrier reads, and it is re-evaluated when a socket joins the
-  // room, so a member who reconnects later is released by that rather than by
-  // having heard the emit. They are not teleported; their button unlocks.
+  // Works with nobody connected: the barrier is re-evaluated when a socket
+  // joins the room, so a member who reconnects later finds their button
+  // unlocked rather than being moved.
   forceAdvance = async (req: AuthRequest, res: Response): Promise<void> => {
     const { class_id, group_id, target_step } = req.body;
 
@@ -796,11 +769,8 @@ export class GroupController {
     }
 
     // Declared outside the try so `finally` can release it, but checked out
-    // INSIDE the try. This is an async handler under Express 4, which does not
-    // catch a rejected promise; with getConnection() ahead of the try, a full
-    // pool or a DB that is down rejected past every handler here, the process
-    // logged an unhandledRejection, and the professor's request never got a
-    // response at all, in front of a class, with nothing to click.
+    // inside it: Express 4 does not catch a rejected promise, so a full pool
+    // or a down database would otherwise leave the professor with no response.
     let conn: PoolConnection | undefined;
 
     try {

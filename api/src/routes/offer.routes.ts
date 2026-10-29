@@ -20,7 +20,7 @@ export default (db: Pool): Router => {
     requireClassModerator(db),
     offerController.getOfferVotes
   );
-  // Accept or reject. A student could previously accept their own group's offer.
+  // Accept or reject: teachers only, so a student cannot accept their own group's offer.
   router.put('/:offer_id', requireAdmin, offerController.updateOffer);
 
   return router;

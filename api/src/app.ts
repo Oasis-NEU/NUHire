@@ -7,9 +7,10 @@ import session from 'express-session';
 import passport from 'passport';
 import path from 'path';
 import { Server as SocketIOServer } from 'socket.io';
-import { Server as HTTPServer } from 'http';
+import { createServer, Server as HTTPServer } from 'http';
 import MySQLStore from 'express-mysql-session';
 import { Pool } from 'mysql2';
+import { PrismaDb } from './config/database';
 import { requireAdmin } from './middleware/auth.middleware';
 
 // Import routes
@@ -40,9 +41,12 @@ export class App {
   private sessionStore: any;
   public onlineStudents: Record<string, string> = {};
 
-  constructor(private db: Pool) {
+  constructor(
+    private db: Pool,
+    private prisma: PrismaDb
+  ) {
     this.app = express();
-    this.server = require('http').createServer(this.app);
+    this.server = createServer(this.app);
     this.io = new SocketIOServer(this.server, {
       cors: {
         origin: process.env.REACT_APP_FRONT_URL,
@@ -204,7 +208,7 @@ export class App {
     this.app.use('/jobs', jobRoutes(this.db, this.io, this.onlineStudents));
     this.app.use('/groups', groupRoutes(this.db, this.io));
     this.app.use('/moderator', moderatorRoutes(this.db));
-    this.app.use('/notes', noteRoutes(this.db));
+    this.app.use('/notes', noteRoutes(this.prisma));
     this.app.use('/offers', offerRoutes(this.db));
     this.app.use('/progress', progressRoutes(this.db, this.io));
     this.app.use('/candidates', candidateRoutes(this.db));
@@ -214,7 +218,7 @@ export class App {
     // this origin. Same URLs, but authenticated and served as bytes (SEC-9).
     this.app.use('/uploads', uploadedFileRoutes());
     this.app.use('/csv', csvRoutes(this.db, this.io));
-    this.app.use('/facts', factsRoutes(this.db, this.io));
+    this.app.use('/facts', factsRoutes(this.prisma, this.io));
     this.app.use('/delete', deleteRoutes(this.db, this.io, this.onlineStudents));
 
     // Last. A throw inside a route used to become an unhandled rejection with

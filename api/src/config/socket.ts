@@ -1,14 +1,13 @@
-// src/config/socket.ts
-
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Pool, ResultSetHeader, RowDataPacket } from 'mysql2';
 import { SocketEvents } from '../models/SocketEvents';
+import { isAdmin } from '../models/User';
 import { BarrierStatus, PresentMember, StepCompletion } from '../models/Barrier';
 
 // Advisors join a room named after their own email (see 'adminOnline' below),
 // so notifying a class's teachers is one emit per Moderator row for that CRN.
 // Use this where the advisor dashboard needs to hear about something; it is
-// never in the group room, and io.emit reached every client in every class.
+// never in the group room, and io.emit would reach every client in every class.
 export function emitToClassModerators(
   io: SocketIOServer,
   db: Pool,
@@ -72,7 +71,7 @@ export async function presentMembers(
 // The members a frontend gate compares against: whoever is present, or the
 // whole roster when nobody is stamped yet. Zero present happens when no stamp
 // has landed since the group started (the socket may carry no session), and
-// reporting 0 opened every `count >= size` gate on the client at 0 of 0.
+// reporting 0 would open every `count >= size` gate on the client at 0 of 0.
 export async function gateMemberIds(
   db: Pool,
   classId: number | string,
@@ -114,12 +113,10 @@ export async function markPresent(
 
 // Has every present member of (group_id, class) recorded `step`?
 //
-// Answered by query every time instead of from a cached count. The count used
-// to live in `global.completedResReview`, which an API restart wiped: the
-// students who had already finished never re-announced, so the group restarted
-// at 0 and could never reach its total again. Rows in MySQL survive a restart,
-// so the same question can be asked as often as anyone needs — on completion,
-// on room join, on a roster change, and from the barrier-status poll.
+// Answered by query every time instead of from a cached count, so the answer
+// survives an API restart and can be asked as often as anyone needs: on
+// completion, on room join, on a roster change, and from the barrier-status
+// poll.
 export async function evaluateGroupBarrier(
   db: Pool,
   classId: number | string,
@@ -181,11 +178,10 @@ export function summarizeBarrier(
 // Re-evaluate the barrier and, if it is open, tell the group.
 //
 // Emitted to the room rather than to cached socket ids, and nothing is deleted
-// afterwards. The release used to be a single shot at one instant: a student
-// who was offline right then never received it and there was no retry. Now the
-// answer is re-derived from MySQL on every completion, room join and roster
-// change, so a student who rejoins picks it up, and GET /groups/barrier-status
-// is the same answer over HTTP for a client whose socket never came back.
+// afterwards: the answer is re-derived from MySQL on every completion, room
+// join and roster change, so a student who was offline picks it up when they
+// rejoin, and GET /groups/barrier-status is the same answer over HTTP for a
+// client whose socket never came back.
 export function broadcastGroupBarrier(
   io: SocketIOServer,
   db: Pool,
@@ -268,12 +264,11 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     // process-level uncaughtException handler in server.ts, which exits. Every
     // handler below destructures its payload, so one client emitting an event
     // with no argument (`socket.emit('adminOnline')` from a browser console)
-    // threw a TypeError and took the API down for the whole class, dropping
-    // every socket and losing the in-memory group barriers with it.
+    // would take the API down for the whole class.
     //
     // Defaulting the payload stops the destructure from throwing, and the catch
     // contains anything else the handler does. A malformed message is dropped
-    // and logged; it can no longer end the class.
+    // and logged.
     const on = <T>(event: string, handler: (payload: T) => void): void => {
       socket.on(event, (payload: T) => {
         try {
@@ -284,11 +279,9 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       });
     };
 
-    // Whether this socket is allowed into this room.
-    //
-    // socket.join() used to accept any string the client sent, so a student
-    // could type another group's room name into a console and receive that
-    // group's votes, popups and offer decisions for the rest of the class.
+    // Whether this socket is allowed into this room. socket.join() takes any
+    // string, so without this a student could type another group's room name
+    // into a console and receive that group's votes, popups and offers.
     //
     // A socket with no identity only exists with SOCKET_AUTH_REQUIRED=false,
     // the emergency setting, and is let through so that setting still works.
@@ -296,7 +289,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       const user = socket.data.user as SocketUser | undefined;
       if (!user) return true;
       // Advisors move between groups to help them; that is the job.
-      if (user.affiliation === 'admin') return true;
+      if (isAdmin(user)) return true;
 
       const ownRoom = `group_${user.group_id}_class_${user.class}`;
       if (room === ownRoom || room === String(user.group_id) || room === `class_${user.class}`) {
@@ -374,9 +367,8 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
     };
 
     // Student events act on the sender's own group, never on one the payload
-    // names. They used to take group, class and student id from the browser, so
-    // a student could tick another group's resumes, confirm an offer as a
-    // teammate, or move a group in another section.
+    // names, so a student cannot tick another group's resumes, confirm an offer
+    // as a teammate, or move a group in another section.
     //
     // One socket's events run one at a time, in arrival order. The lookup above
     // makes every handler async, and without the queue two quick checkbox
@@ -402,9 +394,9 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       const user = socket.data.user as SocketUser | undefined;
 
       // This room receives offer requests and every group's progress, so
-      // joining it by sending someone else's address was a way to watch a whole
-      // class. Trust the session over the payload where there is one.
-      if (user && (user.affiliation !== 'admin' || adminEmail !== user.email)) {
+      // joining it by sending someone else's address would be a way to watch a
+      // whole class. Trust the session over the payload where there is one.
+      if (user && (!isAdmin(user) || adminEmail !== user.email)) {
         console.warn(`Socket ${socket.id} (${user.email}) tried to join admin room ${adminEmail}.`);
         return;
       }
@@ -419,9 +411,6 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       // popups.
       const user = socket.data.user as SocketUser | undefined;
       onlineStudents[user?.email ?? studentId] = socket.id;
-      // Previously also ran a DB lookup here and broadcast an
-      // 'updateOnlineStudents' event carrying the student's email to EVERY
-      // connected client. Nothing listened for it, in any class.
     });
 
     // Room names arrive as `group_<group_id>_class_<class>` from every page.
@@ -435,9 +424,7 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
       socket.join(group_id);
 
       // Re-evaluate on join, because a reconnected socket is in no rooms and
-      // missed whatever was emitted while it was away. The old barrier fired
-      // once, at one instant, to cached socket ids; a student who was offline
-      // then stayed stuck on a page their whole group had already left.
+      // missed whatever was emitted while it was away.
       const parts = roomParts(group_id);
       if (parts) {
         broadcastGroupBarrier(io, db, parts.classId, parts.groupId, RES_REVIEW_BARRIER_STEP).catch(
@@ -571,16 +558,12 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
 
     // Who is on the other end of this socket, read fresh from the roster.
     //
-    // Identity comes from the session only. It used to fall back to a
-    // reverse-lookup in `onlineStudents`, but that map is keyed by whatever
-    // email the client sent in 'studentOnline' when the socket has no session,
-    // so a cookieless socket could register as a teammate and then report that
-    // teammate's completion. While the barrier was an in-memory Set the damage
-    // was a transient early release; now that a completion is a Step_Completion
-    // row it would be a forged, restart-surviving record the professor reads.
-    // A socket with no session therefore has no identity here, full stop.
-    // The session runs over the handshake and survives a reconnect, so a real
-    // student is never the one without it.
+    // Identity comes from the session only, never from `onlineStudents`. That
+    // map is keyed by whatever email the client sent in 'studentOnline' when the
+    // socket has no session, so trusting it would let a cookieless socket
+    // register as a teammate and write a forged Step_Completion row in their
+    // name. The session runs over the handshake and survives a reconnect, so a
+    // real student is never the one without it.
     //
     // Group and class come from `Users`, not from the session or the payload: a
     // student reassigned mid-class carries a stale group in both, and filing

@@ -1,14 +1,78 @@
-// ============================================
-// src/controller/auth.controller.ts
-// ============================================
-
 import { Response, NextFunction } from 'express';
 import passport from 'passport';
 import { AuthRequest } from '../models/AuthRequest';
-import { Pool } from 'mysql2';
+import { User, isAdmin } from '../models/User';
+import { Pool, RowDataPacket } from 'mysql2';
+
+// Pre-fills the signup form for someone who is not set up yet.
+interface SignupName {
+  firstName?: string | null;
+  lastName?: string | null;
+}
+
+// The one place that decides where a user lands after logging in, shared by the
+// callback, a repeat callback and the post-signup redirect so they cannot
+// disagree about who needs the signup form or whether a group has started.
+export async function postLoginPath(
+  db: Pool,
+  dbUser: User | undefined,
+  email: string,
+  name: SignupName
+): Promise<string> {
+  const signupPath =
+    `/signupform?email=${encodeURIComponent(email)}` +
+    `&firstName=${encodeURIComponent(name.firstName ?? '')}` +
+    `&lastName=${encodeURIComponent(name.lastName ?? '')}`;
+
+  if (!dbUser) return signupPath;
+
+  const fullName = encodeURIComponent(`${dbUser.f_name || ''} ${dbUser.l_name || ''}`.trim());
+
+  if (isAdmin(dbUser)) return `/advisor-dashboard?name=${fullName}`;
+  if (!dbUser.f_name || !dbUser.l_name || dbUser.affiliation === 'none') return signupPath;
+
+  try {
+    const [rows] = await db
+      .promise()
+      .query<RowDataPacket[]>(
+        'SELECT started FROM `GroupsInfo` WHERE class_id = ? AND group_id = ?',
+        [dbUser.class, dbUser.group_id]
+      );
+    if (rows.length === 0 || rows[0].started !== 1) return '/waitingGroup';
+  } catch (err) {
+    console.error('Error checking group start status:', err);
+    return '/waitingGroup';
+  }
+
+  return dbUser.seen === 1 ? `/dashboard?name=${fullName}` : '/about';
+}
 
 export class AuthController {
   constructor(private db: Pool) {}
+
+  // Looks the user up and hands the decided URL to `send`, which is either a
+  // plain redirect or the callback's cookie-setting redirect.
+  private sendPostLoginRedirect = async (
+    email: string,
+    name: SignupName,
+    send: (url: string) => void
+  ): Promise<void> => {
+    const FRONT_URL = process.env.REACT_APP_FRONT_URL;
+
+    let dbUser: User | undefined;
+    try {
+      const [rows] = await this.db
+        .promise()
+        .query<RowDataPacket[]>('SELECT * FROM Users WHERE email = ?', [email]);
+      dbUser = rows[0] as User | undefined;
+    } catch (err) {
+      console.error('Database error:', err);
+      send(`${FRONT_URL}/?error=db_error`);
+      return;
+    }
+
+    send(`${FRONT_URL}${await postLoginPath(this.db, dbUser, email, name)}`);
+  };
 
   initiateKeycloakAuth = (req: AuthRequest, res: Response, next: NextFunction): void => {
     passport.authenticate('keycloak')(req, res, next);
@@ -20,30 +84,12 @@ export class AuthController {
       if (!req.query.code) {
         const FRONT_URL = process.env.REACT_APP_FRONT_URL;
 
-        // If authenticated, check their role and redirect appropriately
         if (req.isAuthenticated && req.isAuthenticated() && req.user) {
           const user = req.user;
-
-          this.db.query(
-            'SELECT * FROM Users WHERE email = ?',
-            [user.email],
-            (err, results: any[]) => {
-              if (err || results.length === 0) {
-                res.redirect(`${FRONT_URL}/dashboard`);
-                return;
-              }
-
-              const dbUser = results[0];
-              const fullName = encodeURIComponent(
-                `${dbUser.f_name || ''} ${dbUser.l_name || ''}`.trim()
-              );
-
-              if (dbUser.affiliation === 'admin') {
-                res.redirect(`${FRONT_URL}/advisor-dashboard?name=${fullName}`);
-              } else {
-                res.redirect(`${FRONT_URL}/dashboard?name=${fullName}`);
-              }
-            }
+          void this.sendPostLoginRedirect(
+            user.email,
+            { firstName: user.f_name, lastName: user.l_name },
+            (url) => res.redirect(url)
           );
         } else {
           res.redirect(`${FRONT_URL}/?error=invalid_callback`);
@@ -96,7 +142,7 @@ export class AuthController {
           return;
         }
 
-        // Re-login the user after regeneration
+        // regenerate() drops the logged-in user, so log them back in.
         req.login(user, (loginErr) => {
           if (loginErr) {
             console.error('Login error:', loginErr);
@@ -110,61 +156,7 @@ export class AuthController {
           const firstName = parts[0];
           const lastName = parts[1];
 
-          this.db.query('SELECT * FROM Users WHERE email = ?', [email], (err, results: any[]) => {
-            if (err) {
-              console.error('Database error:', err);
-              setCookieAndRedirect(`${FRONT_URL}/?error=db_error`);
-              return;
-            }
-
-            if (results.length > 0) {
-              const dbUser = results[0];
-              const fullName = encodeURIComponent(
-                `${dbUser.f_name || ''} ${dbUser.l_name || ''}`.trim()
-              );
-
-              if (dbUser.affiliation === 'admin') {
-                setCookieAndRedirect(`${FRONT_URL}/advisor-dashboard?name=${fullName}`);
-                return;
-              }
-
-              if (!dbUser.f_name || !dbUser.l_name || dbUser.affiliation === 'none') {
-                setCookieAndRedirect(
-                  `${FRONT_URL}/signupform?email=${encodeURIComponent(email)}&firstName=${firstName}&lastName=${lastName}`
-                );
-                return;
-              }
-
-              const checkGroupStartedQuery =
-                'SELECT started FROM `GroupsInfo` WHERE class_id = ? AND group_id = ?';
-
-              this.db.query(
-                checkGroupStartedQuery,
-                [dbUser.class, dbUser.group_id],
-                (startErr, startResults: any[]) => {
-                  if (startErr) {
-                    console.error('Error checking group start status:', startErr);
-                    setCookieAndRedirect(`${FRONT_URL}/waitingGroup`);
-                    return;
-                  }
-
-                  if (startResults.length > 0 && startResults[0].started === 1) {
-                    if (dbUser.seen === 1) {
-                      setCookieAndRedirect(`${FRONT_URL}/dashboard?name=${fullName}`);
-                    } else {
-                      setCookieAndRedirect(`${FRONT_URL}/about`);
-                    }
-                  } else {
-                    setCookieAndRedirect(`${FRONT_URL}/waitingGroup`);
-                  }
-                }
-              );
-            } else {
-              setCookieAndRedirect(
-                `${FRONT_URL}/signupform?email=${encodeURIComponent(email)}&firstName=${firstName}&lastName=${lastName}`
-              );
-            }
-          });
+          void this.sendPostLoginRedirect(email, { firstName, lastName }, setCookieAndRedirect);
         });
       });
     },
@@ -238,46 +230,10 @@ export class AuthController {
     }
 
     const user = req.user;
-    const email = user.email;
-
-    this.db.query('SELECT * FROM Users WHERE email = ?', [email], (err, results: any[]) => {
-      if (err || results.length === 0) {
-        res.redirect(`${FRONT_URL}/?error=user_not_found`);
-        return;
-      }
-
-      const dbUser = results[0];
-      const fullName = encodeURIComponent(`${dbUser.f_name || ''} ${dbUser.l_name || ''}`.trim());
-
-      if (dbUser.affiliation === 'admin') {
-        res.redirect(`${FRONT_URL}/advisor-dashboard?name=${fullName}`);
-        return;
-      }
-
-      // Check if group is started for students
-      const checkGroupStartedQuery =
-        'SELECT started FROM `GroupsInfo` WHERE class_id = ? AND group_id = ?';
-
-      this.db.query(
-        checkGroupStartedQuery,
-        [dbUser.class, dbUser.group_id],
-        (startErr, startResults: any[]) => {
-          if (startErr || startResults.length === 0) {
-            res.redirect(`${FRONT_URL}/waitingGroup`);
-            return;
-          }
-
-          if (startResults[0].started === 1) {
-            if (dbUser.seen === 1) {
-              res.redirect(`${FRONT_URL}/dashboard?name=${fullName}`);
-            } else {
-              res.redirect(`${FRONT_URL}/about`);
-            }
-          } else {
-            res.redirect(`${FRONT_URL}/waitingGroup`);
-          }
-        }
-      );
-    });
+    void this.sendPostLoginRedirect(
+      user.email,
+      { firstName: user.f_name, lastName: user.l_name },
+      (url) => res.redirect(url)
+    );
   };
 }

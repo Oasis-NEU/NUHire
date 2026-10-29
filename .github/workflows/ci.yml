@@ -79,6 +79,10 @@ jobs:
           cache-dependency-path: api/package-lock.json
       - name: Install (npm ci)
         run: npm ci --prefix api
+      # The client is generated from api/prisma/schema.prisma and not committed,
+      # so tsc cannot see its types until this has run.
+      - name: Generate Prisma client
+        run: npm run db:generate --prefix api
       - name: Typecheck
         run: npx --prefix api tsc -p api --noEmit
       - name: Build
@@ -196,6 +200,9 @@ jobs:
             frontend/package-lock.json
       - name: Install (npm ci)
         run: npm ci --prefix api && npm ci --prefix frontend
+      # Controllers under test import config/database.ts, which loads the client.
+      - name: Generate Prisma client
+        run: npm run db:generate --prefix api
       - name: API tests
         run: npm test --prefix api
       - name: Frontend tests

@@ -1,12 +1,9 @@
-// ============================================
-// src/controller/interview.controller.ts
-// ============================================
-
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool, RowDataPacket } from 'mysql2';
 import { dbErrorStatus } from '../config/database';
 import { gateMemberIds } from '../config/socket';
+import { User } from '../models/User';
 
 type SessionStudent = { id: number; groupId: number; classId: number };
 
@@ -14,8 +11,8 @@ type SessionStudent = { id: number; groupId: number; classId: number };
 // body, so a student cannot file one under a classmate. requireStep already
 // refuses a student with no group; an admin skips that check and has none.
 const sessionStudent = (req: AuthRequest): SessionStudent | null => {
-  const user = req.user;
-  if (!user?.group_id || !user.class) return null;
+  const user: User = req.user!;
+  if (!user.group_id || !user.class) return null;
   return { id: user.id, groupId: user.group_id, classId: user.class };
 };
 
@@ -248,7 +245,6 @@ export class InterviewController {
       return;
     }
 
-    // Insert all votes in one multi-row INSERT
     const values = votes.map((vote) => [
       student.id,
       student.groupId,

@@ -43,6 +43,10 @@ start.** Those break in ways you won't see until a full class is on it.
 
 ## In progress
 
+## Done
+
+_Move entries here when they merge or get dropped._
+
 ### Absent students no longer block their group
 
 - **Who:** Audrey
@@ -51,8 +55,8 @@ start.** Those break in ways you won't see until a full class is on it.
 - **Files:** `api/src/config/socket.ts`, `api/src/controller/group.controller.ts`, `api/src/controller/interview.controller.ts`, `frontend/src/app/live-class/page.tsx`, `frontend/src/types/index.ts`, `database-files/migrations/006-users-present-at.sql`, `database-files/Pandployer.sql`, `.local/tests/seed/scenarios.mjs`, docs
 - **Touches auth / sockets / schema / deploy?** sockets and schema; talked to Aarav
 - **Size:** days
-- **Status:** in review
-- **Branch:** see [#41](https://github.com/Oasis-NEU/NUHire/pull/41)
+- **Status:** merged 2026-10-13
+- **Branch:** [#41](https://github.com/Oasis-NEU/NUHire/pull/41)
 - **Linear:** TCH-16 (first checkbox)
 
 ### Late students can rejoin their group
@@ -63,10 +67,6 @@ start.** Those break in ways you won't see until a full class is on it.
 - **Files:** `api/src/config/steps.ts`, `api/src/controller/catchUp.controller.ts`, `api/src/routes/group.routes.ts`, `api/src/config/socket.ts`, `frontend/src/app/components/useCatchUp.tsx`, `frontend/src/app/dashboard/page.tsx`, `frontend/src/lib/api.ts`, docs
 - **Touches auth / sockets / schema / deploy?** sockets: one emit of the existing `studentAddedToGroup` event
 - **Size:** days
-- **Status:** in review
-- **Branch:** stacked on #41
+- **Status:** merged 2026-10-13
+- **Branch:** [#42](https://github.com/Oasis-NEU/NUHire/pull/42)
 - **Linear:** STU-21
-
-## Done
-
-_Move entries here when they merge or get dropped._

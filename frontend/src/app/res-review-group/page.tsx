@@ -197,7 +197,9 @@ export default function ResReviewGroup() {
           else if (vote === 'no') voteCounts[resume_number].no += 1;
           else if (vote === 'unanswered') voteCounts[resume_number].undecided += 1;
 
-          checkboxData[resume_number] = checked === 1;
+          // `checked` is a group-level flag stored on every vote row. Take the max
+          // per resume, so one row left at 0 cannot un-tick it for the group.
+          checkboxData[resume_number] = checkboxData[resume_number] || checked === 1;
         });
 
         setVoteCounts(voteCounts);

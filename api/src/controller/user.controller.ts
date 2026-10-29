@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
+import { isAdmin } from '../models/User';
 import { Pool, RowDataPacket } from 'mysql2';
 import { emitToClassModerators, markPresent } from '../config/socket';
 
@@ -30,9 +31,8 @@ export class UserController {
   // and the instructor's CSV import creates students ahead of time. So this
   // only fills in names and, for emails listed in Moderator, promotes to admin.
   //
-  // It used to have no auth and wrote whatever affiliation the body said, so a
-  // single request could make any account an admin or demote a professor. The
-  // email and the target affiliation are now decided server-side.
+  // The email comes from the session, and the requested affiliation is only
+  // granted once it checks out: admin needs a Moderator row, student a roster.
   createUser = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { First_name, Last_name, Affiliation } = req.body;
@@ -191,7 +191,7 @@ export class UserController {
 
       const { email, class: classId } = req.body;
 
-      if (req.user?.email !== email && req.user?.affiliation !== 'admin') {
+      if (req.user?.email !== email && !isAdmin(req.user)) {
         res.status(403).json({ message: 'Forbidden: You can only update your own profile' });
         return;
       }
@@ -253,8 +253,7 @@ export class UserController {
     }
   };
 
-  // Answers only for the caller. It used to answer for any email, and logged
-  // the whole session and cookie header on every call.
+  // Answers only for the caller.
   check = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { email } = req.params;

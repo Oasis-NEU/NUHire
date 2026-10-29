@@ -91,3 +91,4 @@ the way the API does at start, and then all of them twice more.
 | `004-group-confirmations.sql`      | `GroupConfirmations` table; res-review-group confirm state survives refresh |
 | `005-step-completion.sql`          | `Step_Completion` table; the group barrier survives an API restart          |
 | `006-users-present-at.sql`         | `Users.present_at`; gates wait only for students who showed up              |
+| `007-resume-group-lookup-index.sql` | Index `Resume` by group, class and resume for the shortlist lookups |

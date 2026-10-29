@@ -70,13 +70,28 @@ export class ResumeController {
       (err, results: any[]) => {
         const oldVote = results && results.length > 0 ? results[0].vote : 'unanswered';
 
-        const query = `INSERT INTO Resume (student_id, group_id, class, timespent, resume_number, vote) 
-          VALUES (?, ?, ?, ?, ?, ?)
+        // `checked` is the group's shortlist flag, kept on every vote row. A new
+        // row takes the group's current value in the same statement; at the
+        // column default of 0, a teammate voting after the shortlist un-ticked
+        // the resume for the whole group. A re-vote leaves its row's flag alone.
+        const query = `INSERT INTO Resume (student_id, group_id, class, timespent, resume_number, vote, checked)
+          SELECT ?, ?, ?, ?, ?, ?, COALESCE(MAX(checked), 0)
+          FROM Resume WHERE group_id = ? AND class = ? AND resume_number = ?
           ON DUPLICATE KEY UPDATE timespent = VALUES(timespent), vote = VALUES(vote);`;
 
         this.db.query(
           query,
-          [student_id, group_id, classId, timespent, resume_number, vote],
+          [
+            student_id,
+            group_id,
+            classId,
+            timespent,
+            resume_number,
+            vote,
+            group_id,
+            classId,
+            resume_number,
+          ],
           (err) => {
             if (err) {
               console.error('❌ [BACKEND-VOTE] Error saving vote:', err);
@@ -361,49 +376,5 @@ export class ResumeController {
       }
       res.json(results);
     });
-  };
-
-  batchVote = async (req: AuthRequest, res: Response): Promise<void> => {
-    const { votes } = req.body;
-
-    if (!Array.isArray(votes) || votes.length === 0) {
-      res.status(400).json({ error: 'Invalid votes array' });
-      return;
-    }
-
-    try {
-      // Insert all votes in one multi-row INSERT
-      const values = votes.map((vote) => [
-        vote.student_id,
-        vote.group_id,
-        vote.class,
-        vote.timespent,
-        vote.resume_number,
-        vote.vote,
-      ]);
-
-      // Resubmitting must overwrite the student's earlier vote rather than add
-      // a second row. Before the unique key existed this inserted blindly, so a
-      // student who went back and changed an answer, or whose client retried,
-      // counted twice in the group's tally.
-      const query = `
-        INSERT INTO Resume (student_id, group_id, class, timespent, resume_number, vote)
-        VALUES ?
-        ON DUPLICATE KEY UPDATE timespent = VALUES(timespent), vote = VALUES(vote)
-      `;
-
-      this.db.query(query, [values], (err) => {
-        if (err) {
-          console.error('Error saving batch votes:', err);
-          res.status(500).json({ error: 'Failed to save votes' });
-          return;
-        }
-
-        res.json({ success: true, votesCount: votes.length });
-      });
-    } catch (error) {
-      console.error('Error in batchVote:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
   };
 }
