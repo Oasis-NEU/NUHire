@@ -1,4 +1,3 @@
-// src/routes/moderator.routes.ts
 import { Router } from 'express';
 import { Pool } from 'mysql2';
 import { ModeratorController } from '../controller/moderator.controller';
@@ -8,8 +7,7 @@ export default (db: Pool): Router => {
   const router = Router();
   const moderatorController = new ModeratorController(db);
 
-  // Teacher grants. DELETE cascades through the whole class, and all three
-  // used to be reachable with no session at all.
+  // Teacher grants. DELETE cascades through the whole class.
   router.post('/crns', requireModerator, moderatorController.addModeratorCRN);
   router.get('/crns', requireModerator, moderatorController.getAllModeratorCRNs);
   router.delete('/crns/:crn', requireModerator, moderatorController.deleteModeratorCRN);

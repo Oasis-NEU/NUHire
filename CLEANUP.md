@@ -1364,7 +1364,6 @@ grep -rn "^// =" api/src | wc -l                                                
 
 Worst offenders: `advisor-dashboard/page.tsx:1-9` labels every import;
 `app.ts:69`, `:84`, `:93` (`// Now this.sessionStore exists!`);
-`group.controller.ts:729-757`, a 29-line header on `forceAdvance`;
 `res-review/page.tsx:558-576`.
 
 ### For an agent
