@@ -120,6 +120,17 @@ async function apply(name, { conn }) {
       const picked = shortlist(resumeIds, group);
       const members = activeMembersOf(group);
 
+      // Stamp the whole group in one statement, as the socket would before anyone
+      // finishes. The barrier compares second-resolution stamps, so stamping each
+      // student in turn lets the clock tick mid-group and later members read as
+      // late arrivals, releasing the barrier early.
+      const memberIds = members.map((student) => idOf.get(student.email));
+      await conn.query(
+        `UPDATE Users SET current_page = ?, seen = 1, present_at = CURRENT_TIMESTAMP
+          WHERE id IN (${placeholders(memberIds)})`,
+        [STEP_PAGE[p.step], ...memberIds]
+      );
+
       for (const [i, student] of members.entries()) {
         const id = idOf.get(student.email);
         // The ghost's Progress row is the one still naming their old group.
@@ -128,11 +139,6 @@ async function apply(name, { conn }) {
           `INSERT INTO Progress (crn, group_id, step, email) VALUES (?, ?, ?, ?)
            ON DUPLICATE KEY UPDATE crn = VALUES(crn), group_id = VALUES(group_id), step = VALUES(step)`,
           [SIM.crn, progressGroup, p.step, student.email]
-        );
-        // present_at as the socket would stamp it, before any completion below.
-        await conn.query(
-          'UPDATE Users SET current_page = ?, seen = 1, present_at = CURRENT_TIMESTAMP WHERE id = ?',
-          [STEP_PAGE[p.step], id]
         );
 
         const votes = resumeIds.slice(0, p.votes[i]).map((resumeId, k) => [
