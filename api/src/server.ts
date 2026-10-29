@@ -1,5 +1,3 @@
-// src/server.ts
-
 import dotenv from 'dotenv';
 import { Request, Response } from 'express';
 import { App } from './app';
@@ -7,14 +5,13 @@ import { databaseService, dbErrorStatus } from './config/database';
 import { configurePassport } from './config/passport';
 import { initializeSocketHandlers } from './config/socket';
 
-// Load environment variables
 dotenv.config();
 
 /**
- * SESSION_SECRET is read with `!` in app.ts, so an unset value produced a
- * running app signing cookies with `undefined`: every session forgeable, and
- * nothing in the logs to say so (SEC-12b). Boot is the only place this can
- * still be caught, and the length floor matches the generator in .env.example.
+ * SESSION_SECRET is read with `!` in app.ts, so an unset value would run the
+ * app signing cookies with `undefined`: every session forgeable, and nothing in
+ * the logs to say so (SEC-12b). Boot is the only place to catch it, and the
+ * length floor matches the generator in .env.example.
  */
 const MIN_SESSION_SECRET_LENGTH = 32;
 
@@ -85,9 +82,9 @@ async function bootstrap() {
           return;
         }
 
-        // Anything queued means requests are already waiting on a connection.
-        // Reporting that as healthy is the exact lie this endpoint exists to
-        // stop telling, so it fails the check while the pool is still alive.
+        // Anything queued means requests are already waiting on a connection,
+        // so fail the check while the pool is still alive rather than report it
+        // as healthy.
         const saturated = pool.queued > 0;
         res.status(saturated ? 503 : 200).json({
           status: saturated ? 'saturated' : 'ok',
@@ -96,7 +93,7 @@ async function bootstrap() {
       });
     });
 
-    app.onlineStudents = initializeSocketHandlers(app.io, db);
+    initializeSocketHandlers(app.io, db);
 
     const PORT = parseInt(process.env.BACKEND_PORT || '10000', 10);
     app.listen(PORT);
@@ -106,10 +103,10 @@ async function bootstrap() {
   }
 }
 
-// An unhandled rejection used to call process.exit(1). Several controllers use
-// callback-style db.query inside async methods, where a throw becomes exactly
-// that, so a single bad query could kill the API mid-class and drop every
-// socket. Log and keep serving instead.
+// Log and keep serving rather than exit. Several controllers use callback-style
+// db.query inside async methods, where a throw becomes an unhandled rejection,
+// so exiting would let one bad query kill the API mid-class and drop every
+// socket.
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
 });
@@ -121,5 +118,4 @@ process.on('uncaughtException', (error) => {
   setTimeout(() => process.exit(1), 5000).unref();
 });
 
-// Start the application
 bootstrap();

@@ -1,7 +1,3 @@
-// ============================================
-// src/controller/resume.controller.ts
-// ============================================
-
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool } from 'mysql2';
@@ -22,7 +18,7 @@ export class ResumeController {
       return;
     }
 
-    // Count how many students in this group have completed their 10 resume reviews
+    // A student has finished once they have voted on all 10 resumes.
     const query = `
       SELECT COUNT(DISTINCT student_id) as finishedCount
       FROM Resume
@@ -38,7 +34,7 @@ export class ResumeController {
         return;
       }
 
-      // Count the number of students who have finished
+      // One row per finished student.
       const finishedCount = results.length;
 
       res.json({ finishedCount });
@@ -63,7 +59,7 @@ export class ResumeController {
       return;
     }
 
-    // First, get the old vote to send in socket event
+    // Read the old vote first, because voteUpdated carries it.
     this.db.query(
       'SELECT vote FROM Resume WHERE student_id = ? AND resume_number = ? AND group_id = ? AND class = ?',
       [student_id, resume_number, group_id, classId],
@@ -71,9 +67,9 @@ export class ResumeController {
         const oldVote = results && results.length > 0 ? results[0].vote : 'unanswered';
 
         // `checked` is the group's shortlist flag, kept on every vote row. A new
-        // row takes the group's current value in the same statement; at the
-        // column default of 0, a teammate voting after the shortlist un-ticked
-        // the resume for the whole group. A re-vote leaves its row's flag alone.
+        // row takes the group's current value in the same statement, because at
+        // the column default of 0 a teammate voting after the shortlist would
+        // un-tick the resume for the whole group. A re-vote leaves its flag alone.
         const query = `INSERT INTO Resume (student_id, group_id, class, timespent, resume_number, vote, checked)
           SELECT ?, ?, ?, ?, ?, ?, COALESCE(MAX(checked), 0)
           FROM Resume WHERE group_id = ? AND class = ? AND resume_number = ?
@@ -99,7 +95,6 @@ export class ResumeController {
               return;
             }
 
-            // EMIT socket event to all group members
             const roomId = `group_${group_id}_class_${classId}`;
             this.io.to(roomId).emit('voteUpdated', {
               resume_number,
@@ -135,7 +130,7 @@ export class ResumeController {
       return;
     }
 
-    // Just return ALL votes for this group/class - don't merge them
+    // Every member's vote row, not merged per resume.
     const getVotesQuery = `
       SELECT 
         res.resume_number,
@@ -153,12 +148,12 @@ export class ResumeController {
         return;
       }
 
-      res.json(votes); // Return ALL votes, not merged
+      res.json(votes);
     });
   };
 
   getAllResumePdfs = (req: AuthRequest, res: Response): void => {
-    const { class_id } = req.query; // Get class_id from query params
+    const { class_id } = req.query;
 
     if (!class_id) {
       res.status(400).json({ error: 'class_id is required' });
@@ -238,7 +233,8 @@ export class ResumeController {
   deleteResumeFile = (req: AuthRequest, res: Response): void => {
     // Express matches the route before decoding, so "..%2F..%2Fconfig" arrives
     // here as a param containing separators and the fs.unlinkSync below would
-    // follow it out of uploads/resumes. Same containment as getResumeFile.
+    // follow it out of uploads/resumes. Same containment as
+    // upload.controller.serveUploadedFile.
     const fileName = path.basename(req.params.fileName ?? '');
     const classId = req.query.class_id;
 
@@ -271,7 +267,8 @@ export class ResumeController {
 
         const resumeId = resumeResults[0].id;
 
-        // Delete candidates associated with this resume (CASCADE should handle this, but being explicit)
+        // Explicit even though the foreign key cascades, so the response can say
+        // whether a candidate was deleted.
         this.db.query(
           'DELETE FROM Candidates WHERE resume_id = ?',
           [resumeId],
@@ -282,7 +279,6 @@ export class ResumeController {
               return;
             }
 
-            // Delete the resume entry for this specific class
             this.db.query(
               'DELETE FROM Resume_pdfs WHERE id = ? AND class_id = ?',
               [resumeId, classId],
@@ -293,7 +289,6 @@ export class ResumeController {
                   return;
                 }
 
-                // Check if this file is still used by other classes
                 this.db.query(
                   'SELECT COUNT(*) as count FROM Resume_pdfs WHERE file_path = ?',
                   [`uploads/resumes/${fileName}`],
@@ -333,38 +328,6 @@ export class ResumeController {
         );
       }
     );
-  };
-
-  // `fileName` is attacker-controlled and used to be joined straight onto the
-  // resumes directory. `path.join` resolves `../` before anything inspects the
-  // result, and `res.sendFile` with an absolute path and no `root` does no
-  // containment check of its own, so `..%2f..%2f.env` resolved to the API's own
-  // .env and returned it to any logged-in student. The percent-encoded form was
-  // needed only because `:fileName` will not match a literal slash; Express
-  // decodes the parameter before this runs.
-  //
-  // `path.basename` discards every directory component, so what reaches disk is
-  // always a bare name. `root` is then a second, independent check.
-  getResumeFile = (req: AuthRequest, res: Response): void => {
-    const { fileName } = req.params;
-    const resumesDir = path.join(__dirname, '../../uploads/resumes');
-    const safeName = path.basename(fileName);
-
-    if (!safeName || safeName === '.' || safeName === '..') {
-      res.status(400).json({ error: 'Invalid file name' });
-      return;
-    }
-
-    if (!fs.existsSync(path.join(resumesDir, safeName))) {
-      res.status(404).json({ error: `Resume not found: ${safeName}` });
-      return;
-    }
-
-    res.sendFile(safeName, { root: resumesDir }, (err) => {
-      if (err && !res.headersSent) {
-        res.status(404).json({ error: `Resume not found: ${safeName}` });
-      }
-    });
   };
 
   getResumePdfById = (req: AuthRequest, res: Response): void => {

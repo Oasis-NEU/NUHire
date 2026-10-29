@@ -1,7 +1,3 @@
-// ============================================
-// src/controller/job.controller.ts
-// ============================================
-
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool } from 'mysql2';
@@ -14,10 +10,10 @@ import path from 'path';
 // drift from what actually gets deleted. Table and column names are constants,
 // never user input, which is why they are interpolated below.
 //
-// Offers, GroupConfirmations and Step_Completion are here for the same reason:
-// each describes work the reset erases. Leaving Offers behind locked a wiped
-// group out of ever submitting again, and a leftover confirmation or completion
-// marks the group as done with an empty table behind it.
+// Offers, GroupConfirmations and Step_Completion are here because each
+// describes work the reset erases: a leftover offer locks a wiped group out of
+// submitting again, and a leftover confirmation or completion marks the group
+// as done with an empty table behind it.
 export const GROUP_WORK_TABLES = [
   { table: 'Resume', classColumn: 'class', label: 'resume votes' },
   { table: 'InterviewPage', classColumn: 'class', label: 'interview ratings' },
@@ -124,12 +120,11 @@ const CLEARED_TABLES = [...GROUP_WORK_TABLES.map(({ table }) => table), 'Notes']
 export class JobController {
   constructor(
     private db: Pool,
-    private io: any,
-    private onlineStudents: Record<string, string>
+    private io: any
   ) {}
 
   getAllJobs = (req: AuthRequest, res: Response): void => {
-    const { class_id } = req.query; // Get class_id from query params
+    const { class_id } = req.query;
 
     if (!class_id) {
       res.status(400).json({ error: 'class_id is required' });
@@ -150,7 +145,7 @@ export class JobController {
   };
 
   createJob = async (req: AuthRequest, res: Response): Promise<void> => {
-    const { title, filePath, class_id } = req.body; // Add class_id
+    const { title, filePath, class_id } = req.body;
 
     if (!title || !filePath || !class_id) {
       res.status(400).json({ error: 'Missing title, filePath, or class_id' });
@@ -174,7 +169,7 @@ export class JobController {
   };
 
   getJobByTitle = (req: AuthRequest, res: Response): void => {
-    const { title, class_id } = req.query; // Add class_id
+    const { title, class_id } = req.query;
 
     if (!title || !class_id) {
       res.status(400).json({ error: 'Title and class_id are required' });
@@ -294,7 +289,7 @@ export class JobController {
   };
 
   // `reset` must be exactly `true` to erase anything. Without it this only
-  // changes the job, so fixing a typo in a title no longer wipes the class.
+  // changes the job, so fixing a typo in a title does not wipe the class.
   assignJobToAllGroups = async (req: AuthRequest, res: Response): Promise<void> => {
     const { class_id, job_title } = req.body;
     const reset = req.body.reset === true;
@@ -312,18 +307,11 @@ export class JobController {
       return;
     }
 
-    // This runs every DELETE below inside one real transaction. It used to send
-    // START TRANSACTION through the pool, which hands each query whichever
-    // connection is free, so the statements ran on different connections, every
-    // DELETE auto-committed on its own, the ROLLBACK in the catch applied to a
-    // connection that had done nothing, and a connection went back to the pool
-    // with a transaction still open on it. A failure halfway through this loop
-    // left one group's votes deleted and the next group's intact, permanently.
-    // Acquiring is outside the try below on purpose: there is no connection to
-    // release yet. But it must not be bare either. When the pool is saturated
-    // or the DB is down the acquire rejects, Express 4 does not catch a
-    // rejected async handler, and the request hangs with no response while
-    // the process-level handler only logs. Answer 503 so the advisor sees it.
+    // One connection, so every DELETE below runs in one real transaction
+    // (AGENTS.md rule 6). The acquire is outside the try below because there is
+    // no connection to release yet, but it has its own catch: Express 4 does not
+    // catch a rejected async handler, so a saturated pool or a down database
+    // would leave the request hanging. Answer 503 so the advisor sees it.
     let conn;
     try {
       conn = await this.db.promise().getConnection();
@@ -334,7 +322,6 @@ export class JobController {
     }
 
     try {
-      // Get all groups for the class
       const [groupsResult] = (await conn.query(
         'SELECT DISTINCT group_id FROM `GroupsInfo` WHERE class_id = ? ORDER BY group_id',
         [class_id]
@@ -364,9 +351,8 @@ export class JobController {
 
       await conn.commit();
 
-      // Only after the commit. These used to fire inside the loop, so a failure
-      // partway through told the earlier groups their job had changed and then
-      // rolled the change back underneath them.
+      // Only after the commit, so a failure partway through cannot tell the
+      // earlier groups their job changed and then roll it back underneath them.
       for (const groupId of groupIds) {
         this.io.to(`group_${groupId}_class_${classIdInt}`).emit('jobUpdated', {
           job: job_title,
@@ -423,10 +409,8 @@ export class JobController {
       return;
     }
 
-    // Same fix as assignJobToAllGroups: one connection, a real transaction, and
-    // a release in `finally`. Through the pool the reset's DELETEs each
-    // committed on their own and the ROLLBACK did nothing.
-    // See assignJobToAllGroups for why the acquire has its own catch.
+    // One connection and a real transaction, as in assignJobToAllGroups, which
+    // also explains why the acquire has its own catch.
     let conn;
     try {
       conn = await this.db.promise().getConnection();

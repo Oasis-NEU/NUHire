@@ -45,9 +45,8 @@ export class UploadController {
    *   as script on the API's own origin, against the session cookie;
    * - it had no notion of which directories were legitimate.
    *
-   * Containment is the same shape as resume.controller.getResumeFile:
-   * path.basename to drop any separators Express decoded out of %2F, plus
-   * sendFile's `root`, which refuses a resolved path outside it.
+   * Containment is path.basename to drop any separators Express decoded out
+   * of %2F, plus sendFile's `root`, which refuses a resolved path outside it.
    */
   serveUploadedFile = (req: AuthRequest, res: Response): void => {
     const { subdir, fileName } = req.params;

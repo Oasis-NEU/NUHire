@@ -5,9 +5,9 @@ import { Server as SocketIOServer } from 'socket.io';
 import { JobController } from '../controller/job.controller';
 import { requireAuth, requireAdmin, requireClassModerator } from '../middleware/auth.middleware';
 
-export default (db: Pool, io: SocketIOServer, onlineStudents: Record<string, string>): Router => {
+export default (db: Pool, io: SocketIOServer): Router => {
   const router = Router();
-  const jobController = new JobController(db, io, onlineStudents);
+  const jobController = new JobController(db, io);
 
   router.get('/', requireAuth, jobController.getAllJobs);
   router.get('/title', requireAuth, jobController.getJobByTitle);
