@@ -370,12 +370,15 @@ CREATE TABLE `Resume` (
   `checked` tinyint(1) NOT NULL DEFAULT '0',
   `id` int NOT NULL AUTO_INCREMENT,
   PRIMARY KEY (`id`),
-  -- One row per student per resume. Both vote writers use ON DUPLICATE KEY
+  -- One row per student per resume. The vote writer uses ON DUPLICATE KEY
   -- UPDATE, which silently did nothing without this: the only keys were the
   -- auto-increment id and a non-unique index, so every submission appended a
   -- row and the group's tally counted the same student repeatedly.
   UNIQUE KEY `uniq_resume_vote` (`student_id`, `group_id`, `class`, `resume_number`),
   KEY `student_id` (`student_id`),
+  -- The vote INSERT and the `check` socket handler find a group's rows for one
+  -- resume by these columns. migrations/007.
+  KEY `group_resume` (`group_id`, `class`, `resume_number`),
   CONSTRAINT `Resume_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `Users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
