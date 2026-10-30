@@ -105,6 +105,24 @@ export interface Candidate {
   interview?: string;
 }
 
+/** A row of `Resume_pdfs`. `id` is what `Candidates.resume_id` points at. */
+export interface ResumePdf {
+  id: number;
+  title: string;
+  file_path: string;
+  class_id: number;
+  uploaded_at: string | null;
+}
+
+/** One card on the make-offer page: a candidate with their interview video and
+ *  resume file resolved. `candidate_id` is the candidate's `resume_id`, which is
+ *  what `InterviewPage.candidate_id` stores. */
+export type OfferCandidate = Pick<Candidate, 'f_name' | 'l_name'> & {
+  candidate_id: number;
+  video_path: string;
+  resume_path: string;
+};
+
 /** A `job_descriptions` row, trimmed to what the assignment dropdowns read. */
 export interface JobOption {
   id: number;
