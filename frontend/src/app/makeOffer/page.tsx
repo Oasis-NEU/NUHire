@@ -20,7 +20,7 @@ import {
   RATINGS,
   Rating,
 } from '../../lib/ratings';
-import type { InterviewRating } from '../../types';
+import type { Candidate, InterviewRating, OfferCandidate, ResumePdf } from '../../types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -57,10 +57,10 @@ export default function MakeOffer() {
   } | null>(null);
   const pathname = usePathname();
   const [offerPending, setOfferPending] = useState(false);
-  const [resumes, setResumes] = useState<any[]>([]);
-  const [interviews, setInterviews] = useState<any[]>([]);
-  const [candidates, setCandidates] = useState<any[]>([]);
-  const [interviewsWithVideos, setInterviewsWithVideos] = useState<any[]>([]);
+  const [resumes, setResumes] = useState<ResumePdf[]>([]);
+  const [interviews, setInterviews] = useState<InterviewRating[]>([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [interviewsWithVideos, setInterviewsWithVideos] = useState<OfferCandidate[]>([]);
   const [acceptedOffer, setAcceptedOffer] = useState(false);
   const [showInstructions, setShowInstructions] = useState(true);
   const [sentIn, setSentIn] = useState<(true | false | 'none')[]>(['none', 'none', 'none', 'none']);
