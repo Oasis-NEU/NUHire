@@ -64,7 +64,6 @@ symbol names over the numbers.
 | `CU-8`  | A student who misses the release event stays stuck           | MED   | 4h  |
 | `CU-9`  | 33 error paths still send raw MySQL text to the browser      | GFI   | 3h  |
 | `CU-10` | The next student on a lab machine inherits Make Offer state  | MED   | 2h  |
-| `CU-11` | Login failures show nothing                                  | GFI   | 2h  |
 | `CU-12` | A duplicate job title says "uploaded successfully"           | GFI   | 1h  |
 
 **Tidying.** No behaviour change.
@@ -541,43 +540,6 @@ grep -rn "localStorage.getItem('makeOffer_" frontend/src
 - [ ] Every `makeOffer_*` key includes the user id
 - [ ] Log in as student A, select a candidate in Make Offer, log out, log in as
       B on the same browser: B sees no selection
-
----
-
-## CU-11 — Login failures show nothing
-
-**GFI · 2h · `frontend/src/app/page.tsx`**
-
-### What & why
-
-When login fails the API redirects to `/?error=<code>`. The landing page never
-reads the query string, so the student lands back on the start screen with no
-message and clicks "Login" again. With 30 students that is 30 hands up and no
-clue for the professor.
-
-### Evidence
-
-```bash
-grep -rn "?error=" api/src/controller/auth.controller.ts
-grep -rn "useSearchParams\|URLSearchParams" frontend/src/app   # only signupform
-```
-
-Codes sent: `invalid_callback`, `auth_failed`, `no_user`, `session_error`,
-`login_error`, `db_error`, `not_authenticated`, `user_not_found`.
-
-### For an agent
-
-- Read `error` on the landing page and show a short message through the
-  existing `components/popup.tsx`. One line per code, plain words ("Login
-  failed. Try again, and tell your professor if it keeps happening.").
-- `useSearchParams` needs a `<Suspense>` boundary in the App Router or the build
-  fails. Reading `window.location.search` in an effect avoids that.
-- Do not touch the API side.
-
-### Done when
-
-- [ ] `/?error=auth_failed` shows a message; `/` shows none
-- [ ] `npm run build` passes
 
 ---
 
