@@ -74,7 +74,6 @@ export default function JobDescriptionPage() {
     if (user) updateProgress(user, 'job_description');
   }, [user]);
 
-  // Handle scroll indicators
   useEffect(() => {
     const handleScroll = () => {
       const container = pdfContainerRef.current;
@@ -82,17 +81,14 @@ export default function JobDescriptionPage() {
 
       const { scrollTop, scrollHeight, clientHeight } = container;
 
-      // Show scroll up indicator if not at top
       setShowScrollUp(scrollTop > 20);
 
-      // Show scroll down indicator if not at bottom
       setShowScrollDown(scrollTop < scrollHeight - clientHeight - 20);
     };
 
     const container = pdfContainerRef.current;
     if (container) {
       container.addEventListener('scroll', handleScroll);
-      // Initial check
       handleScroll();
     }
 
@@ -119,7 +115,7 @@ export default function JobDescriptionPage() {
             body: JSON.stringify({ page: 'jobdes', user_email: user.email }),
             credentials: 'include',
           });
-          hasUpdatedPageRef.current = true; // Mark as updated
+          hasUpdatedPageRef.current = true;
         } catch (error) {
           console.error('Error updating current page:', error);
         }
@@ -150,7 +146,6 @@ export default function JobDescriptionPage() {
       }
 
       try {
-        // First, get the job assignment for this group/class
         const jobAssignmentResponse = await fetch(
           `${API_BASE_URL}/jobs/assignment/${user.group_id}/${user.class}`,
           { credentials: 'include' }
@@ -163,7 +158,6 @@ export default function JobDescriptionPage() {
         const jobAssignmentData = await jobAssignmentResponse.json();
         const jobTitle = jobAssignmentData.job;
 
-        // Then fetch the PDF file using the job title
         const response = await fetch(
           `${API_BASE_URL}/jobs/title?title=${encodeURIComponent(jobTitle)}&class_id=${user.class}`,
           {
@@ -216,7 +210,6 @@ export default function JobDescriptionPage() {
       event.clientY >= pageRect.top &&
       event.clientY <= pageRect.bottom
     ) {
-      // Calculate coordinates relative to PDF
       const x = ((event.clientX - pageRect.left) / pageRect.width) * 100;
       const y = ((event.clientY - pageRect.top) / pageRect.height) * 100;
       const newComment: CommentType = {
@@ -231,7 +224,6 @@ export default function JobDescriptionPage() {
     }
   };
 
-  // Update comment text and turn off editing mode
   const updateComment = (id: string, newText: string) => {
     setComments((prevComments) =>
       prevComments.map((comment) =>
@@ -268,17 +260,13 @@ export default function JobDescriptionPage() {
       )}
       <Navbar />
 
-      {/* Main content area with fixed height */}
       <div className="flex-1 flex flex-col px-4 py-8 overflow-hidden">
-        {/* Title */}
         <div className="flex justify-center items-center font-rubik text-redHeader text-4xl font-bold mb-4">
           Job Description
         </div>
 
-        {/* Scrollable PDF Container */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 bg-gray-100 border-2 border-gray-300 rounded-lg shadow-lg p-6 mx-auto max-w-5xl relative overflow-hidden">
-            {/* Scroll Up Indicator */}
             {showScrollUp && (
               <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white to-transparent z-10 pointer-events-none flex items-start justify-center">
                 <div className="text-blue-600 text-xs font-semibold animate-bounce">
@@ -367,7 +355,6 @@ export default function JobDescriptionPage() {
               )}
             </div>
 
-            {/* Scroll Down Indicator */}
             {showScrollDown && (
               <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent z-10 pointer-events-none flex items-end justify-center">
                 <div className="text-blue-600 text-xs font-semibold animate-bounce">
@@ -377,7 +364,6 @@ export default function JobDescriptionPage() {
             )}
           </div>
 
-          {/* Page Navigation - Fixed below PDF */}
           <div className="flex justify-center items-center gap-5 mt-5 mb-3 w-full flex-shrink-0">
             <button
               disabled={pageNumber <= 1}
@@ -402,13 +388,11 @@ export default function JobDescriptionPage() {
         </div>
       </div>
 
-      {/* Fixed Footer */}
       <footer className="flex-shrink-0">
         <div className="flex justify-end mt-4 mb-4 mr-4">
           <button
             onClick={async () => {
-              // ✅ Make async
-              await updateProgress(user, 'res_1'); // ✅ Await
+              await updateProgress(user, 'res_1');
               localStorage.setItem('progress', 'res_1');
               window.location.href = '/res-review';
             }}
