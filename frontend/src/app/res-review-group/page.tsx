@@ -59,16 +59,13 @@ export default function ResReviewGroup() {
   const hasUpdatedPageRef = useRef(false);
   const { user, loading: userloading } = useAuth();
 
-  // Job description state
   const [showJobDescription, setShowJobDescription] = useState(false);
   const [jobDescPath, setJobDescPath] = useState('');
   const [jobDescNumPages, setJobDescNumPages] = useState<number | null>(null);
   const [jobDescPageNumber, setJobDescPageNumber] = useState(1);
 
-  // Team confirmation state. The list is server-backed (GroupConfirmations,
-  // keyed on group_id + class + student_id): it used to be pure client state,
-  // so a refresh reset it to [] while the Confirm button stayed disabled for
-  // whoever had already confirmed, and the group deadlocked with no way out.
+  // Server-backed (GroupConfirmations, keyed on group_id + class + student_id),
+  // so a refresh cannot reset the tally and strand the group.
   const [teamConfirmations, setTeamConfirmations] = useState<string[]>([]);
   const [confirming, setConfirming] = useState(false);
   const [groupSize, setGroupSize] = useState(4);
@@ -101,13 +98,11 @@ export default function ResReviewGroup() {
     'You will then watch the interviews of the candidates selected.',
   ];
 
-  // Fetch job description for the group
   useEffect(() => {
     const fetchJobDescription = async () => {
       if (!user?.group_id || !user?.class) return;
 
       try {
-        // First get the job assignment
         const assignmentResponse = await fetch(
           `${API_BASE_URL}/jobs/assignment/${user.group_id}/${user.class}`,
           { credentials: 'include' }
@@ -115,7 +110,6 @@ export default function ResReviewGroup() {
         const assignmentData = await assignmentResponse.json();
 
         if (assignmentData.job) {
-          // Then get the job description details
           const jobResponse = await fetch(
             `${API_BASE_URL}/jobs/title?title=${encodeURIComponent(assignmentData.job)}&class_id=${user.class}`,
             { credentials: 'include' }
@@ -133,7 +127,6 @@ export default function ResReviewGroup() {
     fetchJobDescription();
   }, [user?.group_id, user?.class]);
 
-  // Fetch group size
   useEffect(() => {
     const fetchGroupSize = async () => {
       if (!user?.group_id) return;
@@ -156,14 +149,13 @@ export default function ResReviewGroup() {
     }
   }, [user?.group_id]);
 
-  // OPTIMIZED: Fetch resumes and votes ONCE on page load
+  // Once per page load; the socket listeners below keep it current after that.
   useEffect(() => {
     const fetchInitialData = async () => {
       if (!user?.class || initialFetchDone.current) return;
       initialFetchDone.current = true;
 
       try {
-        // Fetch resumes
         const resumeResponse = await fetch(`${API_BASE_URL}/resume_pdf?class_id=${user.class}`, {
           credentials: 'include',
         });
@@ -175,14 +167,12 @@ export default function ResReviewGroup() {
           last_name: string;
         }[] = await resumeResponse.json();
 
-        // Fetch votes
         const voteResponse = await fetch(
           `${API_BASE_URL}/resume/group/${user.group_id}?class=${user.class}`,
           { credentials: 'include' }
         );
         const voteData: ResumeVote[] = await voteResponse.json();
 
-        // Process vote data
         const voteCounts: { [key: number]: VoteData } = {};
         const checkboxData: { [key: number]: boolean } = {};
 
@@ -205,7 +195,6 @@ export default function ResReviewGroup() {
         setVoteCounts(voteCounts);
         setCheckedState(checkboxData);
 
-        // Format resumes
         const formatted: ResumeCard[] = resumeData.map((item) => ({
           resume_number: item.id,
           file_path: item.file_path,
@@ -227,7 +216,6 @@ export default function ResReviewGroup() {
     fetchInitialData();
   }, [user?.group_id, user?.class]);
 
-  // OPTIMIZED: Socket listeners with live updates (NO REFETCHING)
   useEffect(() => {
     if (!socket || !user) return;
 
@@ -236,7 +224,6 @@ export default function ResReviewGroup() {
 
     const handleStudentRemoved = ({ groupId, classId }: { groupId: number; classId: number }) => {
       if (groupId == user.group_id && classId == user.class) {
-        // Refetch group size
         fetch(`${API_BASE_URL}/interview/group-size/${user.group_id}/${user.class}`, {
           credentials: 'include',
         })
@@ -246,7 +233,6 @@ export default function ResReviewGroup() {
       }
     };
 
-    // Update checkbox state live
     const handleCheckboxUpdated = ({
       resume_number,
       checked,
@@ -260,7 +246,7 @@ export default function ResReviewGroup() {
       }));
     };
 
-    // NEW: Update vote counts live WITHOUT refetching
+    // Adjust the counts from the event rather than refetching every vote.
     const handleVoteUpdated = ({
       resume_number,
       oldVote,
@@ -274,12 +260,10 @@ export default function ResReviewGroup() {
         const current = prev[resume_number] || { yes: 0, no: 0, undecided: 0 };
         const updated = { ...current };
 
-        // Remove old vote
         if (oldVote === 'yes') updated.yes = Math.max(0, updated.yes - 1);
         else if (oldVote === 'no') updated.no = Math.max(0, updated.no - 1);
         else if (oldVote === 'unanswered') updated.undecided = Math.max(0, updated.undecided - 1);
 
-        // Add new vote
         if (newVote === 'yes') updated.yes += 1;
         else if (newVote === 'no') updated.no += 1;
         else if (newVote === 'unanswered') updated.undecided += 1;
@@ -391,18 +375,15 @@ export default function ResReviewGroup() {
   }, [socket, user]);
 
   // Runs on mount and again whenever the roster changes, since a student
-  // joining or leaving changes who the tally is measured against. This used to
-  // clear the list locally, which would now desynchronise the page from the
-  // server and cost everyone else their confirmation. Re-read it instead: a
-  // removed student's row is dropped by the foreign key, and a new member
-  // simply has not confirmed yet.
+  // joining or leaving changes who the tally is measured against. Re-read it
+  // rather than clearing it locally: a removed student's row is already gone
+  // on the server, and a new member simply has not confirmed yet.
   useEffect(() => {
     if (groupSize > 0) {
       fetchConfirmations();
     }
   }, [groupSize, fetchConfirmations]);
 
-  // Student online and page change
   useEffect(() => {
     if (!socket || !user || !user.email) return;
 
@@ -419,7 +400,7 @@ export default function ResReviewGroup() {
             body: JSON.stringify({ page: 'resumepage2', user_email: user.email }),
             credentials: 'include',
           });
-          hasUpdatedPageRef.current = true; // Mark as updated
+          hasUpdatedPageRef.current = true;
         } catch (error) {
           console.error('Error updating current page:', error);
         }
@@ -522,8 +503,6 @@ export default function ResReviewGroup() {
     changeConfirmation('POST');
   };
 
-  // Nothing triggered the unconfirm path before, so a student who confirmed and
-  // then wanted to change the group's four had no way back.
   const handleTeamUnconfirm = () => {
     if (!hasConfirmed) return;
     changeConfirmation('DELETE');
@@ -553,7 +532,6 @@ export default function ResReviewGroup() {
       <Navbar />
 
       <div className="flex-1 flex px-8 py-4 gap-6 overflow-hidden">
-        {/* Resume/Job Description Viewer */}
         <div className="w-1/2 flex flex-col overflow-hidden">
           <div className="mb-3 p-3 bg-gray-100 border-2 border-northeasternRed rounded-lg flex-shrink-0">
             <div className="flex items-center justify-between mb-1">
@@ -577,7 +555,6 @@ export default function ResReviewGroup() {
 
           {showJobDescription && jobDescPath ? (
             <div className="flex-1 flex flex-col border-4 border-northeasternBlack rounded-lg overflow-hidden bg-white">
-              {/* Page navigation for job description */}
               {jobDescNumPages && jobDescNumPages > 1 && (
                 <div className="flex items-center justify-between bg-navy px-2 py-1">
                   <button
@@ -641,7 +618,6 @@ export default function ResReviewGroup() {
           )}
         </div>
 
-        {/* Candidate Cards */}
         <div className="w-1/2 flex flex-col overflow-hidden">
           <div className="mb-3 p-3 bg-gray-100 border-2 border-northeasternRed rounded-lg flex-shrink-0">
             <h3 className="font-bold text-navy mb-1 text-sm">✅ Group Selection (Shared)</h3>
@@ -665,7 +641,6 @@ export default function ResReviewGroup() {
                     isSelected ? 'border-blue-500 bg-blue-50' : 'border-northeasternRed'
                   }`}
                 >
-                  {/* Name and votes on same line */}
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-xl font-semibold text-navy">
                       {resume.first_name} {resume.last_name}
@@ -749,7 +724,7 @@ export default function ResReviewGroup() {
 
             {/* Always offered once confirmed, including at a full tally: a
                 student who wants the group to pick a different four otherwise
-                has no way back, which is what deadlocked this step. */}
+                has no way back. */}
             {hasConfirmed && (
               <button
                 onClick={handleTeamUnconfirm}
