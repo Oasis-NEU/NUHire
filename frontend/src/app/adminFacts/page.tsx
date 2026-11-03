@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import NavbarAdmin from '../components/navbar-admin'; // Importing the admin navbar component
-import { useSocket } from '../components/socketContext'; // Importing custom hook to use socket context
+import NavbarAdmin from '../components/navbar-admin';
+import { useSocket } from '../components/socketContext';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface ModeratorClass {
@@ -22,7 +22,6 @@ export default function AdminFactsPage() {
   } | null>(null);
   const socket = useSocket();
 
-  // Fetch classes for dropdown
   useEffect(() => {
     const fetchClasses = async () => {
       try {
@@ -46,7 +45,6 @@ export default function AdminFactsPage() {
     fetchClasses();
   }, []);
 
-  // Fetch current saved facts for the selected class
   useEffect(() => {
     if (!selectedClass) {
       setCurrentFacts(null);
@@ -60,7 +58,7 @@ export default function AdminFactsPage() {
         });
         if (res.ok) {
           const data = await res.json();
-          // API returns [] when no facts; controller returns object { one, two, three } when exists
+          // The API answers [] when the class has no facts and { one, two, three } when it does.
           if (Array.isArray(data) && data.length === 0) {
             setCurrentFacts(null);
           } else if (
@@ -76,7 +74,6 @@ export default function AdminFactsPage() {
             setCurrentFacts(null);
           }
         } else {
-          // non-ok - still clear but show a popup
           setCurrentFacts(null);
           const errorText = await res.text();
           setPopup({
@@ -93,12 +90,10 @@ export default function AdminFactsPage() {
     fetchFacts();
   }, [selectedClass]);
 
-  // Setup socket to auto-refresh facts when they change (server emits 'factsUpdated' to class room)
   useEffect(() => {
     if (!socket) return;
 
     const handleFactsUpdated = () => {
-      // re-fetch facts for current selectedClass
       if (!selectedClass) return;
       (async () => {
         try {
@@ -123,7 +118,7 @@ export default function AdminFactsPage() {
             }
           }
         } catch (err) {
-          // swallow socket-triggered fetch errors silently (we already have UI for manual actions)
+          // No popup: the manual actions already report their own errors.
           console.error('Error fetching facts after factsUpdated socket:', err);
         }
       })();
@@ -135,7 +130,7 @@ export default function AdminFactsPage() {
       socket.off('factsUpdated', handleFactsUpdated);
       socket.disconnect();
     };
-  }, []); // only once
+  }, []);
 
   const handleFactChange = (index: number, value: string) => {
     setFacts((prev) => {
@@ -155,7 +150,6 @@ export default function AdminFactsPage() {
       return;
     }
     try {
-      // Send as { one, two, three }
       const payload = { one: facts[0], two: facts[1], three: facts[2] };
       const res = await fetch(`${API_BASE_URL}/facts/create/${selectedClass}`, {
         method: 'POST',
@@ -166,7 +160,6 @@ export default function AdminFactsPage() {
       if (res.ok) {
         setPopup({ headline: 'Success', message: 'Facts added successfully!' });
         setFacts(['', '', '']);
-        // update local currentFacts immediately to reflect saved changes (server will also emit)
         setCurrentFacts({ one: payload.one, two: payload.two, three: payload.three });
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -180,7 +173,6 @@ export default function AdminFactsPage() {
   return (
     <div className="flex flex-col min-h-screen bg-sand font-rubik">
       <NavbarAdmin />
-      {/* Page Title */}
       <div className="flex justify-center items-center py-6">
         <h1 className="text-4xl font-bold text-northeasternBlack text-center drop-shadow-lg">
           Waiting Page Facts
@@ -192,7 +184,6 @@ export default function AdminFactsPage() {
             Add Waiting Room Facts
           </h1>
 
-          {/* Display current facts (if any) */}
           {selectedClass ? (
             <div className="mb-6 p-4 rounded bg-gray-50 border border-gray-200">
               <h3 className="font-semibold text-northeasternBlack mb-2">
@@ -217,7 +208,6 @@ export default function AdminFactsPage() {
           ) : null}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Class Dropdown */}
             <div>
               <label className="block text-lg font-medium mb-2 text-northeasternBlack">
                 Select Class:
@@ -236,7 +226,6 @@ export default function AdminFactsPage() {
               </select>
             </div>
 
-            {/* Fact Inputs */}
             {selectedClass && (
               <div className="space-y-4">
                 {[0, 1, 2].map((i) => (
