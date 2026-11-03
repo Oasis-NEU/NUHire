@@ -1,12 +1,12 @@
-'use client'; //Declares that this page is a client component
+'use client';
 export const dynamic = 'force-dynamic';
-import React, { useEffect } from 'react'; // Importing React and the effect hook
-import { useRouter } from 'next/navigation'; // Importing useRouter for navigation
-import Link from 'next/link'; // Importing Link for client-side navigation
-import NavbarAdmin from '../components/navbar-admin'; // Importing the admin navbar component
-import Slideshow from '../components/slideshow'; // Importing slideshow component for background
-import { useSocket } from '../components/socketContext'; // Importing custom hook to use socket context
-import { useAuth } from '../components/AuthContext'; // Importing custom hook to use authentication context
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import NavbarAdmin from '../components/navbar-admin';
+import Slideshow from '../components/slideshow';
+import { useSocket } from '../components/socketContext';
+import { useAuth } from '../components/AuthContext';
 import { PageLoader } from '../components/spinner';
 
 const Dashboard = () => {
@@ -14,7 +14,6 @@ const Dashboard = () => {
   const socket = useSocket();
   const { user, loading: userloading } = useAuth();
 
-  // Socket connection - only run when both socket AND user are ready
   useEffect(() => {
     if (!socket || !user?.email) return;
 
@@ -30,12 +29,10 @@ const Dashboard = () => {
   }
 
   if (!user || user.affiliation !== 'admin') {
-    // If the user is not an admin, redirect to the home page
     router.push('/');
-    return null; // Return null to avoid  anything else
+    return null;
   }
 
-  //  the dashboard if the user is an admin
   return (
     <div className="flex flex-col min-h-screen bg-northeasternWhite font-rubik">
       <div className="fixed inset-0 z-0">
