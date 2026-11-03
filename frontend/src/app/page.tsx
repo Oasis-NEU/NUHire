@@ -1,11 +1,27 @@
 'use client';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Slideshow from './components/slideshow';
+import Popup from './components/popup';
+import { loginErrorPopup } from '../lib/loginError';
+import type { PopupMessage } from '../types';
 import './globals.css';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 
 export default function Home() {
+  const [popup, setPopup] = useState<PopupMessage | null>(null);
+
+  // Read in an effect rather than with useSearchParams, which fails the build
+  // without a Suspense boundary. The code is then dropped from the URL so a
+  // refresh after dismissing does not show the same failure again.
+  useEffect(() => {
+    const found = loginErrorPopup(new URLSearchParams(window.location.search).get('error'));
+    if (!found) return;
+    setPopup(found);
+    window.history.replaceState(null, '', window.location.pathname);
+  }, []);
+
   const handleKeycloakLogin = () => {
     const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
     window.location.href = `${apiUrl}/auth/keycloak`;
@@ -24,7 +40,7 @@ export default function Home() {
       <div className="absolute inset-0 bg-sand/70 z-[1]" />
 
       {/* Navigation Bar */}
-      <div className="w-full flex justify-end p-2 bg-navy shadow-md font-rubik text-2xl fixed top-0">
+      <div className="w-full flex justify-end p-2 bg-navy shadow-md font-rubik text-2xl fixed top-0 z-20">
         <button
           onClick={handleModeratorLogin}
           className="m-2 px-2 py-2 bg-northeasternWhite text-black border-4 border-northeasternRed rounded-md text-lg transition-opacity hover:opacity-60 active:opacity-30"
@@ -99,6 +115,10 @@ export default function Home() {
           <span className="ml-2">Join our Discord</span>
         </a>
       </footer>
+
+      {popup && (
+        <Popup headline={popup.headline} message={popup.message} onDismiss={() => setPopup(null)} />
+      )}
 
       {/* Custom styles for monospace font */}
       <style jsx>{`

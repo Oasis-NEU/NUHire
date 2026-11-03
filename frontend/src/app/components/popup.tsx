@@ -20,7 +20,7 @@ const Popup = ({
   busy = false,
 }: PopupProps) => {
   return (
-    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border-4 border-northeasternRed p-8 w-96 rounded-md shadow-lg z-50">
+    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border-4 border-northeasternRed p-8 w-96 max-w-[calc(100vw-2rem)] rounded-md shadow-lg z-50">
       <h2 className="font-bold text-black text-2xl mb-4">{headline}</h2>
       <p className="text-black text-lg mb-6">{message}</p>
       {onConfirm ? (
