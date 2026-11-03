@@ -89,7 +89,6 @@ export default function MakeOffer() {
   const [ableToMakeOffer, setAbleToMakeOffer] = useState(true);
   const [checkedStateRestored, setCheckedStateRestored] = useState(false);
 
-  // Check if all candidates are rejected
   useEffect(() => {
     const totalCandidates = interviewsWithVideos.length;
     if (totalCandidates === 0) return;
@@ -118,11 +117,6 @@ export default function MakeOffer() {
 
       if (response.ok) {
         // This endpoint returns every offer the group has made, as an array.
-        // The check below used to read `.id` straight off that array: an array
-        // is truthy but has no `id`, so the guard was always false and this
-        // whole block never ran. That is why submitting twice created two
-        // offers, and why a refresh mid-review showed no pending state.
-        //
         // A group should only ever have one offer. Where the data says
         // otherwise, a decision the professor already made outranks one still
         // waiting, and the newest outranks an older rejection.
@@ -637,7 +631,6 @@ export default function MakeOffer() {
 
     const handleStudentRemoved = ({ groupId, classId }: { groupId: number; classId: number }) => {
       if (groupId === user.group_id && classId == user.class) {
-        // Reset confirmations for the selected candidate
         if (selectedCandidateId) {
           setOfferConfirmations((prev) => ({
             ...prev,
@@ -651,7 +644,6 @@ export default function MakeOffer() {
 
     const handleStudentAdded = ({ groupId, classId }: { groupId: number; classId: number }) => {
       if (groupId === user.group_id && classId == user.class) {
-        // Reset confirmations for the selected candidate
         if (selectedCandidateId) {
           setOfferConfirmations((prev) => ({
             ...prev,
@@ -688,7 +680,6 @@ export default function MakeOffer() {
     if (groupSize > 0 && selectedCandidateId) {
       const currentConfirmations = offerConfirmations[selectedCandidateId] || [];
 
-      // If everyone confirmed but group size increased, reset confirmations
       if (currentConfirmations.length > 0 && currentConfirmations.length >= groupSize) {
         setOfferConfirmations((prev) => ({
           ...prev,
