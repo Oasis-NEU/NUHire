@@ -23,9 +23,8 @@ export default function AboutPage() {
             router.push('/dashboard');
             return;
           }
-          // Previously localStorage.clear() here, which wiped progress,
-          // resume-review counters and interview ratings for any user whose
-          // `seen` flag was not 1 - including mid-activity.
+          // Do not clear localStorage here: a user whose `seen` flag is not 1
+          // can be mid-activity, and it holds their progress and ratings.
         }
       } catch (error) {
         console.error('Error checking seen status:', error);
