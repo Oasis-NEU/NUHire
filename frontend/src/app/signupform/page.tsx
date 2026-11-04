@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import Slideshow from '../components/slideshow';
 import Image from 'next/image';
 
-// Define API base URL with fallback
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function SignupDetails() {
@@ -24,7 +23,6 @@ export default function SignupDetails() {
       if (userEmail) {
         setEmail(userEmail);
 
-        // Set first and last name from URL parameters if available
         if (userFirstName) {
           setFirstName(userFirstName);
         }
@@ -45,7 +43,6 @@ export default function SignupDetails() {
     setMessage('');
     setSubmitting(true);
 
-    // Basic validation
     if (!firstName || !lastName || !email || affiliation === 'none') {
       setMessage('Please complete the form before submitting.');
       setSubmitting(false);
@@ -72,7 +69,7 @@ export default function SignupDetails() {
             'Student is not registered by instructor. Please contact your instructor to be added to the system.'
           );
           setSubmitting(false);
-          return; // CRITICAL: Stop execution here
+          return;
         }
       } catch (error) {
         console.error('Error checking email:', error);
@@ -136,7 +133,6 @@ export default function SignupDetails() {
       }
     }
 
-    // Create user object
     const user = {
       First_name: firstName,
       Last_name: lastName,
