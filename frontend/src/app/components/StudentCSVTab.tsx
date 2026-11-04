@@ -31,25 +31,23 @@ export function StudentCSVTab() {
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [dragActive, setDragActive] = useState(false);
 
-  const [isSubmitting, setIsSubmitting] = useState(false); // Add submit loading state
-  const [submitSuccess, setSubmitSuccess] = useState(false); // Add submit success state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, loading: userloading } = useAuth();
 
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
-  // Held as the raw string the professor typed, not a number. When this was a
-  // number coerced on every keystroke, clearing the box parsed '' as NaN and
-  // wrote the default 4 back before the next key, so select-all, Backspace,
-  // "3" produced "43" and Auto-assign dropped the whole class into group 1.
-  // resolveStudentsPerGroup turns it into a usable number where it is consumed.
+  // Held as the raw string the professor typed, not a number: coercing on every
+  // keystroke turns an emptied box back into the default, so clearing it and
+  // typing 3 gives 43. resolveStudentsPerGroup turns it into a number where it
+  // is consumed.
   const [studentsPerGroup, setStudentsPerGroup] = useState<string>(
     String(DEFAULT_STUDENTS_PER_GROUP)
   );
 
-  // This was `/^.*$/` with the real check commented out, so a header row, a
-  // stray "N/A" or a trailing blank cell all became students. Those rows then
-  // count toward the "has every group member finished" barrier and hang the
-  // real students behind a teammate who does not exist.
+  // A header row, a stray "N/A" or a blank cell must not become a student: every
+  // student counts toward the group barrier, so a teammate who does not exist
+  // holds the real ones back.
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const NORTHEASTERN_DOMAIN = '@northeastern.edu';
 
@@ -74,13 +72,10 @@ export function StudentCSVTab() {
     fetchClasses();
   }, [user]);
 
-  // Hand-rolled because this was `split(',')`, and a Canvas gradebook export
-  // quotes any name containing a comma ("Doe, John"), which shifted every
-  // column after it — the email column then held a surname and the whole class
-  // failed validation. Windows CRLF also left a `\r` glued to the last field,
-  // so a trailing email column never matched. RFC 4180: quoted fields may hold
-  // commas, newlines and `""` for a literal quote, and Excel prefixes a UTF-8
-  // BOM that otherwise ends up inside the first header name.
+  // Hand-rolled rather than `split(',')`: a Canvas gradebook export quotes any
+  // name containing a comma ("Doe, John"), Windows files end lines in CRLF, and
+  // Excel prefixes a UTF-8 BOM that would otherwise land in the first header.
+  // RFC 4180: quoted fields may hold commas, newlines and `""` for a literal quote.
   const parseCSV = (csvText: string): string[][] => {
     const text = csvText.replace(/^\uFEFF/, '');
     const rows: string[][] = [];
@@ -145,9 +140,7 @@ export function StudentCSVTab() {
   };
 
   // Fills groups in file order: the first `perGroup` valid rows are group 1,
-  // the next `perGroup` are group 2, and so on. Replaces a hardcoded
-  // `group_id: 1` that put the whole class in one group and left the professor
-  // hand-typing 30 group numbers while the room waited.
+  // the next `perGroup` are group 2, and so on.
   const assignGroupsSequentially = (students: CSVStudent[], perGroup: number): CSVStudent[] => {
     const size = Math.max(1, Math.floor(perGroup) || 1);
     return students.map((student, index) => ({
@@ -179,7 +172,6 @@ export function StudentCSVTab() {
       return { students, errors };
     }
 
-    // Find email column
     const headers = data[0].map((h) => h.toLowerCase().trim());
     const emailIndex = headers.findIndex((h) => h.includes('email'));
 
@@ -216,7 +208,6 @@ export function StudentCSVTab() {
       return;
     }
 
-    // Clear existing data when new file is uploaded
     setCsvStudents([]);
     setValidationErrors([]);
     setSubmitSuccess(false);
@@ -256,8 +247,8 @@ export function StudentCSVTab() {
     }
   };
 
-  // Keyed by row, not by email: a Canvas export with the same address twice
-  // moved both copies when the professor edited one of them.
+  // Keyed by row, not by email: a Canvas export can list the same address twice,
+  // and editing one copy must not move both.
   const updateStudentGroup = (index: number, groupId: number) => {
     setCsvStudents((prev) =>
       prev.map((student, i) =>
@@ -274,11 +265,8 @@ export function StudentCSVTab() {
 
   const projectedGroupCount = Math.ceil(csvStudents.length / effectiveStudentsPerGroup);
 
-  // New submit function
   const handleSubmit = async () => {
     if (!selectedClass || csvStudents.length === 0) {
-      // This was a bare string expression, so the button did nothing at all and
-      // gave no reason why.
       setPopup({
         headline: 'Error',
         message: 'Please select a class and upload student data first',
@@ -321,15 +309,11 @@ export function StudentCSVTab() {
           throw new Error(`Failed to create groups: ${createError.error}`);
         }
 
-        // create-groups refuses to add rows once the class has any, however
-        // many it asked for, and /csv/import writes Users.group_id with no
-        // check against GroupsInfo (there is no FK). This branch used to log
-        // and carry on, so a class that already had k groups got students
-        // written into groups k+1..N that do not exist. Those students are
-        // dropped from the admin tab (it only buckets known ids or null) and
-        // their group can never be started, so the barrier never opens for
-        // them. Groups are only ever inserted as 1..N, so the count in the
-        // body is the highest id that exists; refuse anything above it.
+        // create-groups refuses to add rows once the class has any, and
+        // /csv/import writes Users.group_id with no check against GroupsInfo
+        // (there is no FK), so a student imported into a group that does not
+        // exist can never be started. Groups are numbered 1..N, so the count in
+        // the body is the highest id that exists; refuse anything above it.
         const existingGroups: unknown = createError.existing_groups;
         if (typeof existingGroups !== 'number') {
           setPopup({
@@ -446,7 +430,6 @@ export function StudentCSVTab() {
     <div className="bg-northeasternWhite font-rubik">
       <div className="w-full p-4">
         <div className="bg-white rounded-lg shadow-lg p-6 w-full">
-          {/* Class Selection */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Select Class to Assign Groups:
@@ -465,7 +448,6 @@ export function StudentCSVTab() {
             </select>
           </div>
 
-          {/* CSV Upload */}
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
               Upload CSV with Student Emails
@@ -529,7 +511,6 @@ export function StudentCSVTab() {
             </div>
           </div>
 
-          {/* Validation Errors */}
           {validationErrors.length > 0 && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
               <h3 className="text-lg font-semibold text-red-900 mb-3">
@@ -549,7 +530,6 @@ export function StudentCSVTab() {
             </div>
           )}
 
-          {/* Submit Success Message */}
           {submitSuccess && (
             <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-green-800 font-semibold">
@@ -558,7 +538,6 @@ export function StudentCSVTab() {
             </div>
           )}
 
-          {/* Group Assignment Interface */}
           {csvStudents.length > 0 && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -575,8 +554,8 @@ export function StudentCSVTab() {
                     min="1"
                     max={csvStudents.length}
                     value={studentsPerGroup}
-                    // Store what was typed, including ''. Coercing here is what
-                    // made an emptied box snap back to 4 and turn "3" into "43".
+                    // Store what was typed, including ''; coercing here would snap
+                    // an emptied box back to the default.
                     onChange={(e) => setStudentsPerGroup(e.target.value)}
                     // Once focus leaves, show the number that will actually be
                     // used, so an empty or out-of-range box never disagrees with
@@ -623,7 +602,6 @@ export function StudentCSVTab() {
             </div>
           )}
 
-          {/* Action Buttons */}
           {csvStudents.length > 0 && (
             <div className="flex space-x-4">
               <button
