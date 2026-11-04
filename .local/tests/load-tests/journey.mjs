@@ -2,9 +2,9 @@
 
 // Every gate counts only the members who have shown up (presentMembers in
 // api/src/config/socket.ts), so a group holding the dormant student finishes
-// like any other.
+// like any other. The dormant student never logs in, so has no step at all.
 export function expectedStep(student) {
-  return student.group === null ? null : 'employer';
+  return student.group === null || student.dormant ? null : 'employer';
 }
 
 // An hour-long class, compressed. Ranges in ms.
