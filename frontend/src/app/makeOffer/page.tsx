@@ -1,6 +1,6 @@
 'use client';
 export const dynamic = 'force-dynamic';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../components/socketContext';
 import Navbar from '../components/navbar';
 import { usePathname } from 'next/navigation';
@@ -83,6 +83,12 @@ export default function MakeOffer() {
   const hasConfirmed = user?.id ? confirmations.includes(user.id.toString()) : false;
   const confirmationCount = confirmations.length;
   const allConfirmed = confirmationCount >= groupSize;
+  // What the connect handler re-sends. It is registered once per user, so it
+  // reads this ref rather than the state of the render that registered it.
+  const ownConfirmationRef = useRef<number | null>(null);
+  useEffect(() => {
+    ownConfirmationRef.current = hasConfirmed && selectedCandidateId ? selectedCandidateId : null;
+  }, [hasConfirmed, selectedCandidateId]);
   const [popupVotes, setPopupVotes] = useState<{ [key: number]: InterviewPopup }>({});
 
   const [existingOffer, setExistingOffer] = useState<Offer | null>(null);
@@ -538,13 +544,29 @@ export default function MakeOffer() {
 
     const roomId = `group_${user.group_id}_class_${user.class}`;
 
-    if (socket.connected) {
+    // The server keeps no record of confirmations; it only relays them. One
+    // emitted while the API was down is gone, and the group waits for it
+    // forever, so it is sent again on every connect. Teammates ignore a
+    // duplicate.
+    const announce = () => {
       socket.emit('joinGroup', roomId);
-    }
+      const candidateId = ownConfirmationRef.current;
+      if (candidateId) {
+        socket.emit('confirmOffer', {
+          groupId: user.group_id,
+          classId: user.class,
+          candidateId,
+          studentId: user.id,
+          roomId,
+        });
+      }
+    };
+
+    if (socket.connected) announce();
 
     const handleConnect = () => {
       setIsConnected(true);
-      socket.emit('joinGroup', roomId);
+      announce();
     };
 
     const handleDisconnect = () => {
