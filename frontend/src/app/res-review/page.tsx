@@ -19,7 +19,7 @@ import Facts from '../components/facts';
 import { useAuth } from '../components/AuthContext';
 import { useJobDescription } from '../components/useJobDescription';
 import { PageLoader, Spinner } from '../components/spinner';
-import type { BarrierStatus } from '../../types';
+import { useBarrierReleased } from '../components/useBarrierReleased';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -388,32 +388,19 @@ export default function ResumesPage() {
   const userGroupId = user?.group_id;
   const userClass = user?.class;
 
-  // The release event is one emit at one instant, and a socket that is down
-  // then never sees it. Asking the barrier itself is the fallback. Next used
-  // to unlock when every roster member had ten saved votes instead, which is
-  // not what the barrier counts: a student whose completion was lost could
+  // Asking the barrier itself is the fallback for a missed release event. Next
+  // used to unlock when every roster member had ten saved votes instead, which
+  // is not what the barrier counts: a student whose completion was lost could
   // leave while the rest of the group waited for it forever.
+  const reviewReleased = useBarrierReleased(
+    'res_1',
+    userClass,
+    userGroupId,
+    disabled && totalDecisions >= 10
+  );
   useEffect(() => {
-    if (!disabled || totalDecisions < 10 || !userGroupId || !userClass) return;
-
-    const checkBarrier = async () => {
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/groups/barrier-status/${userClass}/${userGroupId}`,
-          { credentials: 'include' }
-        );
-        if (!response.ok) return;
-        const status = (await response.json()) as BarrierStatus;
-        if (status.released) setDisabled(false);
-      } catch (error) {
-        console.error('Failed to read the resume-review barrier:', error);
-      }
-    };
-
-    checkBarrier();
-    const poll = setInterval(checkBarrier, 5000);
-    return () => clearInterval(poll);
-  }, [disabled, totalDecisions, userGroupId, userClass]);
+    if (reviewReleased && disabled && totalDecisions >= 10) setDisabled(false);
+  }, [reviewReleased, disabled, totalDecisions]);
 
   // The rows the server actually holds for this student, scoped by group_id
   // AND class (a row from another section, or from a group this student was
