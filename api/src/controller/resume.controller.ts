@@ -5,13 +5,14 @@
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool } from 'mysql2';
+import { Server as SocketIOServer } from 'socket.io';
 import fs from 'fs';
 import path from 'path';
 
 export class ResumeController {
   constructor(
     private db: Pool,
-    private io: any
+    private io: SocketIOServer
   ) {}
 
   getFinishedCount = (req: AuthRequest, res: Response): void => {
@@ -33,7 +34,7 @@ export class ResumeController {
 
     this.db.query(query, [group_id, class_id], (err, results: any[]) => {
       if (err) {
-        console.error('❌ [GET-FINISHED-COUNT] Database error:', err);
+        console.error('Database error reading finished count:', err);
         res.status(500).json({ error: 'Database error' });
         return;
       }
@@ -94,7 +95,7 @@ export class ResumeController {
           ],
           (err) => {
             if (err) {
-              console.error('❌ [BACKEND-VOTE] Error saving vote:', err);
+              console.error('Error saving vote:', err);
               res.status(500).json({ error: 'Database error' });
               return;
             }
@@ -148,7 +149,7 @@ export class ResumeController {
 
     this.db.query(getVotesQuery, [group_id, studentClass], (err, votes: any[]) => {
       if (err) {
-        console.error('❌ [BACKEND-GET-VOTES] Error fetching votes:', err);
+        console.error('Error fetching votes:', err);
         res.status(500).json({ error: err.message });
         return;
       }

@@ -1,15 +1,12 @@
-// ============================================
-// src/controller/csv.controller.ts
-// ============================================
-
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool } from 'mysql2';
+import { Server as SocketIOServer } from 'socket.io';
 
 export class CSVController {
   constructor(
     private db: Pool,
-    private io: any
+    private io: SocketIOServer
   ) {}
 
   importCSV = (req: AuthRequest, res: Response): void => {
@@ -38,12 +35,10 @@ export class CSVController {
 
       return new Promise((resolve, reject) => {
         // A student who logs in before the roster is imported already has a row
-        // with affiliation 'none' (the Keycloak callback creates it). Without
-        // the affiliation line below that row stayed 'none' forever, and since
-        // signup only completes for a row that is already on a roster, the
-        // student was stuck on the signup form with no way out. Promote 'none'
-        // to 'student' here, and leave an existing admin alone in case the
-        // professor's own address appears in the file.
+        // with affiliation 'none' (the Keycloak callback creates it), and signup
+        // only completes for a row on a roster, so promote 'none' to 'student'.
+        // An existing admin is left alone in case the professor's own address
+        // appears in the file.
         const query = `
           INSERT INTO Users (email, class, group_id, affiliation)
           VALUES (?, ?, ?, 'student')
@@ -58,7 +53,7 @@ export class CSVController {
             // This rejection reason is returned to the browser in `failed[]`,
             // so err.message would put MySQL's table and column names on the
             // professor's roster-import screen. The real error stays in the log.
-            console.error(`❌ Database error for ${email}:`, err);
+            console.error(`Database error for ${email}:`, err);
             reject({ email, error: 'Failed to assign this student' });
           } else {
             resolve({

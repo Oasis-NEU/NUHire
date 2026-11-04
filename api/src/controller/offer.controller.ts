@@ -1,7 +1,3 @@
-// ============================================
-// src/controller/offer.controller.ts
-// ============================================
-
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool } from 'mysql2';
@@ -12,10 +8,9 @@ export class OfferController {
   createOffer = (req: AuthRequest, res: Response): void => {
     const { candidate_id } = req.body;
 
-    // The group and section come from the session, never the body. With the new
-    // UNIQUE (class_id, group_id) the insert below is an upsert, so a body-supplied
-    // group_id would let any logged-in student overwrite another group's offer
-    // instead of merely adding a stray row (AGENTS.md rule 1).
+    // The group and section come from the session, never the body. The insert
+    // below is an upsert on UNIQUE (class_id, group_id), so a body-supplied
+    // group_id would let any logged-in student overwrite another group's offer.
     const group_id = req.user?.group_id;
     const class_id = req.user?.class;
 
@@ -29,17 +24,16 @@ export class OfferController {
       return;
     }
 
-    // A group submits one offer. Two members hitting submit at the same moment
-    // used to insert two pending rows, and the professor's pending-offers list
-    // showed the group twice: accepting one left the other pending forever.
+    // A group has one offer, so two members submitting at once update the same
+    // row rather than showing the professor the group twice.
     //
     // `status` is not taken from the body. The only caller sends 'pending', and
     // accepting is the professor's call through PUT /offers/:id (requireAdmin);
     // a student posting status: 'accepted' would otherwise accept their own.
     //
-    // The ON DUPLICATE clause leaves `status` alone and only moves candidate_id
-    // while the row is still pending, so a late second click cannot reopen or
-    // repoint an offer the professor already accepted or rejected.
+    // The ON DUPLICATE clause moves candidate_id only while the offer is pending
+    // or rejected, and puts a rejected offer back to pending, so the group can
+    // try again after a rejection but a late click cannot repoint an accepted one.
     // LAST_INSERT_ID(id) makes insertId the existing row's id on the update path,
     // where it would otherwise be 0 and the client would store a bogus offer id.
     this.db.query(

@@ -1,8 +1,6 @@
-// src/config/logger.ts
-//
 // Leveled logging for the API. The level comes from LOG_LEVEL (debug, info,
-// warn, error; default info), so the per-request tracing that used to be
-// console.log is silent during a live class unless someone turns it on.
+// warn, error; default info), so per-request tracing is silent during a live
+// class unless someone turns it on.
 //
 // The methods take exactly what console.* took, so a call site migrates by
 // renaming. Pino's own signature is (mergingObject, message, ...interpolation)

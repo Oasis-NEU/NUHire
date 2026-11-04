@@ -1,17 +1,15 @@
-// ============================================
-// src/controller/progress.controller.ts
-// ============================================
-
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool, ResultSetHeader, RowDataPacket } from 'mysql2';
+import { Server as SocketIOServer } from 'socket.io';
 import { emitToClassModerators } from '../config/socket';
 import { STEP_ORDER, isStep, decideStep } from '../config/steps';
+import { dbNow } from '../config/database';
 
 export class ProgressController {
   constructor(
     private db: Pool,
-    private io: any
+    private io: SocketIOServer
   ) {}
 
   getProgressByGroup = (req: AuthRequest, res: Response): void => {
@@ -148,13 +146,9 @@ export class ProgressController {
     );
   };
 
-  // --- Group-selection confirmations (res-review-group) -------------------
-  //
-  // These used to live only in React state. A refresh reset the tally to 0 and
-  // left the already-confirmed student with a disabled Confirm button, so the
-  // group deadlocked unless every member reloaded in the same instant. The
-  // table is the record; the socket events below are only a live nudge, and the
-  // GET is the fallback a client can poll after a reconnect.
+  // Group-selection confirmations (res-review-group). The table is the record;
+  // the socket events below are only a live nudge, and the GET is the fallback
+  // a client can poll after a refresh or reconnect.
 
   // Identity comes from the session, never the request. A client-supplied
   // group_id or student_id would let one student confirm on a teammate's behalf
@@ -236,10 +230,10 @@ export class ProgressController {
     const { studentId, groupId, classId } = identity;
 
     this.db.query(
-      `INSERT INTO GroupConfirmations (group_id, class, student_id)
-       VALUES (?, ?, ?)
-       ON DUPLICATE KEY UPDATE confirmed_at = CURRENT_TIMESTAMP`,
-      [groupId, classId, studentId],
+      `INSERT INTO GroupConfirmations (group_id, class, student_id, confirmed_at)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE confirmed_at = VALUES(confirmed_at)`,
+      [groupId, classId, studentId, dbNow()],
       (err) => {
         if (err) {
           console.error('Error recording group confirmation:', err);

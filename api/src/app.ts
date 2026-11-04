@@ -38,7 +38,7 @@ export class App {
   public app: Application;
   public server: HTTPServer;
   public io: SocketIOServer;
-  private sessionStore: any;
+  private sessionStore?: session.Store;
   public onlineStudents: Record<string, string> = {};
 
   constructor(
@@ -154,9 +154,7 @@ export class App {
       );
 
       if (recentCalls.length > 50) {
-        console.warn(
-          `⚠️  WARNING: ${route} called ${recentCalls.length} times in the last minute!`
-        );
+        console.warn(`WARNING: ${route} called ${recentCalls.length} times in the last minute!`);
       }
 
       next();
@@ -233,7 +231,7 @@ export class App {
 
   public listen(port: number): void {
     this.server.listen(port, () => {
-      console.log(`🚀 Server running`);
+      console.info(`Server running`);
     });
   }
 }
