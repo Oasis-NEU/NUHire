@@ -11,6 +11,7 @@ import axios from 'axios';
 import Instructions from '../components/instructions';
 import { useProgressManager } from '../components/progress';
 import { useAuth } from '../components/AuthContext';
+import { useOfferGateReleased } from '../components/useOfferGateReleased';
 import { PageLoader } from '../components/spinner';
 import {
   CURVEBALL_COLUMN,
@@ -82,7 +83,14 @@ export default function MakeOffer() {
   const confirmations = selectedCandidateId ? offerConfirmations[selectedCandidateId] || [] : [];
   const hasConfirmed = user?.id ? confirmations.includes(user.id.toString()) : false;
   const confirmationCount = confirmations.length;
-  const allConfirmed = confirmationCount >= groupSize;
+  const everyoneConfirmed = confirmationCount >= groupSize;
+  const gateReleased = useOfferGateReleased(
+    socket,
+    user?.class,
+    user?.group_id,
+    !everyoneConfirmed && !offerPending && !acceptedOffer
+  );
+  const allConfirmed = everyoneConfirmed || gateReleased;
   // What the connect handler re-sends. It is registered once per user, so it
   // reads this ref rather than the state of the render that registered it.
   const ownConfirmationRef = useRef<number | null>(null);
@@ -786,7 +794,7 @@ export default function MakeOffer() {
 
     const candidateId = selectedIds[0];
     const confirmations = offerConfirmations[candidateId] || [];
-    if (confirmations.length < groupSize) {
+    if (!gateReleased && confirmations.length < groupSize) {
       setPopup({
         headline: 'Team Confirmation Required',
         message: `All ${groupSize} team members must confirm before making an offer.`,
@@ -1051,7 +1059,9 @@ export default function MakeOffer() {
             <div className="flex flex-col items-center my-6 gap-4">
               <div className="text-center">
                 <p className="text-navy font-medium">
-                  Team Confirmation: {confirmationCount}/{groupSize} members ready
+                  {gateReleased && !everyoneConfirmed
+                    ? 'Your instructor has let your group make the offer.'
+                    : `Team Confirmation: ${confirmationCount}/${groupSize} members ready`}
                 </p>
               </div>
 

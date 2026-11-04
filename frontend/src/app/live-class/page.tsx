@@ -40,6 +40,8 @@ const LiveClass = () => {
   // Polls and socket refreshes overlap; only the newest response may land.
   const latestRequest = useRef(0);
   const [unsticking, setUnsticking] = useState(false);
+  // The group whose make-offer confirm gate the professor is about to open.
+  const [releasing, setReleasing] = useState<{ classId: string; groupId: number } | null>(null);
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
 
   useEffect(() => {
@@ -186,6 +188,37 @@ const LiveClass = () => {
     }
   };
 
+  const handleReleaseOfferGate = async () => {
+    if (!releasing) return;
+    const { classId, groupId } = releasing;
+
+    setUnsticking(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/groups/release-offer-gate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ class_id: classId, group_id: groupId }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        setPopup({
+          headline: 'Success',
+          message: `Group ${groupId} can make its offer now.`,
+        });
+      } else {
+        setPopup({ headline: 'Error', message: data.error || 'Failed to release the group.' });
+      }
+    } catch (error) {
+      console.error('Error releasing the offer gate:', error);
+      setPopup({ headline: 'Error', message: 'Failed to release the group.' });
+    } finally {
+      setUnsticking(false);
+      setReleasing(null);
+      setRefreshKey((key) => key + 1);
+    }
+  };
+
   if (userloading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-sand">
@@ -293,6 +326,15 @@ const LiveClass = () => {
                 >
                   {next ? `Unstick → ${STEP_LABEL[next]}` : 'At the last step'}
                 </button>
+
+                {canUnstick && step === 'offer' && (
+                  <button
+                    onClick={() => setReleasing({ classId: selectedClass, groupId })}
+                    className="mt-2 px-4 py-2 rounded-lg font-medium transition-colors bg-white text-red-600 hover:bg-red-600 hover:text-white border-2 border-red-600"
+                  >
+                    Let them make an offer
+                  </button>
+                )}
               </div>
             );
           })}
@@ -310,6 +352,17 @@ const LiveClass = () => {
           onDismiss={() => setUnstick(null)}
           onConfirm={handleUnstick}
           confirmLabel={unsticking ? 'Moving...' : 'Unstick'}
+          busy={unsticking}
+        />
+      )}
+
+      {releasing && (
+        <Popup
+          headline={`Let Group ${releasing.groupId} make an offer?`}
+          message="The group stays on Make Offer and can send its offer without every member confirming the candidate. No work is deleted."
+          onDismiss={() => setReleasing(null)}
+          onConfirm={handleReleaseOfferGate}
+          confirmLabel={unsticking ? 'Releasing...' : 'Let them'}
           busy={unsticking}
         />
       )}
