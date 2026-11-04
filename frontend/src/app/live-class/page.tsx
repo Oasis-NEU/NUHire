@@ -39,7 +39,7 @@ const LiveClass = () => {
   const [refreshError, setRefreshError] = useState(false);
   // Polls and socket refreshes overlap; only the newest response may land.
   const latestRequest = useRef(0);
-  const [unsticking, setUnsticking] = useState(false);
+  const [overriding, setOverriding] = useState(false);
   // The group whose make-offer confirm gate the professor is about to open.
   const [releasing, setReleasing] = useState<{ classId: string; groupId: number } | null>(null);
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
@@ -153,70 +153,58 @@ const LiveClass = () => {
       : [];
   };
 
-  const handleUnstick = async () => {
-    if (!unstick) return;
-    const { groupId, to: targetStep } = unstick;
-
-    setUnsticking(true);
+  // Both teacher overrides: post, say how it went, close the dialog, refresh.
+  const runOverride = async (
+    path: string,
+    body: Record<string, unknown>,
+    success: string,
+    failure: string
+  ) => {
+    setOverriding(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/groups/force-advance`, {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          class_id: unstick.classId,
-          group_id: groupId,
-          target_step: targetStep,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await response.json().catch(() => ({}));
-      if (response.ok) {
-        setPopup({
-          headline: 'Success',
-          message: `Group ${groupId} moved to ${STEP_LABEL[targetStep]}.`,
-        });
-      } else {
-        setPopup({ headline: 'Error', message: data.error || 'Failed to unstick group.' });
-      }
+      setPopup(
+        response.ok
+          ? { headline: 'Success', message: success }
+          : { headline: 'Error', message: data.error || failure }
+      );
     } catch (error) {
-      console.error('Error unsticking group:', error);
-      setPopup({ headline: 'Error', message: 'Failed to unstick group.' });
+      console.error(`Error calling ${path}:`, error);
+      setPopup({ headline: 'Error', message: failure });
     } finally {
-      setUnsticking(false);
+      setOverriding(false);
       setUnstick(null);
+      setReleasing(null);
       setRefreshKey((key) => key + 1);
     }
   };
 
-  const handleReleaseOfferGate = async () => {
+  const handleUnstick = () => {
+    if (!unstick) return;
+    const { classId, groupId, to } = unstick;
+    return runOverride(
+      '/groups/force-advance',
+      { class_id: classId, group_id: groupId, target_step: to },
+      `Group ${groupId} moved to ${STEP_LABEL[to]}.`,
+      'Failed to unstick group.'
+    );
+  };
+
+  const handleReleaseOfferGate = () => {
     if (!releasing) return;
     const { classId, groupId } = releasing;
-
-    setUnsticking(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/groups/release-offer-gate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ class_id: classId, group_id: groupId }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (response.ok) {
-        setPopup({
-          headline: 'Success',
-          message: `Group ${groupId} can make its offer now.`,
-        });
-      } else {
-        setPopup({ headline: 'Error', message: data.error || 'Failed to release the group.' });
-      }
-    } catch (error) {
-      console.error('Error releasing the offer gate:', error);
-      setPopup({ headline: 'Error', message: 'Failed to release the group.' });
-    } finally {
-      setUnsticking(false);
-      setReleasing(null);
-      setRefreshKey((key) => key + 1);
-    }
+    return runOverride(
+      '/groups/release-offer-gate',
+      { class_id: classId, group_id: groupId },
+      `Group ${groupId} can make its offer now.`,
+      'Failed to release the group.'
+    );
   };
 
   if (userloading) {
@@ -351,8 +339,8 @@ const LiveClass = () => {
           }`}
           onDismiss={() => setUnstick(null)}
           onConfirm={handleUnstick}
-          confirmLabel={unsticking ? 'Moving...' : 'Unstick'}
-          busy={unsticking}
+          confirmLabel={overriding ? 'Moving...' : 'Unstick'}
+          busy={overriding}
         />
       )}
 
@@ -362,8 +350,8 @@ const LiveClass = () => {
           message="The group stays on Make Offer and can send its offer without every member confirming the candidate. No work is deleted."
           onDismiss={() => setReleasing(null)}
           onConfirm={handleReleaseOfferGate}
-          confirmLabel={unsticking ? 'Releasing...' : 'Let them'}
-          busy={unsticking}
+          confirmLabel={overriding ? 'Releasing...' : 'Let them'}
+          busy={overriding}
         />
       )}
 
