@@ -19,6 +19,7 @@ import Facts from '../components/facts';
 import { useAuth } from '../components/AuthContext';
 import { useJobDescription } from '../components/useJobDescription';
 import { PageLoader, Spinner } from '../components/spinner';
+import type { BarrierStatus } from '../../types';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -96,8 +97,6 @@ export default function ResumesPage() {
   const [currentResumeIndex, setCurrentResumeIndex] = useState(0);
   const [fadingEffect, setFadingEffect] = useState(false);
   const [timeSpent, setTimeSpent] = useState(0);
-  const [groupSize, setGroupSize] = useState(0);
-  const [groupSubmissions, setGroupSubmissions] = useState(0);
   const [disabled, setDisabled] = useState(true);
   const [resumeLoading, setResumeLoading] = useState(true);
   const [popup, setPopup] = useState<{
@@ -160,39 +159,6 @@ export default function ResumesPage() {
       console.error('Error fetching resumes:', error);
     }
   }, []);
-
-  const fetchGroupSize = async () => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/interview/group-size/${user?.group_id}/${user?.class}`,
-        { credentials: 'include' }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setGroupSize(data.count);
-      }
-    } catch (err) {
-      console.error('Failed to fetch group size:', err);
-    }
-  };
-
-  const fetchFinished = async () => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/resume/finished-count/${user?.group_id}/${user?.class}`,
-        {
-          credentials: 'include',
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setGroupSubmissions(data.finishedCount);
-      }
-    } catch (err) {
-      console.error('Failed to fetch finished count:', err);
-    }
-  };
 
   // The saved counters used to be wiped the moment the tenth decision landed,
   // while the student was still sitting on this page waiting for teammates. A
@@ -308,6 +274,10 @@ export default function ResumesPage() {
     // for the rest of the class. Joining on 'connect' rather than once on
     // mount is what makes a wifi blip recoverable; the server re-evaluates the
     // barrier on every join, so a release missed while offline is re-sent.
+    //
+    // A completion emitted while the API was down is lost the same way, and
+    // without its Step_Completion row the group never releases, so it is sent
+    // again too. The server keeps the first completion time on a duplicate.
     const announce = () => {
       socket.emit('studentOnline', { studentId: user.email });
       socket.emit('joinGroup', roomId);
@@ -315,6 +285,9 @@ export default function ResumesPage() {
         studentId: user.email,
         currentPage: pathname,
       });
+      if (announcedFinishRef.current) {
+        socket.emit('userCompletedResReview', { groupId: user.group_id });
+      }
     };
 
     if (socket.connected) announce();
@@ -388,38 +361,12 @@ export default function ResumesPage() {
       }
     };
 
-    const handleUserCompletedResReview = ({ groupId }: { groupId: number }) => {
-      if (groupId === user.group_id) {
-        fetchFinished();
-      }
-    };
-
-    const handleStudentRemoved = ({ groupId, classId }: { groupId: number; classId: number }) => {
-      if (user && groupId === user.group_id && classId == user.class) {
-        fetchGroupSize();
-        fetchFinished();
-      }
-    };
-
-    const handleStudentAdded = ({ groupId, classId }: { groupId: number; classId: number }) => {
-      if (user && groupId === user.group_id && classId == user.class) {
-        fetchGroupSize();
-        fetchFinished();
-      }
-    };
-
-    socket.on('userCompletedResReview', handleUserCompletedResReview);
     socket.on('receivePopup', handleReceivePopup);
     socket.on('moveGroup', handleMoveGroup);
-    socket.on('studentRemovedFromGroup', handleStudentRemoved);
-    socket.on('studentAddedToGroup', handleStudentAdded);
 
     return () => {
       socket.off('receivePopup', handleReceivePopup);
-      socket.off('userCompletedResReview', handleUserCompletedResReview);
       socket.off('moveGroup', handleMoveGroup);
-      socket.off('studentRemovedFromGroup', handleStudentRemoved);
-      socket.off('studentAddedToGroup', handleStudentAdded);
     };
   }, [socket, user]);
 
@@ -437,22 +384,36 @@ export default function ResumesPage() {
     };
   }, [socket]);
 
-  useEffect(() => {
-    if (totalDecisions === 10 && groupSize > 0 && groupSubmissions >= groupSize) {
-      setDisabled(false);
-    }
-  }, [groupSize, groupSubmissions, totalDecisions]);
-
-  useEffect(() => {
-    if (!user?.group_id) return;
-
-    fetchGroupSize();
-    fetchFinished();
-  }, [user?.group_id]);
-
   const userId = user?.id;
   const userGroupId = user?.group_id;
   const userClass = user?.class;
+
+  // The release event is one emit at one instant, and a socket that is down
+  // then never sees it. Asking the barrier itself is the fallback. Next used
+  // to unlock when every roster member had ten saved votes instead, which is
+  // not what the barrier counts: a student whose completion was lost could
+  // leave while the rest of the group waited for it forever.
+  useEffect(() => {
+    if (!disabled || totalDecisions < 10 || !userGroupId || !userClass) return;
+
+    const checkBarrier = async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/groups/barrier-status/${userClass}/${userGroupId}`,
+          { credentials: 'include' }
+        );
+        if (!response.ok) return;
+        const status = (await response.json()) as BarrierStatus;
+        if (status.released) setDisabled(false);
+      } catch (error) {
+        console.error('Failed to read the resume-review barrier:', error);
+      }
+    };
+
+    checkBarrier();
+    const poll = setInterval(checkBarrier, 5000);
+    return () => clearInterval(poll);
+  }, [disabled, totalDecisions, userGroupId, userClass]);
 
   // The rows the server actually holds for this student, scoped by group_id
   // AND class (a row from another section, or from a group this student was
@@ -575,7 +536,6 @@ export default function ResumesPage() {
 
       announcedFinishRef.current = true;
       socket.emit('userCompletedResReview', { groupId: user.group_id });
-      fetchFinished();
     };
 
     verifyAndAnnounce();
