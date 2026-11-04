@@ -50,6 +50,8 @@ module.exports = {
       boxShadow: {
         raised: '0 4px 2px rgba(0, 0, 0, 0.25)',
         pill: '0 4px 4px rgba(0, 0, 0, 0.25)',
+        // Hover and pressed: the library swaps the raised shadow for this.
+        pressed: 'inset 0 4px 4px rgba(0, 0, 0, 0.25)',
       },
     },
   },
