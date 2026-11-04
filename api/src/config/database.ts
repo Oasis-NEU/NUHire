@@ -124,6 +124,22 @@ export function dbErrorStatus(err: unknown): number {
   return 500;
 }
 
+// Two students voting on the same resume at once can deadlock: the vote upsert
+// reads the group's rows to copy the shortlist flag, and both statements then
+// wait on each other's gap lock. MySQL rolls one back with ER_LOCK_DEADLOCK,
+// and running it again is MySQL's documented remedy. Only for a statement that
+// is safe to repeat.
+export async function retryOnDeadlock<T>(run: () => Promise<T>, attempts = 3): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await run();
+    } catch (err) {
+      const deadlocked = (err as { code?: string } | null)?.code === 'ER_LOCK_DEADLOCK';
+      if (!deadlocked || attempt >= attempts) throw err;
+    }
+  }
+}
+
 const POOL_DEFAULTS = {
   connectionLimit: 25,
   queueLimit: 30,

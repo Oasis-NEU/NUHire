@@ -6,6 +6,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool, RowDataPacket } from 'mysql2';
 import { Server as SocketIOServer } from 'socket.io';
+import { retryOnDeadlock } from '../config/database';
 import fs from 'fs';
 import path from 'path';
 
@@ -78,22 +79,24 @@ export class ResumeController {
       // row takes the group's current value in the same statement; at the
       // column default of 0, a teammate voting after the shortlist un-ticked
       // the resume for the whole group. A re-vote leaves its row's flag alone.
-      await promiseDb.query(
-        `INSERT INTO Resume (student_id, group_id, class, timespent, resume_number, vote, checked)
+      await retryOnDeadlock(() =>
+        promiseDb.query(
+          `INSERT INTO Resume (student_id, group_id, class, timespent, resume_number, vote, checked)
           SELECT ?, ?, ?, ?, ?, ?, COALESCE(MAX(checked), 0)
           FROM Resume WHERE group_id = ? AND class = ? AND resume_number = ?
           ON DUPLICATE KEY UPDATE timespent = VALUES(timespent), vote = VALUES(vote);`,
-        [
-          student_id,
-          group_id,
-          classId,
-          timespent,
-          resume_number,
-          vote,
-          group_id,
-          classId,
-          resume_number,
-        ]
+          [
+            student_id,
+            group_id,
+            classId,
+            timespent,
+            resume_number,
+            vote,
+            group_id,
+            classId,
+            resume_number,
+          ]
+        )
       );
 
       this.io.to(`group_${group_id}_class_${classId}`).emit('voteUpdated', {
