@@ -164,17 +164,22 @@ every `connect` (the server ignores a duplicate) would likely close both.
   Confirmations are still only relayed, never stored, so a member who was
   offline while a teammate confirmed misses it until that teammate reconnects.
 
+- **A resume vote that deadlocks is run again.** Two members voting on one
+  resume at once could deadlock `POST /resume/vote` (`INSERT … SELECT
+MAX(checked)` takes gap locks). The loser got a 500, the page queued it behind
+  a Retry button the load test does not press, and the group waited at the
+  barrier for the rest of the run. This failed about one run in three, plain or
+  restart. The upsert is safe to repeat, so it now retries on `ER_LOCK_DEADLOCK`.
+
 Same machine, 2026-11-04:
 
-| Restart run  | Runs | API p95 | Stuck   |
-| ------------ | ---- | ------- | ------- |
-| With OAS-237 | 3    | 60–88ms | 0, 0, 4 |
+| Restart run                | Runs | Stuck         |
+| -------------------------- | ---- | ------------- |
+| With OAS-237, before retry | 5    | 0, 0, 4, 4, 0 |
+| With OAS-237 and the retry | 3    | 0, 0, 0       |
 
-The 4 in the third run were one group stranded by a deadlock, not the restart:
-two members' `POST /resume/vote` collided (`INSERT … SELECT MAX(checked)` takes
-gap locks), one got a 500, the page does not retry, and the barrier waited for
-that vote for the rest of the run. The same deadlock fails plain runs too, about
-one in three.
+Every 4 in the first row was the deadlock. In the last retry run MySQL logged
+a deadlock on the vote insert and nobody was stuck, so the retry absorbed it.
 
 Restarts during interviews and make offer are not in this test. They were
 checked with Playwright, two students in one group: after an API restart both
