@@ -25,7 +25,7 @@ const Popup = ({
   busy = false,
 }: PopupProps) => (
   <Modal label={headline} onDismiss={busy ? undefined : onDismiss}>
-    <Card tone="highlighted" className="w-96 max-w-full !p-8">
+    <Card tone="highlighted" padding="lg" className="w-96 max-w-full">
       <h2 className="text-subheader font-medium text-black mb-4">{headline}</h2>
       <p className="text-base text-black mb-6">{message}</p>
       {onConfirm ? (
