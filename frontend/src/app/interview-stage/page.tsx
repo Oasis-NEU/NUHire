@@ -285,11 +285,19 @@ export default function Interview() {
   useEffect(() => {
     if (!socket || !user?.email) return;
 
+    // A reconnected socket has a new id and is in no rooms, so a join made
+    // once on mount leaves the student deaf to moveGroup and
+    // interviewStatusUpdated after any API restart or wifi blip. Announce
+    // again on every connect.
     const roomId = `group_${user.group_id}_class_${user.class}`;
-    socket.emit('joinGroup', roomId);
+    const announce = () => {
+      socket.emit('joinGroup', roomId);
+      socket.emit('studentOnline', { studentId: user.email });
+      socket.emit('studentPageChanged', { studentId: user.email, currentPage: pathname });
+    };
 
-    socket.emit('studentOnline', { studentId: user.email });
-    socket.emit('studentPageChanged', { studentId: user.email, currentPage: pathname });
+    if (socket.connected) announce();
+    socket.on('connect', announce);
 
     const handleMoveGroup = async ({
       groupId,
@@ -342,6 +350,7 @@ export default function Interview() {
     }
 
     return () => {
+      socket.off('connect', announce);
       socket.off('moveGroup', handleMoveGroup);
     };
   }, [socket, user?.email, pathname, updateProgress]);
@@ -380,6 +389,15 @@ export default function Interview() {
       }
     };
 
+    // Finishing is saved over HTTP, so a teammate who finished while this
+    // socket was down is in the count; re-read it rather than wait for an
+    // interviewStatusUpdated that was emitted to nobody.
+    const handleReconnect = () => {
+      fetchFinished();
+      fetchGroupSize();
+    };
+
+    socket.on('connect', handleReconnect);
     socket.on('receivePopup', handleReceivePopup);
     socket.on('studentAddedToGroup', handleStudentAdded);
     socket.on('interviewStatusUpdated', handleInterviewStatusUpdated);
@@ -387,6 +405,7 @@ export default function Interview() {
     socket.on('studentRemovedFromGroup', handleStudentRemoved);
 
     return () => {
+      socket.off('connect', handleReconnect);
       socket.off('receivePopup', handleReceivePopup);
       socket.off('studentAddedToGroup', handleStudentAdded);
       socket.off('interviewStatusUpdated', handleInterviewStatusUpdated);
