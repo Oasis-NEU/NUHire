@@ -11,15 +11,16 @@ export type ButtonVariant =
   | 'neutralActive' // the selected grey pill
   | 'outlineRed'; // red outline pill, e.g. "Help"
 
-const PILL: ButtonVariant[] = ['neutral', 'neutralActive', 'outlineRed'];
-
-const COLORS: Record<ButtonVariant, string> = {
-  primary: 'bg-northeasternRed text-white shadow-raised',
-  secondary: 'border-2 border-northeasternRed text-northeasternRed',
-  outline: 'border-2 border-gray3 bg-white text-gray3 shadow-raised',
-  neutral: 'border-2 border-gray4 text-gray4 shadow-pill',
-  neutralActive: 'border-2 border-gray3 bg-gray4 text-white',
-  outlineRed: 'border-2 border-northeasternRed bg-white text-northeasternRed shadow-raised',
+const VARIANT: Record<ButtonVariant, { pill: boolean; colors: string }> = {
+  primary: { pill: false, colors: 'bg-northeasternRed text-white shadow-raised' },
+  secondary: { pill: false, colors: 'border-2 border-northeasternRed text-northeasternRed' },
+  outline: { pill: false, colors: 'border-2 border-gray3 bg-white text-gray3 shadow-raised' },
+  neutral: { pill: true, colors: 'border-2 border-gray4 text-gray4 shadow-pill' },
+  neutralActive: { pill: true, colors: 'border-2 border-gray3 bg-gray4 text-white' },
+  outlineRed: {
+    pill: true,
+    colors: 'border-2 border-northeasternRed bg-white text-northeasternRed shadow-raised',
+  },
 };
 
 // A disabled button of any variant is greyed out, as the screens draw "View".
@@ -52,12 +53,13 @@ export const Button: React.FC<ButtonProps> = ({
   children,
   ...rest
 }) => {
-  const shape = PILL.includes(variant) ? 'rounded-full' : 'rounded-lg';
+  const { pill, colors } = VARIANT[variant];
+  const shape = pill ? 'rounded-full' : 'rounded-lg';
   // A busy button keeps its colours; it is working, not unavailable. The
   // library draws hover and pressed as an inset shadow in place of the raised one.
   const state = disabled
     ? DISABLED
-    : `${COLORS[variant]} ${busy ? 'cursor-wait' : 'hover:shadow-pressed active:shadow-pressed'}`;
+    : `${colors} ${busy ? 'cursor-wait' : 'hover:shadow-pressed active:shadow-pressed'}`;
   return (
     <button
       type={type}
@@ -73,7 +75,8 @@ export const Button: React.FC<ButtonProps> = ({
 
 export type IconButtonIcon = 'question' | 'info' | 'lock' | 'user';
 
-const LETTER: Partial<Record<IconButtonIcon, string>> = { question: '?', info: 'i' };
+// Question and info are drawn as letters, the same way as an avatar initial.
+const ICON_LETTER = { question: '?', info: 'i' } as const;
 
 // The library's open-lock glyph, 16x21, in the button's text colour.
 export const LockIcon: React.FC<{ className?: string }> = ({ className = '' }) => (
@@ -82,16 +85,16 @@ export const LockIcon: React.FC<{ className?: string }> = ({ className = '' }) =
   </svg>
 );
 
-interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  // One of the library's four icons, or a letter (e.g. an avatar initial).
-  icon: IconButtonIcon | string;
+// One of the library's four icons, or a letter such as an avatar initial.
+type IconButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   // The button has no visible text, so it needs a name.
   label: string;
-}
+} & ({ icon: IconButtonIcon; letter?: never } | { letter: string; icon?: never });
 
 // The library's BTN Icons: a 40px white circle around a 32px red ring.
 export const IconButton: React.FC<IconButtonProps> = ({
   icon,
+  letter,
   label,
   type = 'button',
   className = '',
@@ -109,7 +112,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
   else
     glyph = (
       <span className="text-2xl font-black leading-none" aria-hidden>
-        {LETTER[icon as IconButtonIcon] ?? icon}
+        {icon ? ICON_LETTER[icon] : letter}
       </span>
     );
 
