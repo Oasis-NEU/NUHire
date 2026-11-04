@@ -475,7 +475,7 @@ export class Student {
   // makeOffer/page.tsx: everyone confirms one candidate, the driver makes the
   // offer, the advisor answers. Returns whether the group got an answer.
   async makeOffer() {
-    const { id, email, group_id, class: classId } = this.user;
+    const { email, group_id, class: classId } = this.user;
     const tally = new Set();
     let answer = null;
     const socket = this.open((s) => s.emit('joinGroup', this.room));
@@ -518,13 +518,7 @@ export class Student {
 
     await think(THINK.click);
     socket.emit('checkint', { group_id: this.room, interview_number: candidateId, checked: true });
-    socket.emit('confirmOffer', {
-      groupId: group_id,
-      classId,
-      candidateId,
-      studentId: id,
-      roomId: this.room,
-    });
+    socket.emit('confirmOffer', { candidateId });
 
     if (this.drives) {
       await this.until(() => tally.size >= size, 'every member to confirm the offer');

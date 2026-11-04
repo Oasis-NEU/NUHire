@@ -535,14 +535,9 @@ export default function MakeOffer() {
       return;
     }
 
-    // Don't update local state - let the socket handler do it for everyone including yourself
-    socket.emit('confirmOffer', {
-      groupId: user.group_id,
-      classId: user.class,
-      candidateId,
-      studentId: user.id,
-      roomId: `group_${user.group_id}_class_${user.class}`,
-    });
+    // Don't update local state - let the socket handler do it for everyone including yourself.
+    // The server takes the student and group from the session.
+    socket.emit('confirmOffer', { candidateId });
   };
 
   useEffect(() => {
@@ -559,15 +554,7 @@ export default function MakeOffer() {
     const announce = () => {
       socket.emit('joinGroup', roomId);
       const candidateId = ownConfirmationRef.current;
-      if (candidateId) {
-        socket.emit('confirmOffer', {
-          groupId: user.group_id,
-          classId: user.class,
-          candidateId,
-          studentId: user.id,
-          roomId,
-        });
-      }
+      if (candidateId) socket.emit('confirmOffer', { candidateId });
     };
 
     if (socket.connected) announce();
