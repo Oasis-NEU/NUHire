@@ -17,18 +17,19 @@ advisor through the activity at once, on the seeded class 9001:
    react at once (the burst).
 3. Job description, 10 resume votes, the barrier, shortlist and confirmations,
    four interview ratings, the offer, the advisor's answer.
-4. The advisor polls the live view every 10s like `/live-class`, accepts every
-   offer, and force-advances group 1 (the dormant student's) at each gate.
+4. The advisor polls the live view every 10s like `/live-class` and accepts
+   every offer. Gates count only present members, so group 1 (the dormant
+   student's) finishes without the teacher.
 
 The seed's messy cases are all in play. `--restart` crashes the API for 5s once
 half the class has finished resume review.
 
-| Criterion (from the ticket)     | Measured as                                                                          |
-| ------------------------------- | ------------------------------------------------------------------------------------ |
-| API p95 under 500ms             | every HTTP request except the Keycloak login                                         |
-| No request unanswered after 10s | counted as a hang, never as a slow sample                                            |
-| No stuck student                | everyone reaches the step `journey.mjs` expects, with no teacher help beyond group 1 |
-| Class-start burst under 2s      | the advisor's start request to the last student on the dashboard                     |
+| Criterion (from the ticket)     | Measured as                                                           |
+| ------------------------------- | --------------------------------------------------------------------- |
+| API p95 under 500ms             | every HTTP request except the Keycloak login                          |
+| No request unanswered after 10s | counted as a hang, never as a slow sample                             |
+| No stuck student                | everyone reaches the step `journey.mjs` expects, with no teacher help |
+| Class-start burst under 2s      | the advisor's start request to the last student on the dashboard      |
 
 ## Choices
 
@@ -91,7 +92,8 @@ in each run, mostly at the resume barrier or the shortlist.
 
 ## Findings
 
-Findings 1, 2 and 4 are fixed (OAS-236); see [After OAS-236](#after-oas-236).
+Findings 1, 2 and 4 are fixed (OAS-236), 3 and 5 (OAS-237); see [After OAS-236](#after-oas-236)
+and [After OAS-237](#after-oas-237).
 
 1. **Fixed. A completion sent around the crash is lost.** Stuck groups had members
    with all 10 votes saved and no `Step_Completion` row. HTTP is back the moment
@@ -107,7 +109,7 @@ Findings 1, 2 and 4 are fixed (OAS-236); see [After OAS-236](#after-oas-236).
    splits: the members behind wait for a barrier that cannot release now, and
    the members ahead wait on `/res-review-group` for a driver stuck behind them.
    Nothing recovers it on its own. Force-advance should; the test doesn't try.
-3. **`/interview-stage` doesn't re-join its room on reconnect**
+3. **Fixed. `/interview-stage` doesn't re-join its room on reconnect**
    (`interview-stage/page.tsx:392`), so a reconnected student misses
    `interviewStatusUpdated` and `moveGroup`. Seen in the container-kill runs,
    when groups were already interviewing at the crash. This breaks rule 4 in
@@ -116,7 +118,7 @@ Findings 1, 2 and 4 are fixed (OAS-236); see [After OAS-236](#after-oas-236).
    (`res-review-group/page.tsx:334`), including a teammate's late one meant for
    `/res-review-group` itself, and reloads. That happened 3 to 8 times per
    restart run.
-5. **A group with a member who never logs in can't make an offer.** The offer
+5. **Fixed. A group with a member who never logs in can't make an offer.** The offer
    tally is kept per browser (`makeOffer/page.tsx:568`) and needs the whole
    roster, and there is no override past makeOffer. Group 1 ends every run at
    `offer`. This breaks rule 3.
@@ -138,13 +140,46 @@ waiting out the run. In one run `GET /groups/barrier-status` was itself over
 500ms at p95, from the polls landing as the API came back.
 
 Separately, on today's `main` a plain run strands the dormant student04 at no
-step (expected `offer`) while force-advance answers 400 for group 1. It happens
-with and without this change; finding 5 is the open half (OAS-237), along with
-finding 3.
+step (expected `offer`) while force-advance answers 400 for group 1. Both come
+from the test, not the app; see [After OAS-237](#after-oas-237).
 
 Findings 1 and 2 together were the likely class-ender: a crash at the wrong
 moment strands groups until the teacher notices. Re-sending the completion on
 every `connect` (the server ignores a duplicate) would likely close both.
+
+## After OAS-237
+
+- **Finding 3.** `/interview-stage` re-joins its room on every `connect` and
+  re-reads the finished count.
+- **Finding 5.** The gates had already moved to present members (the
+  absent-students change, after this test was written), so group 1 was never
+  stuck. The test still stopped it at `offer` and force-advanced it at each
+  gate, which is where the 400s came from. The model now lets group 1 finish on
+  its own, and expects no step for the dormant student.
+- **The teacher can get any group past make offer.** "Unstick → Employer Panel"
+  now moves the screens too (`/makeOffer` follows `moveGroup`). "Let them make an
+  offer" (`POST /groups/release-offer-gate`) instead lets the group send its
+  offer without every confirmation.
+- **A confirmation lost in the crash** is re-sent on every `connect`.
+  Confirmations are still only relayed, never stored, so a member who was
+  offline while a teammate confirmed misses it until that teammate reconnects.
+
+Same machine, 2026-11-04:
+
+| Restart run  | Runs | API p95 | Stuck   |
+| ------------ | ---- | ------- | ------- |
+| With OAS-237 | 3    | 60–88ms | 0, 0, 4 |
+
+The 4 in the third run were one group stranded by a deadlock, not the restart:
+two members' `POST /resume/vote` collided (`INSERT … SELECT MAX(checked)` takes
+gap locks), one got a 500, the page does not retry, and the barrier waited for
+that vote for the rest of the run. The same deadlock fails plain runs too, about
+one in three.
+
+Restarts during interviews and make offer are not in this test. They were
+checked with Playwright, two students in one group: after an API restart both
+followed a force-advance off `/interview-stage` (and neither did on the old
+page), and the release and the Unstick both reached every screen at make offer.
 
 ## Not tested
 
@@ -155,8 +190,8 @@ every `connect` (the server ignores a duplicate) would likely close both.
 - **Time is compressed** to about 75s. Slow-building problems (memory, pool
   leaks, 24h session expiry) are not covered.
 - **30 is the target, not the limit.** No headroom figure.
-- **One restart moment** (mid-resume-review). A crash during offers is likely
-  worse.
+- **One restart moment** (mid-resume-review). Interviews and make offer were
+  checked by hand (see [After OAS-237](#after-oas-237)), not by the load test.
 - **Curveball popups.**
 - **Drift.** The journey is hand-copied from the pages and the test is not in
   CI, so nothing catches a page changing under it.
