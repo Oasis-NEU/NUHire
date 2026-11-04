@@ -1,16 +1,17 @@
 'use client';
 export const dynamic = 'force-dynamic';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../components/socketContext';
 import Navbar from '../components/navbar';
 import { usePathname } from 'next/navigation';
-import { useProgress } from '../components/useProgress';
+import { STEP_TO_ROUTE, useProgress } from '../components/useProgress';
 import Footer from '../components/footer';
 import Popup from '../components/popup';
 import axios from 'axios';
 import Instructions from '../components/instructions';
 import { useProgressManager } from '../components/progress';
 import { useAuth } from '../components/AuthContext';
+import { useOfferGateReleased } from '../components/useOfferGateReleased';
 import { PageLoader } from '../components/spinner';
 import {
   CURVEBALL_COLUMN,
@@ -82,7 +83,20 @@ export default function MakeOffer() {
   const confirmations = selectedCandidateId ? offerConfirmations[selectedCandidateId] || [] : [];
   const hasConfirmed = user?.id ? confirmations.includes(user.id.toString()) : false;
   const confirmationCount = confirmations.length;
-  const allConfirmed = confirmationCount >= groupSize;
+  const everyoneConfirmed = confirmationCount >= groupSize;
+  const gateReleased = useOfferGateReleased(
+    socket,
+    user?.class,
+    user?.group_id,
+    !everyoneConfirmed && !offerPending && !acceptedOffer
+  );
+  const allConfirmed = everyoneConfirmed || gateReleased;
+  // What the connect handler re-sends. It is registered once per user, so it
+  // reads this ref rather than the state of the render that registered it.
+  const ownConfirmationRef = useRef<number | null>(null);
+  useEffect(() => {
+    ownConfirmationRef.current = hasConfirmed && selectedCandidateId ? selectedCandidateId : null;
+  }, [hasConfirmed, selectedCandidateId]);
   const [popupVotes, setPopupVotes] = useState<{ [key: number]: InterviewPopup }>({});
 
   const [existingOffer, setExistingOffer] = useState<Offer | null>(null);
@@ -521,14 +535,9 @@ export default function MakeOffer() {
       return;
     }
 
-    // Don't update local state - let the socket handler do it for everyone including yourself
-    socket.emit('confirmOffer', {
-      groupId: user.group_id,
-      classId: user.class,
-      candidateId,
-      studentId: user.id,
-      roomId: `group_${user.group_id}_class_${user.class}`,
-    });
+    // Don't update local state - let the socket handler do it for everyone including yourself.
+    // The server takes the student and group from the session.
+    socket.emit('confirmOffer', { candidateId });
   };
 
   useEffect(() => {
@@ -538,13 +547,21 @@ export default function MakeOffer() {
 
     const roomId = `group_${user.group_id}_class_${user.class}`;
 
-    if (socket.connected) {
+    // The server keeps no record of confirmations; it only relays them. One
+    // emitted while the API was down is gone, and the group waits for it
+    // forever, so it is sent again on every connect. Teammates ignore a
+    // duplicate.
+    const announce = () => {
       socket.emit('joinGroup', roomId);
-    }
+      const candidateId = ownConfirmationRef.current;
+      if (candidateId) socket.emit('confirmOffer', { candidateId });
+    };
+
+    if (socket.connected) announce();
 
     const handleConnect = () => {
       setIsConnected(true);
-      socket.emit('joinGroup', roomId);
+      announce();
     };
 
     const handleDisconnect = () => {
@@ -663,7 +680,26 @@ export default function MakeOffer() {
       }
     };
 
+    // The teacher's "Unstick" past make offer (POST /groups/force-advance) has
+    // already written every member's progress; this page only has to follow.
+    // A moveGroup for this page itself is a teammate's, not the teacher's.
+    const handleMoveGroup = ({
+      groupId,
+      classId,
+      targetPage,
+    }: {
+      groupId: number;
+      classId: number;
+      targetPage: string;
+    }) => {
+      if (groupId !== user.group_id || classId !== user.class) return;
+      if (targetPage !== STEP_TO_ROUTE.employer) return;
+      localStorage.setItem('progress', 'employer');
+      window.location.href = targetPage;
+    };
+
     socket.on('connect', handleConnect);
+    socket.on('moveGroup', handleMoveGroup);
     socket.on('studentRemovedFromGroup', handleStudentRemoved);
     socket.on('disconnect', handleDisconnect);
     socket.on('studentAddedToGroup', handleStudentAdded);
@@ -675,6 +711,7 @@ export default function MakeOffer() {
     return () => {
       socket.off('studentRemovedFromGroup', handleStudentRemoved);
       socket.off('connect', handleConnect);
+      socket.off('moveGroup', handleMoveGroup);
       socket.off('studentAddedToGroup', handleStudentAdded);
       socket.off('disconnect', handleDisconnect);
       socket.off('groupMemberOffer', handleGroupMemberOffer);
@@ -744,7 +781,7 @@ export default function MakeOffer() {
 
     const candidateId = selectedIds[0];
     const confirmations = offerConfirmations[candidateId] || [];
-    if (confirmations.length < groupSize) {
+    if (!gateReleased && confirmations.length < groupSize) {
       setPopup({
         headline: 'Team Confirmation Required',
         message: `All ${groupSize} team members must confirm before making an offer.`,
@@ -1009,7 +1046,9 @@ export default function MakeOffer() {
             <div className="flex flex-col items-center my-6 gap-4">
               <div className="text-center">
                 <p className="text-navy font-medium">
-                  Team Confirmation: {confirmationCount}/{groupSize} members ready
+                  {gateReleased && !everyoneConfirmed
+                    ? 'Your instructor has let your group make the offer.'
+                    : `Team Confirmation: ${confirmationCount}/${groupSize} members ready`}
                 </p>
               </div>
 

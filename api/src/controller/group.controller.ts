@@ -10,7 +10,13 @@ import {
   connectedEmails,
   evaluateGroupBarrier,
 } from '../config/socket';
-import { STEP_ORDER, STEP_TO_ROUTE, leftmostStep, recordStep } from '../config/steps';
+import {
+  STEP_ORDER,
+  STEP_TO_ROUTE,
+  leftmostStep,
+  readGroupPosition,
+  recordStep,
+} from '../config/steps';
 import { dbNow } from '../config/database';
 
 // A student moved into a group arrives there now, whatever their stamp says.
@@ -748,8 +754,8 @@ export class GroupController {
   // ahead of their server step. A group pushed two steps would ignore the emit
   // and stay put, while the professor got a 200 saying it worked.
   //
-  // /jobdes and /makeOffer have no moveGroup listener, so job_description ->
-  // res_1 and offer -> employer write the rows but nobody navigates.
+  // /jobdes has no moveGroup listener, so job_description -> res_1 writes the
+  // rows but nobody navigates.
   //
   // Works with nobody connected: the barrier is re-evaluated when a socket
   // joins the room, so a member who reconnects later finds their button
@@ -783,10 +789,9 @@ export class GroupController {
       conn = await this.db.promise().getConnection();
       await conn.beginTransaction();
 
-      const [members] = await conn.query<(RowDataPacket & Pick<User, 'id' | 'email'>)[]>(
-        "SELECT id, email FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
-        [group_id, class_id]
-      );
+      // Read in the same transaction as the write, so the step this decision
+      // is based on is the step that gets overwritten.
+      const { members, currentStep } = await readGroupPosition(conn, class_id, group_id);
 
       if (members.length === 0) {
         // Not an error the professor can fix by retrying, so say what is
@@ -798,16 +803,6 @@ export class GroupController {
         return;
       }
 
-      // Where the group is now, read in the same transaction as the write so
-      // the step this decision is based on is the step that gets overwritten.
-      // Same query and same reduction as getProgress, deliberately: the
-      // advisor dashboard shows the professor that number, and what this
-      // accepts has to line up with what they were just looking at.
-      const [progressRows] = await conn.query<RowDataPacket[]>(
-        'SELECT step FROM Progress WHERE crn = ? AND group_id = ?',
-        [class_id, group_id]
-      );
-      const currentStep = leftmostStep(progressRows.map((row) => row.step));
       const nextStep: string | undefined = stepOrder[stepOrder.indexOf(currentStep) + 1];
 
       if (target_step !== nextStep) {

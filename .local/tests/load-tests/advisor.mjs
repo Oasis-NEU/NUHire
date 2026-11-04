@@ -1,9 +1,8 @@
-// The teacher: starts the class, polls the live view like /live-class, accepts
-// every offer, and force-advances only a group with a dormant member.
+// The teacher: starts the class, polls the live view like /live-class, and
+// accepts every offer.
 
 import { login } from '../lib/login.mjs';
 import { ADVISOR, GROUP_IDS, SIM } from '../lib/roster.mjs';
-import { nextStep } from './journey.mjs';
 import { openSocket, timedCall } from './student.mjs';
 
 const LIVE_POLL_MS = 10_000;
@@ -50,17 +49,6 @@ export class Advisor {
   startClass() {
     return this.call('PATCH', '/groups/start-all-groups', '/groups/start-all-groups', {
       class_id: SIM.crn,
-    });
-  }
-
-  // Releases the barrier and moves the group, so both fan-outs time from here.
-  forceAdvance(group, step) {
-    this.h.barrierCause.set(group, performance.now());
-    this.h.moveEmitted.set(group, performance.now());
-    return this.call('POST', '/groups/force-advance', '/groups/force-advance', {
-      class_id: SIM.crn,
-      group_id: group,
-      target_step: nextStep(step),
     });
   }
 

@@ -4,7 +4,7 @@
 import { io } from 'socket.io-client';
 import { callApi, login } from '../lib/login.mjs';
 import { SIM, activeMembersOf } from '../lib/roster.mjs';
-import { LOGIN_SPREAD_MS, NEEDS_TEACHER, STUCK_MS, THINK, pick, sleep, think } from './journey.mjs';
+import { LOGIN_SPREAD_MS, STUCK_MS, THINK, pick, sleep, think } from './journey.mjs';
 
 // socketContext.tsx's options that differ from the defaults. In Node the
 // cookie goes in extraHeaders; withCredentials only works in a browser.
@@ -305,7 +305,6 @@ export class Student {
     socket.emit('userCompletedResReview', { groupId: group_id });
     announced = true;
     this.h.completedResReview();
-    if (NEEDS_TEACHER.has(group_id)) this.h.waiting(this, 'res_1');
 
     // The page also polls the barrier every 5s while it waits. A failure is
     // already counted by timedCall.
@@ -380,7 +379,6 @@ export class Student {
       '/progress/confirmations'
     );
     saved.forEach((c) => confirmations.add(c));
-    if (NEEDS_TEACHER.has(group_id)) this.h.waiting(this, 'res_2');
 
     if (this.drives) {
       await this.until(
@@ -464,7 +462,6 @@ export class Student {
       finished: 1,
     });
     socket.emit('interviewStageFinished', { group_id, class_id: classId, student_id: id });
-    if (NEEDS_TEACHER.has(group_id)) this.h.waiting(this, 'interview');
 
     await this.until(() => finished || moved, 'the rest of the group to finish interviews');
     await this.thinkUnless(THINK.click, () => moved);
@@ -478,7 +475,7 @@ export class Student {
   // makeOffer/page.tsx: everyone confirms one candidate, the driver makes the
   // offer, the advisor answers. Returns whether the group got an answer.
   async makeOffer() {
-    const { id, email, group_id, class: classId } = this.user;
+    const { email, group_id, class: classId } = this.user;
     const tally = new Set();
     let answer = null;
     const socket = this.open((s) => s.emit('joinGroup', this.room));
@@ -521,15 +518,7 @@ export class Student {
 
     await think(THINK.click);
     socket.emit('checkint', { group_id: this.room, interview_number: candidateId, checked: true });
-    socket.emit('confirmOffer', {
-      groupId: group_id,
-      classId,
-      candidateId,
-      studentId: id,
-      roomId: this.room,
-    });
-    // The tally counts the dormant member, so this group stops here (journey.mjs).
-    if (NEEDS_TEACHER.has(group_id)) return false;
+    socket.emit('confirmOffer', { candidateId });
 
     if (this.drives) {
       await this.until(() => tally.size >= size, 'every member to confirm the offer');

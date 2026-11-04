@@ -1,5 +1,6 @@
 // src/config/steps.ts
 
+import { RowDataPacket } from 'mysql2';
 import { PoolConnection } from 'mysql2/promise';
 import { User } from '../models/User';
 import { RES_REVIEW_BARRIER_STEP } from './socket';
@@ -94,6 +95,27 @@ export function leftmostStep(steps: string[]): string {
   );
 }
 
+// A group's roster and the step it is at: its slowest member's, the number
+// getProgress shows the professor. Both teacher overrides decide from this, so
+// what they accept lines up with what the professor was just looking at. Read
+// on the caller's connection, so the decision and its write share a
+// transaction.
+export async function readGroupPosition(
+  conn: PoolConnection,
+  classId: number | string,
+  groupId: number | string
+): Promise<{ members: Pick<User, 'id' | 'email'>[]; currentStep: string }> {
+  const [members] = await conn.query<(RowDataPacket & Pick<User, 'id' | 'email'>)[]>(
+    "SELECT id, email FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
+    [groupId, classId]
+  );
+  const [progressRows] = await conn.query<RowDataPacket[]>(
+    'SELECT step FROM Progress WHERE crn = ? AND group_id = ?',
+    [classId, groupId]
+  );
+  return { members, currentStep: leftmostStep(progressRows.map((row) => row.step)) };
+}
+
 // The step a late student should join their group at, or null when there is
 // nothing to catch up on. Only once the group is through the solo resume review:
 // until then the student is still waited for and does it like everyone else,
@@ -141,16 +163,27 @@ export async function recordStep(
   // 0/4 and disable the button the professor just pressed. Recording them
   // as done is what "past this gate" means, and it holds across a restart.
   const priorSteps = STEP_ORDER.slice(1, (STEP_ORDER as readonly string[]).indexOf(targetStep));
-  if (priorSteps.length > 0) {
-    const now = dbNow();
-    const completionRows = members.flatMap((member) =>
-      priorSteps.map((step) => [member.id, classId, groupId, step, now])
-    );
-    const completionPlaceholders = completionRows.map(() => '(?, ?, ?, ?, ?)').join(', ');
-    await conn.query(
-      `INSERT IGNORE INTO Step_Completion (student_id, class, group_id, step, completed_at)
-       VALUES ${completionPlaceholders}`,
-      completionRows.flat()
-    );
-  }
+  await recordCompletions(conn, classId, groupId, members, priorSteps);
+}
+
+// Mark `steps` done for every one of `members`. INSERT IGNORE keeps a
+// completion that already exists, and with it the time it really happened.
+export async function recordCompletions(
+  conn: PoolConnection,
+  classId: number | string,
+  groupId: number | string,
+  members: Pick<User, 'id'>[],
+  steps: readonly string[]
+): Promise<void> {
+  if (steps.length === 0) return;
+  const now = dbNow();
+  const completionRows = members.flatMap((member) =>
+    steps.map((step) => [member.id, classId, groupId, step, now])
+  );
+  const completionPlaceholders = completionRows.map(() => '(?, ?, ?, ?, ?)').join(', ');
+  await conn.query(
+    `INSERT IGNORE INTO Step_Completion (student_id, class, group_id, step, completed_at)
+     VALUES ${completionPlaceholders}`,
+    completionRows.flat()
+  );
 }

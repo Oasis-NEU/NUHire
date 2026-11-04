@@ -4,6 +4,7 @@ import { Pool } from 'mysql2';
 import { Server as SocketIOServer } from 'socket.io';
 import { GroupController } from '../controller/group.controller';
 import { CatchUpController } from '../controller/catchUp.controller';
+import { OfferGateController } from '../controller/offerGate.controller';
 import {
   requireAuth,
   requireAdmin,
@@ -15,6 +16,7 @@ export default (db: Pool, io: SocketIOServer): Router => {
   const router = Router();
   const groupController = new GroupController(db, io);
   const catchUpController = new CatchUpController(db, io);
+  const offerGateController = new OfferGateController(db, io);
 
   // Advisor only: anything that changes the class, and the roster reads that
   // return every student's name and email.
@@ -33,6 +35,9 @@ export default (db: Pool, io: SocketIOServer): Router => {
   // group's progress, so a student able to call it could drag their own team
   // past a step they have not done.
   router.post('/force-advance', requireAdmin, groupController.forceAdvance);
+  // The same override for make offer's "everyone confirms" gate, which lets the
+  // group make its offer instead of moving it past the step.
+  router.post('/release-offer-gate', requireAdmin, offerGateController.release);
   router.get('/live/:classId', requireClassModerator(db, 'classId'), groupController.getLiveClass);
 
   // Students read their own group's state from these.

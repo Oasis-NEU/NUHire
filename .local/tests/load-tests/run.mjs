@@ -4,10 +4,10 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { io } from 'socket.io-client';
 import { ROOT, loadConfig } from '../lib/env.mjs';
-import { STUDENTS, activeMembersOf } from '../lib/roster.mjs';
+import { STUDENTS } from '../lib/roster.mjs';
 import { SeedError, http, parseArgs, run, say } from '../lib/util.mjs';
 import { Advisor } from './advisor.mjs';
-import { TEACHER_NOTICE_MS, expectedStep, sleep } from './journey.mjs';
+import { expectedStep, sleep } from './journey.mjs';
 import { BURST_LIMIT_MS, HANG_MS, Metrics, P95_LIMIT_MS, markdownTable } from './metrics.mjs';
 import { Student } from './student.mjs';
 
@@ -72,7 +72,6 @@ run(async () => {
   let allReady;
   const readyPromise = new Promise((resolve) => (allReady = resolve));
   const ready = new Set();
-  const waitingAt = new Map();
   let completions = 0;
   let landed = 0;
   let lastLanded = 0;
@@ -98,21 +97,6 @@ run(async () => {
     completedResReview() {
       completions += 1;
       if (args.restart && !restart && completions >= resumeReviewers / 2) restart = crashApi(h);
-    },
-    // The teacher force-advances a group once all its active members wait at one gate.
-    waiting(student, step) {
-      const group = student.account.group;
-      const key = `${group}:${step}`;
-      const waiting = waitingAt.get(key) ?? new Set();
-      // A page reload reports the same student twice; only the last arrival counts.
-      if (waiting.has(student.account.email)) return;
-      waitingAt.set(key, waiting.add(student.account.email));
-      if (waiting.size !== activeMembersOf(group).length) return;
-      setTimeout(() => {
-        advisor
-          .forceAdvance(group, step)
-          .catch((error) => h.problems.push(`force-advance group ${group}: ${error.message}`));
-      }, TEACHER_NOTICE_MS);
     },
   };
 
