@@ -4,7 +4,7 @@
 import { io } from 'socket.io-client';
 import { callApi, login } from '../lib/login.mjs';
 import { SIM, activeMembersOf } from '../lib/roster.mjs';
-import { LOGIN_SPREAD_MS, NEEDS_TEACHER, STUCK_MS, THINK, pick, sleep, think } from './journey.mjs';
+import { LOGIN_SPREAD_MS, STUCK_MS, THINK, pick, sleep, think } from './journey.mjs';
 
 // socketContext.tsx's options that differ from the defaults. In Node the
 // cookie goes in extraHeaders; withCredentials only works in a browser.
@@ -305,7 +305,6 @@ export class Student {
     socket.emit('userCompletedResReview', { groupId: group_id });
     announced = true;
     this.h.completedResReview();
-    if (NEEDS_TEACHER.has(group_id)) this.h.waiting(this, 'res_1');
 
     // The page also polls the barrier every 5s while it waits. A failure is
     // already counted by timedCall.
@@ -380,7 +379,6 @@ export class Student {
       '/progress/confirmations'
     );
     saved.forEach((c) => confirmations.add(c));
-    if (NEEDS_TEACHER.has(group_id)) this.h.waiting(this, 'res_2');
 
     if (this.drives) {
       await this.until(
@@ -464,7 +462,6 @@ export class Student {
       finished: 1,
     });
     socket.emit('interviewStageFinished', { group_id, class_id: classId, student_id: id });
-    if (NEEDS_TEACHER.has(group_id)) this.h.waiting(this, 'interview');
 
     await this.until(() => finished || moved, 'the rest of the group to finish interviews');
     await this.thinkUnless(THINK.click, () => moved);
@@ -528,8 +525,6 @@ export class Student {
       studentId: id,
       roomId: this.room,
     });
-    // The tally counts the dormant member, so this group stops here (journey.mjs).
-    if (NEEDS_TEACHER.has(group_id)) return false;
 
     if (this.drives) {
       await this.until(() => tally.size >= size, 'every member to confirm the offer');

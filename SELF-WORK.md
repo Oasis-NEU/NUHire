@@ -55,6 +55,18 @@ start.** Those break in ways you won't see until a full class is on it.
 - **Branch:** see [#106](https://github.com/Oasis-NEU/NUHire/pull/106)
 - **Linear:** OAS-236
 
+### Interviews and make offer survive a restart, and the teacher can unstick make offer
+
+- **Who:** Audrey
+- **What:** `/interview-stage` re-joins its room on every reconnect; make offer re-sends the student's own confirmation on reconnect, follows `moveGroup`, and opens its "everyone confirmed" gate when the teacher releases it. `/live-class` gets an "Unstick → Employer" button and a "Let them make an offer" button at make offer. Part 2 of OAS-231, stacked on #106.
+- **Why it matters:** a group with one absent or disconnected member had no way past make offer, and a reconnect during interviews missed `moveGroup`
+- **Files:** `frontend/src/app/interview-stage/page.tsx`, `frontend/src/app/makeOffer/page.tsx`, `frontend/src/app/live-class/page.tsx`, `frontend/src/app/res-review/page.tsx`, `frontend/src/app/components/useBarrierReleased.ts` (new), `api/src/controller/group.controller.ts`, `api/src/routes/group.routes.ts`, `api/src/config/steps.ts`, `.local/tests/load-tests/*`, docs
+- **Touches auth / sockets / schema / deploy?** sockets: one new server event, `offerGateReleased`, sent to the group room. No schema change: it writes `Step_Completion` rows for `offer`, which the enum already allows
+- **Size:** days
+- **Status:** in progress
+- **Branch:** `audreyng/fix-students-stranded-by-api-restart-part-2`
+- **Linear:** OAS-237
+
 ## Done
 
 _Move entries here when they merge or get dropped._
