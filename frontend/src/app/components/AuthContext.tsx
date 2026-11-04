@@ -8,7 +8,6 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  refetchUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,11 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchUser();
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, loading, refetchUser: fetchUser }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, loading }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
