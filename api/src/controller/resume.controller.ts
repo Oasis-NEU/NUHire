@@ -4,7 +4,7 @@
 
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
-import { Pool } from 'mysql2';
+import { Pool, RowDataPacket } from 'mysql2';
 import { Server as SocketIOServer } from 'socket.io';
 import fs from 'fs';
 import path from 'path';
@@ -46,7 +46,7 @@ export class ResumeController {
     });
   };
 
-  submitVote = (req: AuthRequest, res: Response): void => {
+  submitVote = async (req: AuthRequest, res: Response): Promise<void> => {
     const { student_id, group_id, class: classId, timespent, resume_number, vote } = req.body;
 
     if (
@@ -64,56 +64,50 @@ export class ResumeController {
       return;
     }
 
-    // First, get the old vote to send in socket event
-    this.db.query(
-      'SELECT vote FROM Resume WHERE student_id = ? AND resume_number = ? AND group_id = ? AND class = ?',
-      [student_id, resume_number, group_id, classId],
-      (err, results: any[]) => {
-        const oldVote = results && results.length > 0 ? results[0].vote : 'unanswered';
+    try {
+      const promiseDb = this.db.promise();
 
-        // `checked` is the group's shortlist flag, kept on every vote row. A new
-        // row takes the group's current value in the same statement; at the
-        // column default of 0, a teammate voting after the shortlist un-ticked
-        // the resume for the whole group. A re-vote leaves its row's flag alone.
-        const query = `INSERT INTO Resume (student_id, group_id, class, timespent, resume_number, vote, checked)
+      // The old vote goes out with the socket event.
+      const [previous] = await promiseDb.query<(RowDataPacket & { vote: string })[]>(
+        'SELECT vote FROM Resume WHERE student_id = ? AND resume_number = ? AND group_id = ? AND class = ?',
+        [student_id, resume_number, group_id, classId]
+      );
+      const oldVote = previous.length > 0 ? previous[0].vote : 'unanswered';
+
+      // `checked` is the group's shortlist flag, kept on every vote row. A new
+      // row takes the group's current value in the same statement; at the
+      // column default of 0, a teammate voting after the shortlist un-ticked
+      // the resume for the whole group. A re-vote leaves its row's flag alone.
+      await promiseDb.query(
+        `INSERT INTO Resume (student_id, group_id, class, timespent, resume_number, vote, checked)
           SELECT ?, ?, ?, ?, ?, ?, COALESCE(MAX(checked), 0)
           FROM Resume WHERE group_id = ? AND class = ? AND resume_number = ?
-          ON DUPLICATE KEY UPDATE timespent = VALUES(timespent), vote = VALUES(vote);`;
+          ON DUPLICATE KEY UPDATE timespent = VALUES(timespent), vote = VALUES(vote);`,
+        [
+          student_id,
+          group_id,
+          classId,
+          timespent,
+          resume_number,
+          vote,
+          group_id,
+          classId,
+          resume_number,
+        ]
+      );
 
-        this.db.query(
-          query,
-          [
-            student_id,
-            group_id,
-            classId,
-            timespent,
-            resume_number,
-            vote,
-            group_id,
-            classId,
-            resume_number,
-          ],
-          (err) => {
-            if (err) {
-              console.error('Error saving vote:', err);
-              res.status(500).json({ error: 'Database error' });
-              return;
-            }
+      this.io.to(`group_${group_id}_class_${classId}`).emit('voteUpdated', {
+        resume_number,
+        oldVote,
+        newVote: vote,
+        student_id,
+      });
 
-            // EMIT socket event to all group members
-            const roomId = `group_${group_id}_class_${classId}`;
-            this.io.to(roomId).emit('voteUpdated', {
-              resume_number,
-              oldVote,
-              newVote: vote,
-              student_id,
-            });
-
-            res.status(200).json({ message: 'Resume review updated successfully' });
-          }
-        );
-      }
-    );
+      res.status(200).json({ message: 'Resume review updated successfully' });
+    } catch (err) {
+      console.error('Error saving vote:', err);
+      res.status(500).json({ error: 'Database error' });
+    }
   };
 
   getResumesByStudent = (req: AuthRequest, res: Response): void => {

@@ -13,8 +13,6 @@ type Call = { sql: string; params: unknown };
 
 function fakeRes() {
   const out: { status: number; body: unknown } = { status: 200, body: undefined };
-  let resolve: () => void = () => {};
-  const done = new Promise<void>((r) => (resolve = r));
   const res = {
     status(code: number) {
       out.status = code;
@@ -22,11 +20,10 @@ function fakeRes() {
     },
     json(body: unknown) {
       out.body = body;
-      resolve();
       return res;
     },
   };
-  return { res: res as unknown as Response, out, done };
+  return { res: res as unknown as Response, out };
 }
 
 const io = { to: () => ({ emit: () => {} }) };
@@ -35,14 +32,16 @@ describe('submitVote', () => {
   it('copies the group current shortlist flag into a new vote row', async () => {
     const calls: Call[] = [];
     const db = {
-      query: (sql: string, params: unknown, cb: (err: Error | null, rows?: unknown) => void) => {
-        calls.push({ sql, params });
-        cb(null, sql.startsWith('SELECT vote') ? [] : { affectedRows: 1 });
-      },
+      promise: () => ({
+        query: async (sql: string, params: unknown) => {
+          calls.push({ sql, params });
+          return [sql.startsWith('SELECT vote') ? [] : { affectedRows: 1 }];
+        },
+      }),
     } as unknown as Pool;
-    const { res, out, done } = fakeRes();
+    const { res, out } = fakeRes();
 
-    new ResumeController(db, io).submitVote(
+    await new ResumeController(db, io).submitVote(
       {
         body: {
           student_id: 9,
@@ -55,7 +54,6 @@ describe('submitVote', () => {
       } as AuthRequest,
       res
     );
-    await done;
 
     expect(out.status).toBe(200);
     const insert = calls.find((c) => c.sql.includes('INSERT INTO Resume'))!;
