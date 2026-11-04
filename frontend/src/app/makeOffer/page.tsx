@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSocket } from '../components/socketContext';
 import Navbar from '../components/navbar';
 import { usePathname } from 'next/navigation';
-import { useProgress } from '../components/useProgress';
+import { STEP_TO_ROUTE, useProgress } from '../components/useProgress';
 import Footer from '../components/footer';
 import Popup from '../components/popup';
 import axios from 'axios';
@@ -663,7 +663,26 @@ export default function MakeOffer() {
       }
     };
 
+    // The teacher's "Unstick" past make offer (POST /groups/force-advance) has
+    // already written every member's progress; this page only has to follow.
+    // A moveGroup for this page itself is a teammate's, not the teacher's.
+    const handleMoveGroup = ({
+      groupId,
+      classId,
+      targetPage,
+    }: {
+      groupId: number;
+      classId: number;
+      targetPage: string;
+    }) => {
+      if (groupId !== user.group_id || classId !== user.class) return;
+      if (targetPage !== STEP_TO_ROUTE.employer) return;
+      localStorage.setItem('progress', 'employer');
+      window.location.href = targetPage;
+    };
+
     socket.on('connect', handleConnect);
+    socket.on('moveGroup', handleMoveGroup);
     socket.on('studentRemovedFromGroup', handleStudentRemoved);
     socket.on('disconnect', handleDisconnect);
     socket.on('studentAddedToGroup', handleStudentAdded);
@@ -675,6 +694,7 @@ export default function MakeOffer() {
     return () => {
       socket.off('studentRemovedFromGroup', handleStudentRemoved);
       socket.off('connect', handleConnect);
+      socket.off('moveGroup', handleMoveGroup);
       socket.off('studentAddedToGroup', handleStudentAdded);
       socket.off('disconnect', handleDisconnect);
       socket.off('groupMemberOffer', handleGroupMemberOffer);

@@ -17,7 +17,7 @@ const GATE_FIELD: Partial<Record<Step, 'review_completed_at' | 'confirmed_at'>> 
 
 // Only these pages listen for moveGroup. Anywhere else force-advance writes the
 // rows but nobody's screen moves, so the button would report a fake success.
-const UNSTICK_STEPS: Step[] = ['res_1', 'res_2', 'interview'];
+const UNSTICK_STEPS: Step[] = ['res_1', 'res_2', 'interview', 'offer'];
 
 const LiveClass = () => {
   const { user, loading: userloading } = useAuth();

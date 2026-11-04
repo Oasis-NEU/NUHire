@@ -748,8 +748,8 @@ export class GroupController {
   // ahead of their server step. A group pushed two steps would ignore the emit
   // and stay put, while the professor got a 200 saying it worked.
   //
-  // /jobdes and /makeOffer have no moveGroup listener, so job_description ->
-  // res_1 and offer -> employer write the rows but nobody navigates.
+  // /jobdes has no moveGroup listener, so job_description -> res_1 writes the
+  // rows but nobody navigates.
   //
   // Works with nobody connected: the barrier is re-evaluated when a socket
   // joins the room, so a member who reconnects later finds their button
