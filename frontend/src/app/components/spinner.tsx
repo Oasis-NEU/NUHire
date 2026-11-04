@@ -26,7 +26,7 @@ export const Spinner: React.FC<SpinnerProps> = ({
     height={SPINNER_PX[size]}
     viewBox="0 0 56 56"
     fill="none"
-    className={`animate-spin mx-auto ${className}`}
+    className={`animate-spin ${size === 'md' ? 'block mx-auto' : 'inline-block'} ${className}`}
   >
     <circle cx="28" cy="28" r="24" stroke="#D9D9D9" strokeWidth="8" />
     <path
