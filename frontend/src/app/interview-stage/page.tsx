@@ -119,9 +119,10 @@ export default function Interview() {
         withCredentials: true,
       });
 
-      const newGroupSubmissions = response.data.finishedCount;
-      setGroupSubmissions(newGroupSubmissions);
-      setGroupFinished(groupSize > 0 && newGroupSubmissions >= groupSize);
+      // groupFinished follows from the count in the effect below. Setting it
+      // here read the groupSize of whichever render registered the caller,
+      // which in the socket handlers is 0, and turned Next off on reconnect.
+      setGroupSubmissions(response.data.finishedCount);
     } catch (err) {
       console.error('Failed to fetch finished count:', err);
     }
