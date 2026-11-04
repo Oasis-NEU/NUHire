@@ -141,16 +141,27 @@ export async function recordStep(
   // 0/4 and disable the button the professor just pressed. Recording them
   // as done is what "past this gate" means, and it holds across a restart.
   const priorSteps = STEP_ORDER.slice(1, (STEP_ORDER as readonly string[]).indexOf(targetStep));
-  if (priorSteps.length > 0) {
-    const now = dbNow();
-    const completionRows = members.flatMap((member) =>
-      priorSteps.map((step) => [member.id, classId, groupId, step, now])
-    );
-    const completionPlaceholders = completionRows.map(() => '(?, ?, ?, ?, ?)').join(', ');
-    await conn.query(
-      `INSERT IGNORE INTO Step_Completion (student_id, class, group_id, step, completed_at)
-       VALUES ${completionPlaceholders}`,
-      completionRows.flat()
-    );
-  }
+  await recordCompletions(conn, classId, groupId, members, priorSteps);
+}
+
+// Mark `steps` done for every one of `members`. INSERT IGNORE keeps a
+// completion that already exists, and with it the time it really happened.
+export async function recordCompletions(
+  conn: PoolConnection,
+  classId: number | string,
+  groupId: number | string,
+  members: Pick<User, 'id'>[],
+  steps: readonly string[]
+): Promise<void> {
+  if (steps.length === 0 || members.length === 0) return;
+  const now = dbNow();
+  const completionRows = members.flatMap((member) =>
+    steps.map((step) => [member.id, classId, groupId, step, now])
+  );
+  const completionPlaceholders = completionRows.map(() => '(?, ?, ?, ?, ?)').join(', ');
+  await conn.query(
+    `INSERT IGNORE INTO Step_Completion (student_id, class, group_id, step, completed_at)
+     VALUES ${completionPlaceholders}`,
+    completionRows.flat()
+  );
 }
