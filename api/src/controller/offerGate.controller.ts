@@ -9,15 +9,10 @@ import { readGroupPosition, recordCompletions } from '../config/steps';
 
 const OFFER_STEP = 'offer';
 
-// The teacher's way past "every member must confirm" on make offer, for a group
-// whose last confirmation is never coming: a student who closed their laptop,
-// or a confirmation lost while the API was down. Unlike force-advance it does
-// not move the group, so the group still picks and sends its own offer.
-//
-// The release is a Step_Completion row for `offer` per member, the same record
-// force-advance leaves behind for a gate it walks a group past. That keeps it
-// in MySQL, so it survives a restart, and lets the page ask
-// GET /groups/barrier-status?step=offer when it missed the event.
+// The teacher's override for make offer's "every member confirms" gate. It opens
+// the gate without moving the group, so the group still sends its own offer.
+// Stored as Step_Completion rows for `offer`, so it outlives a restart and the
+// page can poll it from GET /groups/barrier-status?step=offer.
 export class OfferGateController {
   constructor(
     private db: Pool,

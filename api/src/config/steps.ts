@@ -175,7 +175,7 @@ export async function recordCompletions(
   members: Pick<User, 'id'>[],
   steps: readonly string[]
 ): Promise<void> {
-  if (steps.length === 0 || members.length === 0) return;
+  if (steps.length === 0) return;
   const now = dbNow();
   const completionRows = members.flatMap((member) =>
     steps.map((step) => [member.id, classId, groupId, step, now])
