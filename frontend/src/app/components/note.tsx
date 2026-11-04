@@ -1,20 +1,18 @@
-'use client'; // Declares that this page is a client component
+'use client';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useSocket } from './socketContext';
 import type { Note } from '../../types';
 const NotesPage = () => {
-  // State variables to manage notes and their visibility
   const [isOpen, setIsOpen] = useState(false);
   const [note, setNote] = useState('');
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [userEmail, setUserEmail] = useState('');
   const { user } = useAuth();
-  // Use the app-wide socket. This component previously called io() at module
-  // scope, which opened a SECOND connection per browser tab (the navbar renders
-  // it on every page), doubling connection count for the whole class.
+  // The app-wide socket, not a new io(): the navbar renders this on every page,
+  // so a connection of its own would double the class's connection count.
   const socket = useSocket();
 
   useEffect(() => {
@@ -81,7 +79,6 @@ const NotesPage = () => {
 
   return (
     <div className="relative p-4">
-      {/* Toggle Notes Button */}
       <button
         className="bg-northeasternRed text-northeasternWhite px-4 py-2 rounded-md hover:bg-sand border-4 border-navy transition"
         onClick={() => setIsOpen(!isOpen)}
@@ -91,7 +88,6 @@ const NotesPage = () => {
 
       {isOpen && (
         <div className="absolute top-14 right-4 w-80 bg-northeasternWhite opacity-100 shadow-lg rounded-lg p-4 border border-gray-300 z-50">
-          {/* Note Input Section */}
           <div className="mb-4">
             <textarea
               placeholder="Enter your notes..."
@@ -107,7 +103,6 @@ const NotesPage = () => {
             </button>
           </div>
 
-          {/* Display Saved Notes */}
           <div className="mt-4">
             <h2 className="font-bold text-navy">Saved Notes:</h2>
             <div className="max-h-60 overflow-y-auto pr-1">
