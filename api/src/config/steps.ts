@@ -1,5 +1,6 @@
 // src/config/steps.ts
 
+import { RowDataPacket } from 'mysql2';
 import { PoolConnection } from 'mysql2/promise';
 import { User } from '../models/User';
 import { RES_REVIEW_BARRIER_STEP } from './socket';
@@ -92,6 +93,27 @@ export function leftmostStep(steps: string[]): string {
   return started.reduce((earliest, current) =>
     order.indexOf(current) < order.indexOf(earliest) ? current : earliest
   );
+}
+
+// A group's roster and the step it is at: its slowest member's, the number
+// getProgress shows the professor. Both teacher overrides decide from this, so
+// what they accept lines up with what the professor was just looking at. Read
+// on the caller's connection, so the decision and its write share a
+// transaction.
+export async function readGroupPosition(
+  conn: PoolConnection,
+  classId: number | string,
+  groupId: number | string
+): Promise<{ members: Pick<User, 'id' | 'email'>[]; currentStep: string }> {
+  const [members] = await conn.query<(RowDataPacket & Pick<User, 'id' | 'email'>)[]>(
+    "SELECT id, email FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
+    [groupId, classId]
+  );
+  const [progressRows] = await conn.query<RowDataPacket[]>(
+    'SELECT step FROM Progress WHERE crn = ? AND group_id = ?',
+    [classId, groupId]
+  );
+  return { members, currentStep: leftmostStep(progressRows.map((row) => row.step)) };
 }
 
 // The step a late student should join their group at, or null when there is

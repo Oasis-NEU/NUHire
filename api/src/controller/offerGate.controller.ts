@@ -1,12 +1,11 @@
 // src/controller/offerGate.controller.ts
 
 import { Response } from 'express';
-import { Pool, RowDataPacket } from 'mysql2';
+import { Pool } from 'mysql2';
 import { PoolConnection } from 'mysql2/promise';
 import { Server as SocketIOServer } from 'socket.io';
 import { AuthRequest } from '../models/AuthRequest';
-import { User } from '../models/User';
-import { leftmostStep, recordCompletions } from '../config/steps';
+import { readGroupPosition, recordCompletions } from '../config/steps';
 
 const OFFER_STEP = 'offer';
 
@@ -41,10 +40,7 @@ export class OfferGateController {
       conn = await this.db.promise().getConnection();
       await conn.beginTransaction();
 
-      const [members] = await conn.query<(RowDataPacket & Pick<User, 'id'>)[]>(
-        "SELECT id FROM Users WHERE group_id = ? AND class = ? AND affiliation = 'student'",
-        [group_id, class_id]
-      );
+      const { members, currentStep } = await readGroupPosition(conn, class_id, group_id);
       if (members.length === 0) {
         await conn.rollback();
         res.status(404).json({
@@ -53,13 +49,6 @@ export class OfferGateController {
         return;
       }
 
-      // The same reading of "where the group is" that force-advance and the
-      // live view use, so the button the professor pressed matches the check.
-      const [progressRows] = await conn.query<RowDataPacket[]>(
-        'SELECT step FROM Progress WHERE crn = ? AND group_id = ?',
-        [class_id, group_id]
-      );
-      const currentStep = leftmostStep(progressRows.map((row) => row.step));
       if (currentStep !== OFFER_STEP) {
         await conn.rollback();
         res.status(400).json({
