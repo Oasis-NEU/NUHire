@@ -6,6 +6,7 @@ import { App } from './app';
 import { databaseService, dbErrorStatus } from './config/database';
 import { configurePassport } from './config/passport';
 import { initializeSocketHandlers } from './config/socket';
+import { backfillPdfText } from './config/pdfText';
 
 // Load environment variables
 dotenv.config();
@@ -100,6 +101,9 @@ async function bootstrap() {
 
     const PORT = parseInt(process.env.BACKEND_PORT || '10000', 10);
     app.listen(PORT);
+
+    // Not awaited: reading every class's PDFs must not hold up the healthcheck.
+    void backfillPdfText(db.promise());
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

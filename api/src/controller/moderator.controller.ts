@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool } from 'mysql2';
+import { backfillPdfText } from '../config/pdfText';
 
 export class ModeratorController {
   constructor(private db: Pool) {}
@@ -226,6 +227,9 @@ export class ModeratorController {
       }
 
       await conn.commit();
+
+      // After the commit, so reading 15 files does not hold the transaction open.
+      await backfillPdfText(this.db.promise(), crn);
 
       res.status(201).json({
         admin_email,
