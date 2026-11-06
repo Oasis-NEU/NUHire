@@ -28,3 +28,146 @@ body {
   pointer-events: auto;
   z-index: 1000;
 }
+
+/* PageLoader (components/spinner.tsx): the design system's shredder loader.
+   One 1.5s loop; times and easing curves are the Figma library's motion data.
+   Each strip drops a few milliseconds after the one to its left. */
+.loader-paper {
+  animation: loader-paper 1.5s infinite;
+}
+
+@keyframes loader-paper {
+  0% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.42, 0, 0.36, 0.973);
+  }
+  40.2% {
+    transform: translateY(200px);
+    animation-timing-function: cubic-bezier(0.861, -0.007, 1, 1);
+  }
+  66.67%,
+  100% {
+    transform: translateY(264px);
+  }
+}
+
+.loader-strip-0 {
+  animation: loader-strip-0 1.5s linear infinite;
+}
+
+@keyframes loader-strip-0 {
+  0%,
+  40.2% {
+    transform: translateY(0);
+  }
+  56.81% {
+    transform: translateY(11px);
+    animation-timing-function: cubic-bezier(0.86, -0.01, 1, 1);
+  }
+  74.21%,
+  100% {
+    transform: translateY(209px);
+  }
+}
+
+.loader-strip-1 {
+  animation: loader-strip-1 1.5s linear infinite;
+}
+
+@keyframes loader-strip-1 {
+  0%,
+  40.2% {
+    transform: translateY(0);
+  }
+  55.78% {
+    transform: translateY(11px);
+    animation-timing-function: cubic-bezier(0.86, -0.01, 1, 1);
+  }
+  72.4%,
+  100% {
+    transform: translateY(209px);
+  }
+}
+
+.loader-strip-2 {
+  animation: loader-strip-2 1.5s linear infinite;
+}
+
+@keyframes loader-strip-2 {
+  0%,
+  40.2% {
+    transform: translateY(0);
+  }
+  54.92% {
+    transform: translateY(11px);
+    animation-timing-function: cubic-bezier(0.86, -0.01, 1, 1);
+  }
+  71.46%,
+  100% {
+    transform: translateY(209px);
+  }
+}
+
+.loader-strip-3 {
+  animation: loader-strip-3 1.5s linear infinite;
+}
+
+@keyframes loader-strip-3 {
+  0%,
+  40.2% {
+    transform: translateY(0);
+  }
+  54.15% {
+    transform: translateY(11px);
+    animation-timing-function: cubic-bezier(0.86, -0.01, 1, 1);
+  }
+  70.69%,
+  100% {
+    transform: translateY(209px);
+  }
+}
+
+.loader-strip-4 {
+  animation: loader-strip-4 1.5s linear infinite;
+}
+
+@keyframes loader-strip-4 {
+  0%,
+  40.2% {
+    transform: translateY(0);
+  }
+  53.29% {
+    transform: translateY(11px);
+    animation-timing-function: cubic-bezier(0.86, -0.01, 1, 1);
+  }
+  69.23%,
+  100% {
+    transform: translateY(209px);
+  }
+}
+
+.loader-strip-5 {
+  animation: loader-strip-5 1.5s linear infinite;
+}
+
+@keyframes loader-strip-5 {
+  0%,
+  40.2% {
+    transform: translateY(0);
+  }
+  52.17% {
+    transform: translateY(11px);
+    animation-timing-function: cubic-bezier(0.86, -0.01, 1, 1);
+  }
+  68.11%,
+  100% {
+    transform: translateY(209px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader-paper,
+  .loader-strip {
+    animation: none;
+  }
+}
