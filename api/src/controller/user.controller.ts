@@ -4,6 +4,7 @@ import { isAdmin } from '../models/User';
 import { Pool, RowDataPacket } from 'mysql2';
 import { Server as SocketIOServer } from 'socket.io';
 import { emitToClassModerators, markPresent } from '../config/socket';
+import { dbErrorStatus } from '../config/database';
 
 export class UserController {
   constructor(
@@ -16,7 +17,7 @@ export class UserController {
       this.db.query('SELECT * FROM Users', (err, results) => {
         if (err) {
           console.error('Error fetching users:', err);
-          res.status(500).json({ error: err.message });
+          res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch users' });
           return;
         }
         res.json(results);
@@ -134,7 +135,7 @@ export class UserController {
       this.db.query(query, params, (err, results) => {
         if (err) {
           console.error('Error fetching students:', err);
-          res.status(500).json({ error: err.message });
+          res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch students' });
           return;
         }
         res.json(results);
