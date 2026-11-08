@@ -20,7 +20,7 @@ import {
   RATINGS,
   Rating,
 } from '../../lib/ratings';
-import type { Candidate, InterviewRating, OfferCandidate, ResumePdf } from '../../types';
+import type { Candidate, InterviewRating, Offer, OfferCandidate, ResumePdf } from '../../types';
 import { API_BASE_URL } from '../../lib/api';
 
 type VoteData = Record<Rating, number>;
@@ -33,14 +33,6 @@ const NO_VOTES: VoteData = {
 };
 
 type InterviewPopup = Pick<InterviewRating, 'question1' | 'question2' | 'question3' | 'question4'>;
-
-interface Offer {
-  id: number;
-  class_id: number;
-  group_id: number;
-  candidate_id: number;
-  status: 'pending' | 'accepted' | 'rejected';
-}
 
 export default function MakeOffer() {
   useProgress();
