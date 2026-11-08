@@ -10,6 +10,7 @@ import type { Pool as PromisePool, PoolConnection, RowDataPacket } from 'mysql2/
 import fs from 'fs';
 import path from 'path';
 import { extractPdfText } from '../config/pdfText';
+import { dbErrorStatus } from '../config/database';
 
 // Every group-scoped table a reset wipes. The reset deletes from this list and
 // the reset preview counts from it, so the warning the professor reads cannot
@@ -143,7 +144,8 @@ export class JobController {
       [class_id],
       (err, results) => {
         if (err) {
-          res.status(500).json({ error: err.message });
+          console.error('Error fetching jobs:', err);
+          res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch jobs' });
           return;
         }
         res.json(results);
@@ -190,7 +192,8 @@ export class JobController {
       [title, class_id],
       (err, results: any[]) => {
         if (err) {
-          res.status(500).json({ error: err.message });
+          console.error('Error fetching job by title:', err);
+          res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch job' });
           return;
         }
 
@@ -498,7 +501,7 @@ export class JobController {
       (err, results: any[]) => {
         if (err) {
           console.error('Error fetching job assignment:', err);
-          res.status(500).json({ error: err.message });
+          res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch job assignment' });
           return;
         }
 
