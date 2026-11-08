@@ -3,6 +3,7 @@ import { AuthRequest } from '../models/AuthRequest';
 import { Pool } from 'mysql2';
 import { backfillPdfText } from '../config/pdfText';
 import { PdfTextRepository } from '../repository/pdfText.repository';
+import { dbErrorStatus } from '../config/database';
 
 export class ModeratorController {
   constructor(
@@ -258,7 +259,7 @@ export class ModeratorController {
       }
 
       console.error('Error creating class with seed data:', err);
-      res.status(500).json({ error: err.message });
+      res.status(dbErrorStatus(err)).json({ error: 'Failed to create class' });
     } finally {
       conn.release();
     }
@@ -267,7 +268,8 @@ export class ModeratorController {
   getAllModeratorCRNs = (req: AuthRequest, res: Response): void => {
     this.db.query('SELECT * FROM Moderator', (err, results) => {
       if (err) {
-        res.status(500).json({ error: err.message });
+        console.error('Error fetching moderator classes:', err);
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch classes' });
         return;
       }
       res.json(results);
@@ -278,7 +280,8 @@ export class ModeratorController {
     const { crn } = req.params;
     this.db.query('DELETE FROM Moderator WHERE crn = ?', [crn], (err, result: any) => {
       if (err) {
-        res.status(500).json({ error: err.message });
+        console.error('Error deleting moderator class:', err);
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to delete class' });
         return;
       }
       if (result.affectedRows === 0) {
@@ -293,7 +296,8 @@ export class ModeratorController {
     const { crn } = req.params;
     this.db.query('SELECT * FROM Moderator WHERE crn = ?', [crn], (err, results: any[]) => {
       if (err) {
-        res.status(500).json({ error: err.message });
+        console.error('Error fetching moderator class:', err);
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch class' });
         return;
       }
       res.json(results[0]);
@@ -307,7 +311,8 @@ export class ModeratorController {
       [email],
       (err, results: any[]) => {
         if (err) {
-          res.status(500).json({ error: err.message });
+          console.error('Error fetching moderator classes:', err);
+          res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch classes' });
           return;
         }
         res.json(results.map((row) => row.crn));
@@ -319,7 +324,8 @@ export class ModeratorController {
     const { email } = req.params;
     this.db.query('SELECT * FROM Moderator WHERE admin_email = ?', [email], (err, results) => {
       if (err) {
-        res.status(500).json({ error: err.message });
+        console.error('Error fetching moderator classes:', err);
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch classes' });
         return;
       }
       res.json(results);
@@ -333,7 +339,8 @@ export class ModeratorController {
       [email, f_name, l_name, class_id, group_id, group_id, class_id, f_name, l_name],
       (err) => {
         if (err) {
-          res.status(500).json({ error: err.message });
+          console.error('Error adding student:', err);
+          res.status(dbErrorStatus(err)).json({ error: 'Failed to add student' });
           return;
         }
         res.json({ success: true });
@@ -345,7 +352,8 @@ export class ModeratorController {
     const { email } = req.body;
     this.db.query('DELETE FROM Users WHERE email = ?', [email], (err) => {
       if (err) {
-        res.status(500).json({ error: err.message });
+        console.error('Error deleting student:', err);
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to delete student' });
         return;
       }
       res.json({ success: true });
