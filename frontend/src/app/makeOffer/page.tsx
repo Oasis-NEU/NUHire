@@ -20,8 +20,9 @@ import {
   RATINGS,
   Rating,
 } from '../../lib/ratings';
-import type { Candidate, InterviewRating, OfferCandidate, ResumePdf } from '../../types';
+import type { Candidate, InterviewRating, Offer, OfferCandidate, ResumePdf } from '../../types';
 import { API_BASE_URL } from '../../lib/api';
+import { loadSavedOffer, saveOffer } from './offerStorage';
 
 type VoteData = Record<Rating, number>;
 
@@ -33,14 +34,6 @@ const NO_VOTES: VoteData = {
 };
 
 type InterviewPopup = Pick<InterviewRating, 'question1' | 'question2' | 'question3' | 'question4'>;
-
-interface Offer {
-  id: number;
-  class_id: number;
-  group_id: number;
-  candidate_id: number;
-  status: 'pending' | 'accepted' | 'rejected';
-}
 
 export default function MakeOffer() {
   useProgress();
@@ -87,6 +80,9 @@ export default function MakeOffer() {
   const [existingOffer, setExistingOffer] = useState<Offer | null>(null);
   const [ableToMakeOffer, setAbleToMakeOffer] = useState(true);
   const [checkedStateRestored, setCheckedStateRestored] = useState(false);
+  // The user whose saved offer state has been read back. Null until then, which
+  // stops the save effect writing the initial values over the saved ones.
+  const [storageUserId, setStorageUserId] = useState<string | null>(null);
 
   // Check if all candidates are rejected
   useEffect(() => {
@@ -168,62 +164,43 @@ export default function MakeOffer() {
     }
   };
 
+  // Waits for the user because the saved state is per user.
   useEffect(() => {
-    if (acceptedOffer) {
-      localStorage.removeItem('makeOffer_existingOffer');
-      localStorage.removeItem('makeOffer_acceptedOffer');
-      localStorage.removeItem('makeOffer_sentIn');
-      localStorage.removeItem('makeOffer_offerPending');
-      localStorage.removeItem('makeOffer_checkedState');
-      localStorage.removeItem('makeOffer_offerConfirmations');
-    }
-  }, [acceptedOffer]);
+    if (!user?.id) return;
+    const id = String(user.id);
+    const saved = loadSavedOffer(id);
 
-  useEffect(() => {
-    const savedCheckedState = localStorage.getItem('makeOffer_checkedState');
-    if (savedCheckedState) {
-      setCheckedState(JSON.parse(savedCheckedState));
+    if (saved.checkedState !== undefined) {
+      setCheckedState(saved.checkedState);
       setCheckedStateRestored(true);
     }
-  }, []);
+    if (saved.offerConfirmations !== undefined) setOfferConfirmations(saved.offerConfirmations);
+    if (saved.existingOffer !== undefined) setExistingOffer(saved.existingOffer);
+    if (saved.acceptedOffer !== undefined) setAcceptedOffer(saved.acceptedOffer);
+    if (saved.sentIn !== undefined) setSentIn(saved.sentIn);
+    if (saved.offerPending !== undefined) setOfferPending(saved.offerPending);
+    setStorageUserId(id);
+  }, [user?.id]);
 
   useEffect(() => {
-    const savedOffer = localStorage.getItem('makeOffer_existingOffer');
-    const savedAccepted = localStorage.getItem('makeOffer_acceptedOffer');
-    const savedSentIn = localStorage.getItem('makeOffer_sentIn');
-    const savedPending = localStorage.getItem('makeOffer_offerPending');
-    const savedOfferConfirmations = localStorage.getItem('makeOffer_offerConfirmations');
-
-    if (savedOfferConfirmations) setOfferConfirmations(JSON.parse(savedOfferConfirmations));
-    if (savedOffer) setExistingOffer(JSON.parse(savedOffer));
-    if (savedAccepted) setAcceptedOffer(savedAccepted === 'true');
-    if (savedSentIn) setSentIn(JSON.parse(savedSentIn));
-    if (savedPending) setOfferPending(savedPending === 'true');
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('makeOffer_checkedState', JSON.stringify(checkedState));
-  }, [checkedState]);
-
-  useEffect(() => {
-    localStorage.setItem('makeOffer_offerConfirmations', JSON.stringify(offerConfirmations));
-  }, [offerConfirmations]);
-
-  useEffect(() => {
-    localStorage.setItem('makeOffer_existingOffer', JSON.stringify(existingOffer));
-  }, [existingOffer]);
-
-  useEffect(() => {
-    localStorage.setItem('makeOffer_acceptedOffer', String(acceptedOffer));
-  }, [acceptedOffer]);
-
-  useEffect(() => {
-    localStorage.setItem('makeOffer_sentIn', JSON.stringify(sentIn));
-  }, [sentIn]);
-
-  useEffect(() => {
-    localStorage.setItem('makeOffer_offerPending', String(offerPending));
-  }, [offerPending]);
+    if (!storageUserId) return;
+    saveOffer(storageUserId, {
+      checkedState,
+      offerConfirmations,
+      existingOffer,
+      acceptedOffer,
+      sentIn,
+      offerPending,
+    });
+  }, [
+    storageUserId,
+    checkedState,
+    offerConfirmations,
+    existingOffer,
+    acceptedOffer,
+    sentIn,
+    offerPending,
+  ]);
 
   useEffect(() => {
     if (user?.group_id && user?.class) {
