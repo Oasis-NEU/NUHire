@@ -9,6 +9,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import fs from 'fs';
 import path from 'path';
 import { extractPdfText } from '../config/pdfText';
+import { dbErrorStatus } from '../config/database';
 
 export class ResumeController {
   constructor(
@@ -121,7 +122,8 @@ export class ResumeController {
     const { student_id } = req.params;
     this.db.query('SELECT * FROM Resume WHERE student_id = ?', [student_id], (err, results) => {
       if (err) {
-        res.status(500).json({ error: err.message });
+        console.error('Error fetching resumes for student:', err);
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch resumes' });
         return;
       }
       res.json(results);
@@ -151,7 +153,7 @@ export class ResumeController {
     this.db.query(getVotesQuery, [group_id, studentClass], (err, votes: any[]) => {
       if (err) {
         console.error('Error fetching votes:', err);
-        res.status(500).json({ error: err.message });
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch votes' });
         return;
       }
 
@@ -184,7 +186,8 @@ export class ResumeController {
 
     this.db.query(query, [class_id], (err, results) => {
       if (err) {
-        res.status(500).json({ error: err.message });
+        console.error('Error fetching resume PDFs:', err);
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch resume PDFs' });
         return;
       }
       res.json(results);
@@ -375,7 +378,8 @@ export class ResumeController {
     const { id } = req.params;
     this.db.query('SELECT * FROM Resume_pdfs WHERE id = ?', [id], (err, results) => {
       if (err) {
-        res.status(500).json({ error: err.message });
+        console.error('Error fetching resume PDF:', err);
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch resume PDF' });
         return;
       }
       res.json(results);
