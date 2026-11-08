@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool } from 'mysql2';
+import { dbErrorStatus } from '../config/database';
 
 export class OfferController {
   constructor(private db: Pool) {}
@@ -47,7 +48,7 @@ export class OfferController {
       (err, result: any) => {
         if (err) {
           console.error('Error creating offer:', err);
-          res.status(500).json({ error: err.message });
+          res.status(dbErrorStatus(err)).json({ error: 'Failed to create offer' });
           return;
         }
 
@@ -68,7 +69,7 @@ export class OfferController {
     this.db.query(query, [class_id, group_id], (err, results) => {
       if (err) {
         console.error('Error fetching pending offers:', err);
-        res.status(500).json({ error: err.message });
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch offers' });
         return;
       }
 
@@ -84,7 +85,7 @@ export class OfferController {
     this.db.query(query, [class_id], (err, results) => {
       if (err) {
         console.error('Error fetching pending offers:', err);
-        res.status(500).json({ error: err.message });
+        res.status(dbErrorStatus(err)).json({ error: 'Failed to fetch offers' });
         return;
       }
 
@@ -141,7 +142,7 @@ export class OfferController {
       (err, result: any) => {
         if (err) {
           console.error('Error updating offer:', err);
-          res.status(500).json({ error: err.message });
+          res.status(dbErrorStatus(err)).json({ error: 'Failed to update offer' });
           return;
         }
 
