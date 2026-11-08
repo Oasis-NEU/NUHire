@@ -18,6 +18,18 @@ export interface User {
   keycloakProfile?: any;
 }
 
+export interface KeycloakProfile {
+  id?: string;
+  username?: string;
+  email?: string;
+  given_name?: string;
+  family_name?: string;
+  firstName?: string;
+  lastName?: string;
+  keycloakId?: string;
+  [key: string]: any;
+}
+
 export function isAdmin(user: Pick<User, 'affiliation'> | undefined): boolean {
   return user?.affiliation === 'admin';
 }

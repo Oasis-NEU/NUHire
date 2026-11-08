@@ -2,19 +2,8 @@
 
 import passport from 'passport';
 import { Pool } from 'mysql2';
+import { KeycloakProfile } from '../models/User';
 const KeycloakStrategy = require('passport-keycloak-oauth2-oidc').Strategy;
-
-interface KeycloakProfile {
-  id?: string;
-  username?: string;
-  email?: string;
-  given_name?: string;
-  family_name?: string;
-  firstName?: string;
-  lastName?: string;
-  keycloakId?: string;
-  [key: string]: any;
-}
 
 export function configurePassport(db: Pool): void {
   const keycloak_url = process.env.KEYCLOAK_URL!;
