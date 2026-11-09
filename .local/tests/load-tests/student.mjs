@@ -309,7 +309,27 @@ export class Student {
     if ((await finishedCount()) >= size) released = true;
     if (NEEDS_TEACHER.has(group_id)) this.h.waiting(this, 'res_1');
 
-    await this.until(() => released || moved, 'the resume-review barrier');
+    // useResReviewRelease also asks the barrier every 5s while the student waits,
+    // in case the socket event never arrives.
+    const checkBarrier = async () => {
+      if (released || moved) return;
+      const status = await this.call(
+        'GET',
+        '/groups/barrier-status/:classId/:groupId',
+        `/groups/barrier-status/${classId}/${group_id}`
+      ).catch(() => null);
+      if (status?.released && !released) {
+        metrics.since('poll: barrier release', this.h.barrierCause.get(group_id));
+        released = true;
+      }
+    };
+    void checkBarrier();
+    const barrierPoll = setInterval(checkBarrier, 5000);
+    try {
+      await this.until(() => released || moved, 'the resume-review barrier');
+    } finally {
+      clearInterval(barrierPoll);
+    }
     await this.thinkUnless(THINK.click, () => moved);
     await this.progress('res_2');
     if (!moved) {
