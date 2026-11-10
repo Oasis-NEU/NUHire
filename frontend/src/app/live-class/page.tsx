@@ -4,6 +4,7 @@ import { API_BASE_URL } from '../../lib/api';
 import React, { useEffect, useRef, useState } from 'react';
 import NavbarAdmin from '../components/navbar-admin';
 import Popup from '../components/popup';
+import { PageLoader } from '../components/spinner';
 import { useAuth } from '../components/AuthContext';
 import { useSocket } from '../components/socketContext';
 import { STEP_LABEL, STEP_ORDER } from '../components/useProgress';
@@ -187,14 +188,7 @@ const LiveClass = () => {
   };
 
   if (userloading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-sand">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Loading...</h2>
-          <div className="w-16 h-16 border-t-4 border-navy border-solid rounded-full animate-spin mx-auto"></div>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (!user || user.affiliation !== 'admin') {
