@@ -7,7 +7,6 @@ import { API_BASE_URL } from '../../lib/api';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  refetchUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,11 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchUser();
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, loading, refetchUser: fetchUser }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, loading }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
