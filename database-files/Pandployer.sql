@@ -221,26 +221,6 @@ CREATE TABLE `job_descriptions` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `MakeOfferPage`
---
-
-DROP TABLE IF EXISTS `MakeOfferPage`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `MakeOfferPage` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `selected_candidate` int NOT NULL,
-  `timespent` int NOT NULL,
-  `group_id` int NOT NULL,
-  `class` int NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `selected_candidate` (`selected_candidate`),
-  KEY `group_id` (`group_id`),
-  CONSTRAINT `MakeOfferPage_ibfk_1` FOREIGN KEY (`selected_candidate`) REFERENCES `Candidates` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `Moderator`
 --
 
@@ -271,22 +251,6 @@ CREATE TABLE `Notes` (
   PRIMARY KEY (`id`),
   KEY `user_email` (`user_email`),
   CONSTRAINT `notes_ibfk_1` FOREIGN KEY (`user_email`) REFERENCES `Users` (`email`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `Offer_Status`
---
-
-DROP TABLE IF EXISTS `Offer_Status`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `Offer_Status` (
-  `student_id` int NOT NULL,
-  `clicked` tinyint NOT NULL DEFAULT '0',
-  `group_id` varchar(45) NOT NULL,
-  `class` int NOT NULL,
-  PRIMARY KEY (`student_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -326,22 +290,6 @@ CREATE TABLE `Progress` (
   `email` varchar(45) NOT NULL,
   PRIMARY KEY (`email`),
   UNIQUE KEY `email_UNIQUE` (`email`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `Res2_Status`
---
-
-DROP TABLE IF EXISTS `Res2_Status`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `Res2_Status` (
-  `student_id` int NOT NULL,
-  `finished` tinyint NOT NULL DEFAULT '0',
-  `group_id` int NOT NULL,
-  `class` int NOT NULL,
-  PRIMARY KEY (`student_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -402,46 +350,6 @@ CREATE TABLE `Resume_pdfs` (
   UNIQUE KEY `title_class_unique` (`title`,`class_id`),
   KEY `resume_pdfs_class_fk_idx` (`class_id`),
   CONSTRAINT `resume_pdfs_class_fk` FOREIGN KEY (`class_id`) REFERENCES `Moderator` (`crn`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `Resumepage`
---
-
-DROP TABLE IF EXISTS `Resumepage`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `Resumepage` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `visited` datetime DEFAULT CURRENT_TIMESTAMP,
-  `student_id` int NOT NULL,
-  `timespent` int NOT NULL,
-  `vote` enum('yes','no','unanswered') DEFAULT 'unanswered',
-  PRIMARY KEY (`id`),
-  KEY `student_id` (`student_id`),
-  CONSTRAINT `Resumepage_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `Users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `Resumepage2`
---
-
-DROP TABLE IF EXISTS `Resumepage2`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `Resumepage2` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `vote1` int NOT NULL,
-  `vote2` int NOT NULL,
-  `vote3` int NOT NULL,
-  `vote4` int NOT NULL,
-  `timespent` int NOT NULL,
-  `group_id` int NOT NULL,
-  `class` int NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `group_id` (`group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
