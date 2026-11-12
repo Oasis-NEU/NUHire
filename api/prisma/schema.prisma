@@ -9,13 +9,12 @@ datasource db {
 }
 
 model Candidates {
-  id            Int             @id @default(autoincrement())
-  resume_id     Int             @unique(map: "resume_id_UNIQUE")
-  interview     String          @db.VarChar(255)
-  f_name        String          @db.VarChar(45)
-  l_name        String          @db.VarChar(45)
-  Resume_pdfs   Resume_pdfs     @relation(fields: [resume_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_candidates_resume")
-  MakeOfferPage MakeOfferPage[]
+  id          Int         @id @default(autoincrement())
+  resume_id   Int         @unique(map: "resume_id_UNIQUE")
+  interview   String      @db.VarChar(255)
+  f_name      String      @db.VarChar(45)
+  l_name      String      @db.VarChar(45)
+  Resume_pdfs Resume_pdfs @relation(fields: [resume_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_candidates_resume")
 
   @@index([resume_id], map: "resume_id")
 }
@@ -100,18 +99,6 @@ model Job_Assignment {
   @@index([job], map: "job_idx")
 }
 
-model MakeOfferPage {
-  id                 Int        @id @default(autoincrement())
-  selected_candidate Int
-  timespent          Int
-  group_id           Int
-  class              Int
-  Candidates         Candidates @relation(fields: [selected_candidate], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "MakeOfferPage_ibfk_1")
-
-  @@index([group_id], map: "group_id")
-  @@index([selected_candidate], map: "selected_candidate")
-}
-
 model Moderator {
   id               Int                @id @default(autoincrement())
   admin_email      String             @db.VarChar(45)
@@ -131,13 +118,6 @@ model Notes {
   @@index([user_email], map: "user_email")
 }
 
-model Offer_Status {
-  student_id Int    @id
-  clicked    Int    @default(0) @db.TinyInt
-  group_id   String @db.VarChar(45)
-  class      Int
-}
-
 model Offers {
   class_id     Int
   group_id     Int
@@ -153,13 +133,6 @@ model Progress {
   group_id Int
   step     Progress_step?
   email    String         @id @unique(map: "email_UNIQUE") @db.VarChar(45)
-}
-
-model Res2_Status {
-  student_id Int @id
-  finished   Int @default(0) @db.TinyInt
-  group_id   Int
-  class      Int
 }
 
 model Resume {
@@ -193,30 +166,6 @@ model Resume_pdfs {
   @@index([class_id], map: "resume_pdfs_class_fk_idx")
 }
 
-model Resumepage {
-  id         Int              @id @default(autoincrement())
-  visited    DateTime?        @default(now()) @db.DateTime(0)
-  student_id Int
-  timespent  Int
-  vote       Resumepage_vote? @default(unanswered)
-  Users      Users            @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "Resumepage_ibfk_1")
-
-  @@index([student_id], map: "student_id")
-}
-
-model Resumepage2 {
-  id        Int @id @default(autoincrement())
-  vote1     Int
-  vote2     Int
-  vote3     Int
-  vote4     Int
-  timespent Int
-  group_id  Int
-  class     Int
-
-  @@index([group_id], map: "group_id")
-}
-
 model Step_Completion {
   student_id   Int
   class        Int
@@ -244,7 +193,6 @@ model Users {
   GroupConfirmations GroupConfirmations[]
   Notes              Notes[]
   Resume             Resume[]
-  Resumepage         Resumepage[]
   Step_Completion    Step_Completion[]
 }
 
@@ -303,12 +251,6 @@ enum Step_Completion_step {
   interview
   offer
   employer
-}
-
-enum Resumepage_vote {
-  yes
-  no
-  unanswered
 }
 
 enum Users_affiliation {
