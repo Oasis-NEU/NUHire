@@ -7,7 +7,7 @@ import { SeedError } from './util.mjs';
 
 // Rows keyed on a student. The seed keeps the Users rows, so nothing cascades
 // and these are cleared by hand.
-const BY_STUDENT_ID = ['Step_Completion', 'GroupConfirmations', 'Resume', 'Resumepage'];
+const BY_STUDENT_ID = ['Step_Completion', 'GroupConfirmations', 'Resume'];
 
 // Rows keyed on the class that have no foreign key to Moderator, so deleting
 // the class does not remove them either.
@@ -16,11 +16,7 @@ const BY_CLASS = [
   ['Offers', 'class_id'],
   ['InterviewPage', 'class'],
   ['InterviewPopup', 'class'],
-  ['Interview_Status', 'class'],
-  ['Offer_Status', 'class'],
-  ['MakeOfferPage', 'class'],
-  ['Res2_Status', 'class'],
-  ['Resumepage2', 'class'],
+  ['Interview_Status', 'class']
 ];
 
 // Throws unless class SIM.crn is entirely ours; returns whether it exists. Run
