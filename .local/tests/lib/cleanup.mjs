@@ -16,7 +16,7 @@ const BY_CLASS = [
   ['Offers', 'class_id'],
   ['InterviewPage', 'class'],
   ['InterviewPopup', 'class'],
-  ['Interview_Status', 'class']
+  ['Interview_Status', 'class'],
 ];
 
 // Throws unless class SIM.crn is entirely ours; returns whether it exists. Run
