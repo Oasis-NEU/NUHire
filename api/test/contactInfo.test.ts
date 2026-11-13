@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { stripContactInfo, TAGS } from '../src/config/contactInfo';
 import { askGemini, GeminiClient } from '../src/config/gemini';
+import { contactLeaks, NO_LEAKS } from './contactLeaks';
 
 // Everything sent to Gemini goes through stripContactInfo. These resumes are
-// made up, in three layouts PDF extraction produces. The leak checks below
-// are deliberately blunter than the stripper's own patterns, so they catch
-// what it misses rather than agreeing with it.
+// made up, in three layouts PDF extraction produces. The leak checks in
+// contactLeaks.ts are deliberately blunter than the stripper's own patterns,
+// so they catch what it misses rather than agreeing with it. The cases that
+// once leaked, and the timing checks, are in contactInfoEdges.test.ts.
 
 const SINGLE_COLUMN = {
   names: ['Jordan', 'Rivera'],
@@ -38,22 +40,7 @@ Skills: Figma, JavaScript, React; Location preference: Boston, MA`,
 };
 
 const LAYOUTS = { SINGLE_COLUMN, TWO_COLUMN, LABELLED };
-
-const leaks = (text: string, names: readonly string[]) => ({
-  emails: text.match(/@/g) ?? [],
-  phones: text.match(/(?:\d[\s().+-]*){10,}/g) ?? [],
-  urls:
-    text
-      .match(
-        /https?:|www\.|mailto:|linkedin|github|[\p{L}\p{N}-]+\.(?:com|org|net|io|dev|me|co|uk)(?![\p{L}.])/giu
-      )
-      ?.filter((hit) => hit.toLowerCase() !== 'socket.io' && hit.toLowerCase() !== 'asp.net') ?? [],
-  names: names
-    .flatMap((name) => name.split(/\s+/))
-    .filter((part) => new RegExp(`\\b${part}\\b`, 'i').test(text)),
-});
-
-const NO_LEAKS = { emails: [], phones: [], urls: [], names: [] };
+const leaks = contactLeaks;
 
 describe('stripContactInfo', () => {
   it('the leak checks catch every detail in the raw resumes', () => {
