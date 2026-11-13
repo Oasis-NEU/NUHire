@@ -179,15 +179,16 @@ model Resume {
 }
 
 model Resume_pdfs {
-  file_path      String           @db.VarChar(255)
-  uploaded_at    DateTime?        @default(now()) @db.Timestamp(0)
-  title          String           @db.VarChar(255)
-  id             Int              @id @default(autoincrement())
-  class_id       Int
-  extracted_text String?          @db.MediumText
-  Candidates     Candidates?
-  Interview_vids Interview_vids[]
-  Moderator      Moderator        @relation(fields: [class_id], references: [crn], onDelete: Cascade, onUpdate: NoAction, map: "resume_pdfs_class_fk")
+  file_path         String              @db.VarChar(255)
+  uploaded_at       DateTime?           @default(now()) @db.Timestamp(0)
+  title             String              @db.VarChar(255)
+  id                Int                 @id @default(autoincrement())
+  class_id          Int
+  extracted_text    String?             @db.MediumText
+  Candidates        Candidates?
+  Interview_vids    Interview_vids[]
+  Moderator         Moderator           @relation(fields: [class_id], references: [crn], onDelete: Cascade, onUpdate: NoAction, map: "resume_pdfs_class_fk")
+  Screening_Results Screening_Results[]
 
   @@unique([title, class_id], map: "title_class_unique")
   @@index([class_id], map: "resume_pdfs_class_fk_idx")
@@ -256,14 +257,15 @@ model WaitingFacts {
 }
 
 model job_descriptions {
-  id             Int              @id @default(autoincrement())
-  title          String           @db.VarChar(255)
-  file_path      String           @db.VarChar(255)
-  uploaded_at    DateTime?        @default(now()) @db.Timestamp(0)
-  class_id       Int
-  extracted_text String?          @db.MediumText
-  Job_Assignment Job_Assignment[]
-  Moderator      Moderator        @relation(fields: [class_id], references: [crn], onDelete: Cascade, onUpdate: NoAction, map: "job_descriptions_class_fk")
+  id                Int                 @id @default(autoincrement())
+  title             String              @db.VarChar(255)
+  file_path         String              @db.VarChar(255)
+  uploaded_at       DateTime?           @default(now()) @db.Timestamp(0)
+  class_id          Int
+  extracted_text    String?             @db.MediumText
+  Job_Assignment    Job_Assignment[]
+  Screening_Results Screening_Results[]
+  Moderator         Moderator           @relation(fields: [class_id], references: [crn], onDelete: Cascade, onUpdate: NoAction, map: "job_descriptions_class_fk")
 
   @@unique([title, class_id], map: "title_class_unique")
   @@index([class_id], map: "job_descriptions_class_fk_idx")
@@ -277,6 +279,25 @@ model sessions {
   session_id String  @id @db.VarChar(128)
   expires    Int     @db.UnsignedInt
   data       String? @db.MediumText
+}
+
+model Screening_Results {
+  class            Int
+  group_id         Int
+  job_id           Int
+  resume_id        Int
+  status           Screening_Results_status @default(pending)
+  score            Int?                     @db.UnsignedTinyInt
+  matched_keywords Json?
+  missed_keywords  Json?
+  ai_summary       String?                  @db.Text
+  is_sample        Boolean                  @default(false)
+  job_descriptions job_descriptions         @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "screening_results_job_fk")
+  Resume_pdfs      Resume_pdfs              @relation(fields: [resume_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "screening_results_resume_fk")
+
+  @@id([class, group_id, job_id, resume_id])
+  @@index([job_id], map: "screening_results_job_idx")
+  @@index([resume_id], map: "screening_results_resume_idx")
 }
 
 enum Progress_step {
@@ -330,4 +351,10 @@ enum Users_current_page {
   jobdes
   interviewpage
   makeofferpage
+}
+
+enum Screening_Results_status {
+  pending
+  done
+  failed
 }

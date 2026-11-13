@@ -84,6 +84,36 @@ CREATE TABLE `Step_Completion` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `Screening_Results`
+--
+-- The screener's result for each resume a group reviews, against the posting
+-- the group is hiring for. Added by migrations/009-screening-results.sql; keep
+-- the two in step.
+--
+
+DROP TABLE IF EXISTS `Screening_Results`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `Screening_Results` (
+  `class` int NOT NULL,
+  `group_id` int NOT NULL,
+  `job_id` int NOT NULL,
+  `resume_id` int NOT NULL,
+  `status` enum('pending','done','failed') NOT NULL DEFAULT 'pending',
+  `score` tinyint unsigned DEFAULT NULL,
+  `matched_keywords` json DEFAULT NULL,
+  `missed_keywords` json DEFAULT NULL,
+  `ai_summary` text,
+  `is_sample` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`class`, `group_id`, `job_id`, `resume_id`),
+  KEY `screening_results_job_idx` (`job_id`),
+  KEY `screening_results_resume_idx` (`resume_id`),
+  CONSTRAINT `screening_results_job_fk` FOREIGN KEY (`job_id`) REFERENCES `job_descriptions` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `screening_results_resume_fk` FOREIGN KEY (`resume_id`) REFERENCES `Resume_pdfs` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `GroupsInfo`
 --
 
