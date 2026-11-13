@@ -5,6 +5,7 @@ import { createFactsRepository } from '../src/repository/facts.repository';
 import { createModeratorRepository } from '../src/repository/moderator.repository';
 import { createNotesRepository } from '../src/repository/notes.repository';
 import { createPdfTextRepository } from '../src/repository/pdfText.repository';
+import { createScreeningRepository } from '../src/repository/screening.repository';
 
 // The controllers are tested against fake repositories, so these check the
 // other half: each repository asks Prisma for the right rows.
@@ -102,5 +103,95 @@ describe('pdf text repository', () => {
       data: { extracted_text: 'Software Engineer Co-op' },
     });
     expect(resumes.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('screening repository', () => {
+  const GROUP = { groupId: 3, classId: 101 };
+  const KEY = { class: 101, group_id: 3, job_id: 7, resume_id: 42 };
+
+  function withResults(count = 1, rows: unknown[] = []) {
+    const createMany = vi.fn(async () => ({ count }));
+    const findMany = vi.fn(async () => rows);
+    const updateMany = vi.fn(async () => ({ count }));
+    const db = { screening_Results: { createMany, findMany, updateMany } } as unknown as DbClient;
+    return { screening: createScreeningRepository(db), createMany, findMany, updateMany };
+  }
+
+  it('queues each resume as pending under the group, class and posting, skipping ones already there', async () => {
+    const { screening, createMany } = withResults(2);
+    expect(await screening.queue(GROUP, 7, [42, 43], 1)).toBe(2);
+    expect(createMany).toHaveBeenCalledWith({
+      data: [
+        { ...KEY, is_sample: true },
+        { ...KEY, resume_id: 43, is_sample: true },
+      ],
+      skipDuplicates: true,
+    });
+  });
+
+  it('queues nothing, without a query, for no resumes', async () => {
+    const { screening, createMany } = withResults();
+    expect(await screening.queue(GROUP, 7, [], 0)).toBe(0);
+    expect(createMany).not.toHaveBeenCalled();
+  });
+
+  it("lists one group's results in one class, with is_sample as 0 or 1 and keywords as strings", async () => {
+    const row = {
+      ...KEY,
+      status: 'done',
+      score: 80,
+      matched_keywords: ['java', 7, 'sql'],
+      missed_keywords: { not: 'a list' },
+      ai_summary: null,
+      is_sample: false,
+    };
+    const { screening, findMany } = withResults(1, [row]);
+    expect(await screening.listForGroup(GROUP, 7)).toEqual([
+      { ...row, matched_keywords: ['java', 'sql'], missed_keywords: [], is_sample: 0 },
+    ]);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { class: 101, group_id: 3, job_id: 7 } })
+    );
+  });
+
+  it('stores a finished screen on the queued row', async () => {
+    const { screening, updateMany } = withResults();
+    const outcome = {
+      score: 75,
+      matched_keywords: ['linux'],
+      missed_keywords: ['python'],
+      ai_summary: 'Strong on systems.',
+    };
+    expect(await screening.saveDone(GROUP, 7, 42, outcome)).toBe(true);
+    expect(updateMany).toHaveBeenCalledWith({ where: KEY, data: { status: 'done', ...outcome } });
+  });
+
+  it('marks a screen failed and clears any earlier result', async () => {
+    const { screening, updateMany } = withResults();
+    expect(await screening.markFailed(GROUP, 7, 42)).toBe(true);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: KEY,
+      data: {
+        status: 'failed',
+        score: null,
+        matched_keywords: Prisma.DbNull,
+        missed_keywords: Prisma.DbNull,
+        ai_summary: null,
+      },
+    });
+  });
+
+  it('says so when a result is written for a resume that was never queued', async () => {
+    const { screening } = withResults(0);
+    expect(
+      await screening.saveDone(GROUP, 7, 42, {
+        score: 1,
+        matched_keywords: [],
+        missed_keywords: [],
+        ai_summary: null,
+      })
+    ).toBe(false);
+    expect(await screening.markFailed(GROUP, 7, 42)).toBe(false);
   });
 });
