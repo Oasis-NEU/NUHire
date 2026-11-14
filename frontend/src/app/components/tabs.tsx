@@ -16,8 +16,8 @@ const Tabs: React.FC<TabProps> = ({ children }) => {
             className={`flex-1 py-2 px-4 font-bold rounded-t-lg border-b-2 transition-colors
               ${
                 selectedTab === idx
-                  ? 'bg-northeasternRed text-white border-northeasternRed'
-                  : 'bg-northeasternWhite text-northeasternRed border-gray-300 hover:bg-springWater'
+                  ? 'bg-neu-red text-white border-neu-red'
+                  : 'bg-white text-neu-red border-gray-300 hover:bg-gray-50'
               }`}
             onClick={() => setSelectedTab(idx)}
           >

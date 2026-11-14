@@ -34,16 +34,14 @@ export default function UserProfile() {
   return (
     <div>
       {authUser?.affiliation !== 'admin' ? <Navbar /> : <NavbarAdmin />}
-      <div className="bg-sand flex flex-col items-center justify-center p-6 min-h-screen">
-        <div className="bg-northeasternWhite p-8 rounded-2xl shadow-lg w-full max-w-lg border-2 border-black">
-          <h1 className="text-4xl font-bold mb-4 text-northeasternRed text-center">User Profile</h1>
+      <div className="bg-white flex flex-col items-center justify-center p-6 min-h-screen">
+        <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-lg border-2 border-black">
+          <h1 className="text-4xl font-bold mb-4 text-neu-red text-center">User Profile</h1>
 
           {authUser && (
             <div className="space-y-6">
-              <div className="bg-northeasternWHite p-4 rounded-lg border border-black">
-                <h2 className="text-xl font-semibold text-northeasternRed mb-2">
-                  Personal Information
-                </h2>
+              <div className="p-4 rounded-lg border border-black">
+                <h2 className="text-xl font-semibold text-neu-red mb-2">Personal Information</h2>
                 <p className="text-black">
                   <span className="font-semibold">Name:</span> {authUser.f_name} {authUser.l_name}
                 </p>

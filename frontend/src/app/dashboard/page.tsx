@@ -244,15 +244,15 @@ const Dashboard = () => {
   if (!user || user.affiliation !== 'student') return null;
 
   return (
-    <div className="bg-sand font-rubik min-h-screen flex flex-col">
+    <div className="bg-white min-h-screen flex flex-col">
       <div className="fixed inset-0 z-0">
         <Slideshow />
       </div>
 
-      <div className="fixed inset-0 bg-sand/80 z-[5]" />
+      <div className="fixed inset-0 bg-white/80 z-[5]" />
       <Navbar />
       <div className="flex-1 flex flex-col px-4 py-8 relative z-10">
-        <div className="font-extrabold text-3xl font-rubik text-northeasternBlack mb-6 text-center">
+        <div className="font-extrabold text-3xl text-black mb-6 text-center">
           <h3>Progress Steps</h3>
         </div>
         <div className="flex-1 flex items-center justify-center">
@@ -284,9 +284,9 @@ const Dashboard = () => {
                   >
                     {/* Front Side */}
                     <div
-                      className={`absolute w-full h-full ${!unlocked ? 'bg-gray-300' : 'bg-northeasternWhite'} border-2 border-northeasternRed text-white rounded-xl shadow-lg flex flex-col justify-center items-center font-semibold text-lg backface-hidden p-4`}
+                      className={`absolute w-full h-full ${!unlocked ? 'bg-gray-300' : 'bg-white'} border-2 border-neu-red text-white rounded-xl shadow-lg flex flex-col justify-center items-center font-semibold text-lg backface-hidden p-4`}
                     >
-                      <span className="mb-2 text-northeasternRed text-center">{step.desc}</span>
+                      <span className="mb-2 text-neu-red text-center">{step.desc}</span>
                       <span className="text-2xl">{step.emoji}</span>
                       {(!unlocked || isEmployerPanel) && (
                         <span className="text-4xl mt-4" title="Locked">
@@ -295,18 +295,18 @@ const Dashboard = () => {
                       )}
                     </div>
                     {/* Back Side */}
-                    <div className="absolute w-full h-full bg-northeasternWhite text-northeasternRed border-2 border-northeasternRed bg-opacity-50 rounded-xl shadow-lg flex flex-col justify-center items-center font-extrabold text-xl rotate-y-180 backface-hidden p-4">
+                    <div className="absolute w-full h-full bg-white text-neu-red border-2 border-neu-red bg-opacity-50 rounded-xl shadow-lg flex flex-col justify-center items-center font-extrabold text-xl rotate-y-180 backface-hidden p-4">
                       <a
                         href={unlocked ? step.path : undefined}
-                        className={`mt-2 underline ${unlocked ? 'text-northeasternBlack' : 'text-gray-400 pointer-events-none'}`}
+                        className={`mt-2 underline ${unlocked ? 'text-black' : 'text-gray-400 pointer-events-none'}`}
                         style={{ pointerEvents: unlocked ? 'auto' : 'none' }}
                         onClick={(e) => {
                           e.stopPropagation();
                         }}
                       >
-                        <div className="mb-2 text-northeasternRed text-center">Go To</div>
-                        <div className="mb-2 text-northeasternRed text-center">{step.emoji}</div>
-                        <div className="mb-2 text-northeasternRed text-center">{step.label}</div>
+                        <div className="mb-2 text-neu-red text-center">Go To</div>
+                        <div className="mb-2 text-neu-red text-center">{step.emoji}</div>
+                        <div className="mb-2 text-neu-red text-center">{step.label}</div>
                       </a>
                     </div>
                   </div>

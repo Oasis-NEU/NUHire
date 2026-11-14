@@ -188,10 +188,10 @@ const LiveClass = () => {
 
   if (userloading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-sand">
+      <div className="flex items-center justify-center min-h-screen bg-white">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Loading...</h2>
-          <div className="w-16 h-16 border-t-4 border-navy border-solid rounded-full animate-spin mx-auto"></div>
+          <div className="w-16 h-16 border-t-4 border-black border-solid rounded-full animate-spin mx-auto"></div>
         </div>
       </div>
     );
@@ -204,12 +204,10 @@ const LiveClass = () => {
   const groupIds = [...new Set(students.map((student) => student.group_id))];
 
   return (
-    <div className="flex flex-col min-h-screen bg-sand font-rubik">
+    <div className="flex flex-col min-h-screen bg-white">
       <NavbarAdmin />
       <div className="flex justify-center items-center py-6">
-        <h1 className="text-4xl font-bold text-northeasternBlack text-center drop-shadow-lg">
-          Live Class
-        </h1>
+        <h1 className="text-4xl font-bold text-black text-center drop-shadow-lg">Live Class</h1>
       </div>
 
       <div className="flex-1 p-6">

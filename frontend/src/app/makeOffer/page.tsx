@@ -831,16 +831,16 @@ export default function MakeOffer() {
 
   if (videosLoading) {
     return (
-      <div className="min-h-screen bg-sand font-rubik">
+      <div className="min-h-screen bg-white">
         <Navbar />
         <div className="flex-1 flex flex-col px-4 py-8">
           <div className="w-full p-6">
-            <h1 className="text-3xl font-bold text-center text-navy mb-6">
+            <h1 className="text-3xl font-bold text-center text-black mb-6">
               Make an Offer as a Group
             </h1>
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="w-20 h-20 border-t-4 border-redHeader border-solid rounded-full animate-spin mb-6"></div>
-              <p className="text-lg font-semibold text-navy mb-2">Loading Candidate Offers...</p>
+              <div className="w-20 h-20 border-t-4 border-neu-red border-solid rounded-full animate-spin mb-6"></div>
+              <p className="text-lg font-semibold text-black mb-2">Loading Candidate Offers...</p>
               <p className="text-sm text-gray-600">
                 Please wait while we fetch the candidate information
               </p>
@@ -855,7 +855,7 @@ export default function MakeOffer() {
   if (!user || user.affiliation !== 'student') return null;
 
   return (
-    <div className="min-h-screen bg-sand font-rubik">
+    <div className="min-h-screen bg-white">
       {showInstructions && (
         <Instructions
           instructions={offerInstructions}
@@ -868,7 +868,7 @@ export default function MakeOffer() {
       <Navbar />
       <div className="flex-1 flex flex-col px-4 py-8">
         <div className="w-full p-6">
-          <h1 className="text-3xl font-bold text-center text-navy mb-6">
+          <h1 className="text-3xl font-bold text-center text-black mb-6">
             Make an Offer as a Group
           </h1>
 
@@ -932,10 +932,10 @@ export default function MakeOffer() {
                         ? 'bg-red-100 border border-red-300 pointer-events-none'
                         : isNoShow
                           ? 'bg-gray-100 border border-gray-400 opacity-75'
-                          : 'bg-wood'
+                          : 'bg-gray-200'
                   }`}
                 >
-                  <h3 className="text-xl font-semibold text-navy text-center">
+                  <h3 className="text-xl font-semibold text-black text-center">
                     {interview.f_name} {interview.l_name}
                     {isAccepted && ' ✓ Offered'}
                     {isRejected && ' ✗ Not Offered'}
@@ -953,7 +953,7 @@ export default function MakeOffer() {
                     ></iframe>
                   </div>
 
-                  <div className="mt-2 space-y-1 text-navy text-sm">
+                  <div className="mt-2 space-y-1 text-black text-sm">
                     {RATINGS.map((rating) => (
                       <p key={rating}>
                         <span className="font-medium">{RATING_LABEL[rating]}:</span>{' '}
@@ -966,7 +966,7 @@ export default function MakeOffer() {
                     href={`${API_BASE_URL}/${interview.resume_path}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`text-navy hover:underline ${isRejected ? 'pointer-events-none opacity-50' : ''}`}
+                    className={`text-black hover:underline ${isRejected ? 'pointer-events-none opacity-50' : ''}`}
                   >
                     View / Download Resume
                   </a>
@@ -980,9 +980,9 @@ export default function MakeOffer() {
                         checked={checkedState[interviewNumber] || false}
                         onChange={() => !isOfferDisabled && handleCheckboxChange(interviewNumber)}
                         disabled={isOfferDisabled}
-                        className="h-4 w-4 text-redHeader"
+                        className="h-4 w-4 text-neu-red"
                       />
-                      <span className="ml-2 text-navy text-sm">Selected for Offer</span>
+                      <span className="ml-2 text-black text-sm">Selected for Offer</span>
                     </label>
                   )}
 
@@ -1007,7 +1007,7 @@ export default function MakeOffer() {
           {selectedCount === 1 && !isOfferDisabled && !acceptedOffer && (
             <div className="flex flex-col items-center my-6 gap-4">
               <div className="text-center">
-                <p className="text-navy font-medium">
+                <p className="text-black font-medium">
                   Team Confirmation: {confirmationCount}/{groupSize} members ready
                 </p>
               </div>
@@ -1017,7 +1017,7 @@ export default function MakeOffer() {
                   <button
                     onClick={() => handleConfirmOfferClick(selectedCandidateId)}
                     disabled={hasConfirmed || offerPending || isOfferDisabled}
-                    className={`px-6 py-3 rounded-lg shadow-md font-rubik transition duration-300 ${
+                    className={`px-6 py-3 rounded-lg shadow-md transition duration-300 ${
                       hasConfirmed
                         ? 'bg-green-500 text-white cursor-not-allowed'
                         : isOfferDisabled
@@ -1033,10 +1033,10 @@ export default function MakeOffer() {
                   <button
                     onClick={handleMakeOffer}
                     disabled={offerPending || isOfferDisabled}
-                    className={`px-6 py-3 rounded-lg shadow-md font-rubik transition duration-300 ${
+                    className={`px-6 py-3 rounded-lg shadow-md transition duration-300 ${
                       offerPending || isOfferDisabled
                         ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                        : 'bg-redHeader text-white hover:bg-blue-700'
+                        : 'bg-neu-red text-white hover:bg-blue-700'
                     }`}
                   >
                     {offerPending
@@ -1076,14 +1076,14 @@ export default function MakeOffer() {
         <footer className="flex justify-between mt-6 px-4">
           <button
             onClick={() => (window.location.href = '/jobdes')}
-            className="px-4 py-2 bg-redHeader text-white rounded-lg shadow-md cursor-not-allowed opacity-50 transition duration-300 font-rubik"
+            className="px-4 py-2 bg-neu-red text-white rounded-lg shadow-md cursor-not-allowed opacity-50 transition duration-300"
             disabled={true}
           >
             ← Back: Interview Stage
           </button>
           <button
             onClick={completeMakeOffer}
-            className={`px-4 py-2 bg-redHeader text-white rounded-lg shadow-md font-rubik transition duration-300 ${
+            className={`px-4 py-2 bg-neu-red text-white rounded-lg shadow-md transition duration-300 ${
               !acceptedOffer && !allRejected ? 'cursor-not-allowed opacity-50' : 'hover:bg-blue-400'
             }`}
             disabled={!acceptedOffer && !allRejected}

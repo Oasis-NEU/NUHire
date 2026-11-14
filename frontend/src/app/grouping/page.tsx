@@ -18,18 +18,18 @@ const Grouping = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-sand font-rubik">
+    <div className="flex flex-col h-screen bg-white">
       <NavbarAdmin />
       <div className="flex-1 p-4 overflow-hidden flex flex-col">
         <Tabs>
           <div title="Manage Groups">
-            <div className="w-full max-h-[calc(100vh-200px)] overflow-y-auto border-4 border-northeasternBlack rounded-lg">
+            <div className="w-full max-h-[calc(100vh-200px)] overflow-y-auto border-4 border-black rounded-lg">
               <ManageGroupsTab />
             </div>
           </div>
 
           <div title="CSV Group Assignment">
-            <div className="w-full max-h-[calc(100vh-200px)] overflow-y-auto border-4 border-northeasternBlack rounded-lg">
+            <div className="w-full max-h-[calc(100vh-200px)] overflow-y-auto border-4 border-black rounded-lg">
               <StudentCSVTab />
             </div>
           </div>

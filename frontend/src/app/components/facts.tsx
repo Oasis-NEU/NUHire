@@ -61,10 +61,10 @@ const Facts: React.FC = () => {
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-md max-w-md mx-auto my-6">
-      <h2 className="text-2xl font-bold text-northeasternRed mb-4 text-center">Waiting Facts</h2>
+      <h2 className="text-2xl font-bold text-neu-red mb-4 text-center">Waiting Facts</h2>
       <ul className="space-y-4">
         {facts.map((fact, index) => (
-          <li key={index} className="text-lg text-navy font-medium">
+          <li key={index} className="text-lg text-black font-medium">
             {fact.fact}
           </li>
         ))}

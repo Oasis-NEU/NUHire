@@ -37,15 +37,15 @@ const Dashboard = () => {
 
   //  the dashboard if the user is an admin
   return (
-    <div className="flex flex-col min-h-screen bg-northeasternWhite font-rubik">
+    <div className="flex flex-col min-h-screen bg-white">
       <div className="fixed inset-0 z-0">
         <Slideshow />
       </div>
-      <div className="fixed inset-0 bg-sand/80 z-[5]" />
+      <div className="fixed inset-0 bg-white/80 z-[5]" />
       <NavbarAdmin />
       <div className="mt-6" />
       <div className="flex justify-center items-center py-1 z-10">
-        <h1 className="text-4xl font-bold text-northeasternBlack text-center drop-shadow-lg">
+        <h1 className="text-4xl font-bold text-black text-center drop-shadow-lg">
           Advisor Dashboard
         </h1>
       </div>
@@ -54,28 +54,28 @@ const Dashboard = () => {
         <div className="mt-6 gap-6 flex flex-row justify-center items-center">
           <Link
             href="/live-class"
-            className="px-8 py-8 bg-northeasternWhite text-northeasternRed border-4 border-northeasternRed font-semibold rounded-2xl shadow-xl hover:bg-northeasternRed hover:text-northeasternWhite transition flex flex-col items-center justify-center text-center text-lg w-72 h-72"
+            className="px-8 py-8 bg-white text-neu-red border-4 border-neu-red font-semibold rounded-2xl shadow-xl hover:bg-neu-red hover:text-white transition flex flex-col items-center justify-center text-center text-lg w-72 h-72"
           >
             <span className="text-4xl mb-2">📡</span>
             <span>Live Class</span>
           </Link>
           <Link
             href="/grouping"
-            className="px-8 py-8 bg-northeasternWhite text-northeasternRed border-4 border-northeasternRed font-semibold rounded-2xl shadow-xl hover:bg-northeasternRed hover:text-northeasternWhite transition flex flex-col items-center justify-center text-center text-lg w-72 h-72"
+            className="px-8 py-8 bg-white text-neu-red border-4 border-neu-red font-semibold rounded-2xl shadow-xl hover:bg-neu-red hover:text-white transition flex flex-col items-center justify-center text-center text-lg w-72 h-72"
           >
             <span className="text-4xl mb-2">👥</span>
             <span>Manage Groups</span>
           </Link>
           <Link
             href="/new-pdf"
-            className="px-8 py-8 bg-northeasternWhite text-northeasternRed border-4 border-northeasternRed font-semibold rounded-2xl shadow-xl hover:bg-northeasternRed hover:text-northeasternWhite transition flex flex-col items-center justify-center text-center text-lg w-72 h-72"
+            className="px-8 py-8 bg-white text-neu-red border-4 border-neu-red font-semibold rounded-2xl shadow-xl hover:bg-neu-red hover:text-white transition flex flex-col items-center justify-center text-center text-lg w-72 h-72"
           >
             <span className="text-4xl mb-2">📤</span>
             <span>Upload Job and Resumes</span>
           </Link>
           <Link
             href="/adminFacts"
-            className="px-8 py-8 bg-northeasternWhite text-northeasternRed border-4 border-northeasternRed font-semibold rounded-2xl shadow-xl hover:bg-northeasternRed hover:text-northeasternWhite transition flex flex-col items-center justify-center text-center text-lg w-72 h-72"
+            className="px-8 py-8 bg-white text-neu-red border-4 border-neu-red font-semibold rounded-2xl shadow-xl hover:bg-neu-red hover:text-white transition flex flex-col items-center justify-center text-center text-lg w-72 h-72"
           >
             <span className="text-4xl mb-2">🔍</span>
             <span>Waiting Facts</span>

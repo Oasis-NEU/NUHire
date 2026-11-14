@@ -125,7 +125,7 @@ export default function WaitingGroupPage() {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-sand">
+      <div className="flex items-center justify-center min-h-screen bg-white">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Please log in to continue</h2>
         </div>
@@ -134,38 +134,36 @@ export default function WaitingGroupPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-sand font-rubik">
+    <div className="flex flex-col min-h-screen bg-white">
       {/* Background Slideshow */}
       <div className="fixed inset-0 z-0">
         <Slideshow />
       </div>
 
       {/* Overlay */}
-      <div className="fixed inset-0 bg-sand/80 z-[5]" />
+      <div className="fixed inset-0 bg-white/80 z-[5]" />
 
       {/* Main Content */}
       <div className="z-10 flex flex-col items-center justify-center relative flex-grow p-8">
         <div className="max-w-2xl w-full text-center">
           <div className="mb-8">
-            <h1 className="text-4xl font-extrabold text-northeasternRed mb-4">
-              Waiting for Teacher
-            </h1>
-            <p className="text-xl text-northeasternBlack mb-4">
+            <h1 className="text-4xl font-extrabold text-neu-red mb-4">Waiting for Teacher</h1>
+            <p className="text-xl text-black mb-4">
               Hello, {user.f_name} {user.l_name}!
             </p>
-            {user.class && <p className="text-lg text-navy mb-6">Class CRN: {user.class}</p>}
+            {user.class && <p className="text-lg text-black mb-6">Class CRN: {user.class}</p>}
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg border-4 border-northeasternBlack p-8 mb-8">
+          <div className="bg-white rounded-lg shadow-lg border-4 border-black p-8 mb-8">
             <div className="flex flex-col items-center space-y-6">
               <div className="relative">
-                <div className="w-20 h-20 border-4 border-northeasternRed border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-20 h-20 border-4 border-neu-red border-t-transparent rounded-full animate-spin"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-12 h-12 bg-northeasternRed rounded-full opacity-20 animate-pulse"></div>
+                  <div className="w-12 h-12 bg-neu-red rounded-full opacity-20 animate-pulse"></div>
                 </div>
               </div>
               <div className="text-center">
-                <h2 className="text-2xl font-bold text-navy mb-4">
+                <h2 className="text-2xl font-bold text-black mb-4">
                   Waiting for Teacher to allow Start
                 </h2>
                 <Facts />
@@ -176,9 +174,9 @@ export default function WaitingGroupPage() {
       </div>
 
       {/* Footer */}
-      <footer className="w-full flex justify-center p-2 bg-navy/90 backdrop-blur-sm shadow-md font-rubik text-2xl z-20">
+      <footer className="w-full flex justify-center p-2 bg-black/90 backdrop-blur-sm shadow-md text-2xl z-20">
         <a
-          className="flex items-center text-wood hover:text-blue-300 transition-colors duration-200"
+          className="flex items-center text-gray-200 hover:text-blue-300 transition-colors duration-200"
           href="https://discord.com/invite/jyvzqyJHy6"
           target="_blank"
           rel="noopener noreferrer"
