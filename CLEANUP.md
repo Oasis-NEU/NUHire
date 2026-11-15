@@ -726,7 +726,6 @@ identity from the URL in ways `AGENTS.md` rule 1 forbids.
 | `GET /interview/vids`                | `interview.routes.ts:18` |                                               |
 | `GET /users`                         | `user.routes.ts:15`      | signup POSTs to `/users`; nothing GETs it     |
 | `GET /users/students`                | `user.routes.ts:16`      |                                               |
-| `POST /users/update-user-class`      | `user.routes.ts:19`      |                                               |
 | `GET /offers/class/:class_id`        | `offer.routes.ts:16`     |                                               |
 | `GET /progress/group/:crn/:group_id` | `progress.routes.ts:12`  | do last; that file is in flight               |
 | `POST /groups/update-group`          | `group.routes.ts:15`     | its UPDATE has no `class` either              |
@@ -754,8 +753,9 @@ grep -rhoE 'API_BASE_URL\}/[a-z_]+(/[A-Za-z_-]+)?' frontend/src | sort -u
   can be called with one verb and dead with another. `AGENTS.md` rule 9: check
   both sides.
 - Remove the route, then the controller method, then any type only it used.
-- `SEC-18` cites `updateUserClass` as an example of an ownership check;
-  `updateUserSeen` has the same check and stays.
+- `SEC-18` cited `updateUserClass` as an example of an ownership check. It
+  is gone (`POST /classes/join` replaced it); `updateUserSeen` has the same
+  check and stays.
 - `candidate.routes.ts` is getting a new route from the candidate-inspect pair.
   Coordinate.
 - One route file per PR.

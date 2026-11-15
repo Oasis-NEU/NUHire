@@ -11,6 +11,7 @@ import { AddStudentModal } from './manageGroups/AddStudentModal';
 import { ConfirmActionModal } from './manageGroups/ConfirmActionModal';
 import { ReassignStudentModal } from './manageGroups/ReassignStudentModal';
 import { ClassPicker } from './manageGroups/ClassPicker';
+import { ClassCodeCard } from './manageGroups/ClassCodeCard';
 import { GroupCard, type ScrollState } from './manageGroups/GroupCard';
 import { useClassGroups } from './manageGroups/useClassGroups';
 import { useOffers } from './manageGroups/useOffers';
@@ -894,6 +895,7 @@ export function ManageGroupsTab() {
             selectedClass={selectedClass}
             onChange={handleClassChange}
           />
+          {selectedClass && <ClassCodeCard classId={selectedClass} />}
 
           {selectedClass && groups.length > 0 && !isLoadingGroups && (
             <div>
