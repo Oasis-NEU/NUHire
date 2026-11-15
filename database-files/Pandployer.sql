@@ -89,7 +89,7 @@ CREATE TABLE `Step_Completion` (
 -- Group votes decided by majority of present students, with one revote and a
 -- professor tiebreak. The rounds and the revote deadline live here, not in the
 -- API process, so a vote in progress survives a restart. Added by
--- migrations/010-group-votes.sql; keep the two in step.
+-- migrations/009-group-votes.sql; keep the two in step.
 --
 
 DROP TABLE IF EXISTS `Group_Vote_Ballot`;
