@@ -6,23 +6,21 @@ import { useAuth } from './AuthContext';
 import { useSocket } from './socketContext';
 import type { Note } from '../../types';
 
-export async function loadNotes(userEmail: string): Promise<Note[]> {
-  const response = await fetch(
-    `${API_BASE_URL}/notes?user_email=${encodeURIComponent(userEmail)}`,
-    { credentials: 'include' }
-  );
-  if (!response.ok) throw new Error('Failed to fetch notes');
+// The notes API reads the student from the session, so neither request names one.
+export async function loadNotes(): Promise<Note[]> {
+  const response = await fetch(`${API_BASE_URL}/notes`, { credentials: 'include' });
+  if (!response.ok) throw new Error(`GET /notes returned ${response.status}`);
   return response.json();
 }
 
-export async function saveNote(userEmail: string, content: string): Promise<Note> {
+export async function saveNote(content: string): Promise<Note> {
   const response = await fetch(`${API_BASE_URL}/notes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ user_email: userEmail, content }),
+    body: JSON.stringify({ content }),
   });
-  if (!response.ok) throw new Error(`Failed to save note: ${userEmail}`);
+  if (!response.ok) throw new Error(`POST /notes returned ${response.status}`);
   return response.json();
 }
 
@@ -36,7 +34,7 @@ export const useNotes = ({ onReset }: Options = {}) => {
   const { user } = useAuth();
   const socket = useSocket();
   const [notes, setNotes] = useState<Note[]>([]);
-  const email = user?.email ?? '';
+  const email = user?.email;
 
   const onResetRef = useRef(onReset);
   useEffect(() => {
@@ -46,7 +44,7 @@ export const useNotes = ({ onReset }: Options = {}) => {
   const reload = useCallback(async () => {
     if (!email) return;
     try {
-      setNotes(await loadNotes(email));
+      setNotes(await loadNotes());
     } catch (err) {
       console.error('Error fetching notes:', err);
     }
@@ -57,20 +55,16 @@ export const useNotes = ({ onReset }: Options = {}) => {
   }, [reload]);
 
   // Resolves false when the note was not saved, so the caller can keep the draft.
-  const add = useCallback(
-    async (content: string): Promise<boolean> => {
-      try {
-        const note = await saveNote(email, content);
-        setNotes((current) => [...current, note]);
-        reload();
-        return true;
-      } catch (err) {
-        console.error('Error saving note:', err);
-        return false;
-      }
-    },
-    [email, reload]
-  );
+  const add = useCallback(async (content: string): Promise<boolean> => {
+    try {
+      const note = await saveNote(content);
+      setNotes((current) => [note, ...current]);
+      return true;
+    } catch (err) {
+      console.error('Error saving note:', err);
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     if (!socket) return;
