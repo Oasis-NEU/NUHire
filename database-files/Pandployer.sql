@@ -84,6 +84,50 @@ CREATE TABLE `Step_Completion` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `Group_Vote_Round` and `Group_Vote_Ballot`
+--
+-- Group votes decided by majority of present students, with one revote and a
+-- professor tiebreak. The rounds and the revote deadline live here, not in the
+-- API process, so a vote in progress survives a restart. Added by
+-- migrations/009-group-votes.sql; keep the two in step.
+--
+
+DROP TABLE IF EXISTS `Group_Vote_Ballot`;
+DROP TABLE IF EXISTS `Group_Vote_Round`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `Group_Vote_Round` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `class` int NOT NULL,
+  `group_id` int NOT NULL,
+  `kind` enum('resume_review','final_pick') NOT NULL,
+  `round` tinyint NOT NULL,
+  `options` json NOT NULL,
+  `status` enum('open','tied','escalated','decided') NOT NULL DEFAULT 'open',
+  `winners` json DEFAULT NULL,
+  `tied` json DEFAULT NULL,
+  `decided_by` enum('majority','professor') DEFAULT NULL,
+  `opened_at` timestamp NOT NULL,
+  `deadline_at` timestamp NULL DEFAULT NULL,
+  `closed_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_group_vote_round` (`class`, `group_id`, `kind`, `round`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `Group_Vote_Ballot` (
+  `round_id` int NOT NULL,
+  `student_id` int NOT NULL,
+  `resume_id` int NOT NULL,
+  `vote` enum('yes','no') NOT NULL,
+  `voted_at` timestamp NOT NULL,
+  PRIMARY KEY (`round_id`, `student_id`, `resume_id`),
+  KEY `student_id` (`student_id`),
+  CONSTRAINT `Group_Vote_Ballot_round_fk` FOREIGN KEY (`round_id`) REFERENCES `Group_Vote_Round` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `Group_Vote_Ballot_user_fk` FOREIGN KEY (`student_id`) REFERENCES `Users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `GroupsInfo`
 --
 

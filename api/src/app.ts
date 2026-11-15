@@ -30,6 +30,7 @@ import uploadRoutes, { uploadedFileRoutes } from './routes/upload.routes';
 import csvRoutes from './routes/csv.routes';
 import deleteRoutes from './routes/delete.routes';
 import factsRoutes from './routes/facts.routes';
+import voteRoutes from './routes/vote.routes';
 
 const routeCallCount: Record<string, number> = {};
 const routeCallTimestamps: Record<string, number[]> = {};
@@ -208,6 +209,7 @@ export class App {
     this.app.use('/moderator', moderatorRoutes(this.db, this.prisma));
     this.app.use('/notes', noteRoutes(this.prisma));
     this.app.use('/offers', offerRoutes(this.db));
+    this.app.use('/votes', voteRoutes(this.db, this.io));
     this.app.use('/progress', progressRoutes(this.db, this.io));
     this.app.use('/candidates', candidateRoutes(this.db));
     this.app.use('/upload', uploadRoutes());

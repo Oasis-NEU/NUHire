@@ -4,6 +4,7 @@ import { SocketEvents } from '../models/SocketEvents';
 import { isAdmin } from '../models/User';
 import { BarrierStatus, PresentMember, StepCompletion } from '../models/Barrier';
 import { dbNow } from './database';
+import { castBallot, professorDecide, reevaluateVotes } from './groupVote';
 
 // Advisors join a room named after their own email (see 'adminOnline' below),
 // so notifying a class's teachers is one emit per Moderator row for that CRN.
@@ -204,6 +205,44 @@ export function broadcastGroupBarrier(
       });
     }
     return status;
+  });
+}
+
+// Tell a class's teachers that a group is making an offer, and tell the group
+// which candidate it went to. The makeOfferRequest event and the group vote's
+// final pick both end here, so the professor's accept/reject view sees one
+// shape whichever way the offer was made.
+export async function announceGroupOffer(
+  io: SocketIOServer,
+  db: Pool,
+  classId: number,
+  groupId: number,
+  candidateId: number
+): Promise<void> {
+  const [candidates] = await db
+    .promise()
+    .query<(RowDataPacket & { f_name: string; l_name: string })[]>(
+      'SELECT f_name, l_name FROM Candidates WHERE resume_id = ?',
+      [candidateId]
+    );
+
+  const firstName = candidates[0]?.f_name ?? '';
+  const lastName = candidates[0]?.l_name ?? '';
+  const candidateName = candidates[0] ? `${firstName} ${lastName}` : `Candidate #${candidateId}`;
+
+  emitToClassModerators(io, db, classId, 'makeOfferRequest', {
+    classId,
+    groupId,
+    candidateId,
+    candidateName,
+    firstName,
+    lastName,
+  });
+  io.to(`group_${groupId}_class_${classId}`).emit('groupMemberOffer', {
+    candidateId,
+    candidateName,
+    firstName,
+    lastName,
   });
 }
 
@@ -433,6 +472,11 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
             console.error(`Could not re-evaluate the barrier for room ${group_id}:`, err);
           }
         );
+        // Same reason for the group votes: a revote may have run out while
+        // nobody was connected to see it.
+        reevaluateVotes(io, db, Number(parts.classId), Number(parts.groupId)).catch((err) => {
+          console.error(`Could not re-evaluate the group votes for room ${group_id}:`, err);
+        });
       }
     });
 
@@ -450,6 +494,33 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
         );
       io.to(student.room).emit('checkboxUpdated', { resume_number, checked });
     });
+
+    // A ballot in the sender's own group's vote. A refusal goes back to the
+    // sender alone; the result of an accepted ballot goes to the whole room.
+    onStudent<SocketEvents['castGroupVote']>('castGroupVote', async (payload, student) => {
+      const refusal = await castBallot(io, db, student, payload.kind, payload);
+      if (refusal) socket.emit('groupVoteError', { kind: payload.kind, error: refusal.error });
+    });
+
+    // The professor's tiebreak, or override, on one group's vote.
+    onTeacher<SocketEvents['decideGroupVote']>(
+      'decideGroupVote',
+      (payload) => payload.classId,
+      ({ classId, groupId, kind, winners }: SocketEvents['decideGroupVote']) => {
+        professorDecide(io, db, {
+          classId: Number(classId),
+          groupId: Number(groupId),
+          kind,
+          winners,
+        })
+          .then((refusal) => {
+            if (refusal) socket.emit('groupVoteError', { kind, groupId, error: refusal.error });
+          })
+          .catch((err) => {
+            console.error(`Could not decide the ${kind} vote for group ${groupId}:`, err);
+          });
+      }
+    );
 
     onStudent<SocketEvents['checkint']>('checkint', ({ interview_number, checked }, student) => {
       socket.to(student.room).emit('checkboxUpdated', { interview_number, checked });
@@ -510,29 +581,8 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
 
     onStudent<SocketEvents['makeOfferRequest']>(
       'makeOfferRequest',
-      async ({ candidateId }, { groupId, classId, room }) => {
-        const [candidates] = await db
-          .promise()
-          .query<(RowDataPacket & { f_name: string; l_name: string })[]>(
-            'SELECT f_name, l_name FROM Candidates WHERE resume_id = ?',
-            [candidateId]
-          );
-
-        const firstName = candidates[0]?.f_name ?? '';
-        const lastName = candidates[0]?.l_name ?? '';
-        const candidateName = candidates[0]
-          ? `${firstName} ${lastName}`
-          : `Candidate #${candidateId}`;
-
-        emitToClassModerators(io, db, classId, 'makeOfferRequest', {
-          classId,
-          groupId,
-          candidateId,
-          candidateName,
-          firstName,
-          lastName,
-        });
-        io.to(room).emit('groupMemberOffer', { candidateId, candidateName, firstName, lastName });
+      async ({ candidateId }, { groupId, classId }) => {
+        await announceGroupOffer(io, db, classId, groupId, candidateId);
       }
     );
 
