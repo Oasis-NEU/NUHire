@@ -31,6 +31,38 @@ model GroupConfirmations {
   @@index([student_id], map: "student_id")
 }
 
+model Group_Vote_Ballot {
+  round_id         Int
+  student_id       Int
+  resume_id        Int
+  vote             Group_Vote_Ballot_vote
+  voted_at         DateTime               @db.Timestamp(0)
+  Group_Vote_Round Group_Vote_Round       @relation(fields: [round_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "Group_Vote_Ballot_round_fk")
+  Users            Users                  @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "Group_Vote_Ballot_user_fk")
+
+  @@id([round_id, student_id, resume_id])
+  @@index([student_id], map: "student_id")
+}
+
+model Group_Vote_Round {
+  id                Int                          @id @default(autoincrement())
+  class             Int
+  group_id          Int
+  kind              Group_Vote_Round_kind
+  round             Int                          @db.TinyInt
+  options           Json
+  status            Group_Vote_Round_status      @default(open)
+  winners           Json?
+  tied              Json?
+  decided_by        Group_Vote_Round_decided_by?
+  opened_at         DateTime                     @db.Timestamp(0)
+  deadline_at       DateTime?                    @db.Timestamp(0)
+  closed_at         DateTime?                    @db.Timestamp(0)
+  Group_Vote_Ballot Group_Vote_Ballot[]
+
+  @@unique([class, group_id, kind, round], map: "uniq_group_vote_round")
+}
+
 model GroupsInfo {
   id        Int       @id @default(autoincrement())
   class_id  Int
@@ -242,6 +274,7 @@ model Users {
   seen               Int                  @default(0) @db.TinyInt
   present_at         DateTime?            @db.Timestamp(0)
   GroupConfirmations GroupConfirmations[]
+  Group_Vote_Ballot  Group_Vote_Ballot[]
   Notes              Notes[]
   Resume             Resume[]
   Resumepage         Resumepage[]
@@ -330,4 +363,26 @@ enum Users_current_page {
   jobdes
   interviewpage
   makeofferpage
+}
+
+enum Group_Vote_Ballot_vote {
+  yes
+  no
+}
+
+enum Group_Vote_Round_kind {
+  resume_review
+  final_pick
+}
+
+enum Group_Vote_Round_status {
+  open
+  tied
+  escalated
+  decided
+}
+
+enum Group_Vote_Round_decided_by {
+  majority
+  professor
 }

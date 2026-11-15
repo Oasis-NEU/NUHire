@@ -1,6 +1,7 @@
 // src/models/SocketEvents.ts
 
 import type { DbBool } from './DbBool';
+import type { MyVote, VoteKind } from './Vote';
 
 // What the server reads from each client event. Student events carry no group,
 // class or student id: the server takes those from the sender's login, and
@@ -66,6 +67,24 @@ export interface SocketEvents {
   // Completion events
   confirmOffer: {
     candidateId: number;
+  };
+
+  // Group votes (OAS-368). The student's group, class and id come from their
+  // login; the payload only says which vote and what they chose. resume_review
+  // takes `votes` (or one `resumeId` with `vote`), final_pick takes `resumeId`.
+  castGroupVote: {
+    kind: VoteKind;
+    votes?: MyVote[];
+    resumeId?: number;
+    vote?: MyVote['vote'];
+  };
+  // Teacher only. On an escalated round `winners` must come from its tied
+  // options; on an open round it forces the result from all of its options.
+  decideGroupVote: {
+    classId: number;
+    groupId: number;
+    kind: VoteKind;
+    winners: number[];
   };
 
   // Preset votes

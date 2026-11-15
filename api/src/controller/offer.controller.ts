@@ -15,8 +15,8 @@ import { Pool } from 'mysql2';
 // LAST_INSERT_ID(id) makes insertId the existing row's id on the update path,
 // where it would otherwise be 0 and the client would store a bogus offer id.
 //
-// Exported so every way of making an offer uses this one statement and they
-// cannot drift.
+// Shared with the group vote (config/groupVote.ts), whose final pick becomes the
+// group's offer: one statement, so the two ways of making an offer cannot drift.
 // Parameters: group_id, class_id, candidate_id.
 export const UPSERT_GROUP_OFFER_SQL = `INSERT INTO Offers (group_id, class_id, candidate_id, status)
        VALUES (?, ?, ?, 'pending')
