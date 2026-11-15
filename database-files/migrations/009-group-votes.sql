@@ -1,5 +1,5 @@
 -- migrate:up
--- 010: group votes decided by majority, with one revote and a professor
+-- 009: group votes decided by majority, with one revote and a professor
 -- tiebreak (OAS-368).
 --
 -- A group decides its resume shortlist and its final pick by voting. Each
