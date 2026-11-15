@@ -3,6 +3,7 @@ import { Lato } from 'next/font/google';
 import './globals.css';
 import { SocketProvider } from './components/socketContext';
 import { AuthProvider } from './components/AuthContext';
+import { NotebookProvider } from './components/notebook/NotebookContext';
 
 const lato = Lato({
   variable: '--font-lato',
@@ -24,7 +25,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${lato.variable} font-sans antialiased`}>
         <AuthProvider>
-          <SocketProvider>{children}</SocketProvider>
+          <SocketProvider>
+            <NotebookProvider>{children}</NotebookProvider>
+          </SocketProvider>
         </AuthProvider>
       </body>
     </html>

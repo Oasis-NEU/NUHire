@@ -1,14 +1,15 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import NotesPage from '../components/note';
 import { useRouter, usePathname } from 'next/navigation';
+import { useNotebook } from './notebook/NotebookContext';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   const router = useRouter();
+  const { ready: notebookReady, open: notebookOpen, setOpen: setNotebookOpen } = useNotebook();
 
   const progressStepPages = [
     '/jobdes',
@@ -18,7 +19,7 @@ const Navbar = () => {
     '/makeOffer',
   ];
 
-  const showHelpButton = progressStepPages.includes(pathname);
+  const onStepPage = progressStepPages.includes(pathname);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -64,16 +65,22 @@ const Navbar = () => {
         </div>
         <div className="flex items-center gap-2 ml-auto">
           {/* Help button - smaller */}
-          {showHelpButton && (
+          {onStepPage && (
             <div className="bg-neu-red text-white px-3 py-1 rounded-md hover:bg-white border-2 border-black transition text-sm">
               <button onClick={handleShowInstructions} className="w-full">
                 Instructions
               </button>
             </div>
           )}
-          <div className="w-40 flex items-center">
-            <NotesPage />
-          </div>
+          {onStepPage && notebookReady && !notebookOpen && (
+            <button
+              type="button"
+              onClick={() => setNotebookOpen(true)}
+              className="bg-neu-red text-white px-3 py-1 rounded-md hover:bg-red-700 border-2 border-black transition text-sm"
+            >
+              Notebook
+            </button>
+          )}
           <Link
             href="/userProfile"
             className="flex items-center justify-center w-8 h-8 rounded-full bg-neu-red cursor-pointer transition duration-300 ease-in-out hover:bg-black hover:border-2 hover:border-neu-red relative"

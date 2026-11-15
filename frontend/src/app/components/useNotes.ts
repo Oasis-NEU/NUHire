@@ -24,6 +24,8 @@ export async function saveNote(content: string): Promise<Note> {
   return response.json();
 }
 
+export type NotesStatus = 'loading' | 'loaded' | 'failed';
+
 interface Options {
   // Called when a job reset erases the notes, so a caller can clear its draft too.
   onReset?: () => void;
@@ -34,19 +36,30 @@ export const useNotes = ({ onReset }: Options = {}) => {
   const { user } = useAuth();
   const socket = useSocket();
   const [notes, setNotes] = useState<Note[]>([]);
-  const email = user?.email;
+  const [status, setStatus] = useState<NotesStatus>('loading');
 
   const onResetRef = useRef(onReset);
   useEffect(() => {
     onResetRef.current = onReset;
   }, [onReset]);
 
+  // A reply for the previous student on a shared browser must not land on the next one.
+  const latestRequest = useRef(0);
+  const email = user?.email;
+
   const reload = useCallback(async () => {
     if (!email) return;
+    const request = ++latestRequest.current;
+    setStatus('loading');
     try {
-      setNotes(await loadNotes());
+      const loaded = await loadNotes();
+      if (request !== latestRequest.current) return;
+      setNotes(loaded);
+      setStatus('loaded');
     } catch (err) {
+      if (request !== latestRequest.current) return;
       console.error('Error fetching notes:', err);
+      setStatus('failed');
     }
   }, [email]);
 
@@ -80,5 +93,5 @@ export const useNotes = ({ onReset }: Options = {}) => {
     };
   }, [socket]);
 
-  return { notes, add };
+  return { notes, status, reload, add };
 };

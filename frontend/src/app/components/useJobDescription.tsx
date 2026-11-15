@@ -22,7 +22,8 @@ interface Options {
   // The dashboard only needs the title to unlock steps; the other pages also
   // need the PDF.
   includeFile?: boolean;
-  // Refetch when the professor changes the job. Only the dashboard listens.
+  // Refetch when the professor changes the job. The dashboard and the
+  // notebook's Job tab listen.
   refetchOnJobUpdated?: boolean;
 }
 
