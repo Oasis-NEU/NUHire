@@ -15,7 +15,6 @@ export default (db: Pool, io: SocketIOServer): Router => {
   router.get('/', requireAdmin, userController.getAllUsers);
   router.get('/students', requireAdmin, userController.getStudents);
   router.post('/update-currentpage', requireAuth, userController.updateCurrentPage);
-  router.post('/update-user-class', requireAuth, userController.updateUserClass);
   router.post('/update-seen', requireAuth, userController.updateUserSeen);
   router.get('/check/:email', requireAuth, userController.check);
 

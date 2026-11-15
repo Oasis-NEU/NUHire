@@ -436,8 +436,8 @@ Genuinely clean: no `.env` file is or ever was in git.
 **SEC-18 [HARD] [SPEC] 20h — Scope every data endpoint to the caller's group** — deps: SEC-6, STU-16
 Role checks are in place; ownership checks largely are not. `POST /resume/vote`
 still takes `student_id` from the **body**, so a student can vote as a classmate.
-Note `updateUserClass` and `updateUserSeen` _do_ check ownership, so the pattern
-exists and just was not applied.
+Note `updateUserSeen` _does_ check ownership, so the pattern exists and just
+was not applied.
 
 **SEC-15 [MED] 12h — FERPA and data-handling policy** — deps: SEC-11b
 Real Canvas names and emails, and nobody has written down what is collected, who

@@ -18,7 +18,7 @@ import { dbNow } from '../config/database';
 // present all along: the barrier reads closed for a group already through it,
 // and the student is never offered the catch-up. Someone never stamped stays
 // unstamped, since they still have not shown up. The `?` takes dbNow().
-const RESTAMP_ON_MOVE = 'present_at = IF(present_at IS NULL, NULL, ?)';
+export const RESTAMP_ON_MOVE = 'present_at = IF(present_at IS NULL, NULL, ?)';
 
 export class GroupController {
   constructor(

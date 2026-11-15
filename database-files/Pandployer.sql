@@ -257,6 +257,27 @@ CREATE TABLE `Moderator` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `ClassCodes`
+--
+-- The code a student types to join a class, one per CRN. Written the first
+-- time the professor asks for it and replaced on regenerate. Added by
+-- migrations/009-class-codes.sql; keep the two in step.
+--
+
+DROP TABLE IF EXISTS `ClassCodes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ClassCodes` (
+  `crn` int NOT NULL,
+  `code` char(6) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`crn`),
+  UNIQUE KEY `code_UNIQUE` (`code`),
+  CONSTRAINT `ClassCodes_ibfk_1` FOREIGN KEY (`crn`) REFERENCES `Moderator` (`crn`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `Notes`
 --
 

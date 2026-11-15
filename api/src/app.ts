@@ -21,6 +21,7 @@ import resumePdfRoutes from './routes/resume-pdf.routes';
 import interviewRoutes from './routes/interview.routes';
 import jobRoutes from './routes/job.routes';
 import groupRoutes from './routes/group.routes';
+import classRoutes from './routes/class.routes';
 import moderatorRoutes from './routes/moderator.routes';
 import noteRoutes from './routes/note.routes';
 import offerRoutes from './routes/offer.routes';
@@ -205,6 +206,7 @@ export class App {
     this.app.use('/interview', interviewRoutes(this.db, this.io));
     this.app.use('/jobs', jobRoutes(this.db, this.io, this.onlineStudents));
     this.app.use('/groups', groupRoutes(this.db, this.io));
+    this.app.use('/classes', classRoutes(this.db, this.io));
     this.app.use('/moderator', moderatorRoutes(this.db, this.prisma));
     this.app.use('/notes', noteRoutes(this.prisma));
     this.app.use('/offers', offerRoutes(this.db));

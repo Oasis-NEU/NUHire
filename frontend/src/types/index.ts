@@ -60,6 +60,13 @@ export interface ClassInfo {
   class_name: string;
 }
 
+/** What GET /classes/:class_id/code and its regenerate return: the code
+ *  students type to join the class. */
+export interface ClassCode {
+  classId: number;
+  code: string;
+}
+
 /** A row of `Notes`. `id` is `int AUTO_INCREMENT`, not a string. */
 export interface Note {
   id: number;

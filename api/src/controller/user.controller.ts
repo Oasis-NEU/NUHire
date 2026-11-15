@@ -1,6 +1,5 @@
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
-import { isAdmin } from '../models/User';
 import { Pool, RowDataPacket } from 'mysql2';
 import { Server as SocketIOServer } from 'socket.io';
 import { emitToClassModerators, markPresent } from '../config/socket';
@@ -179,50 +178,6 @@ export class UserController {
       );
     } catch (error) {
       console.error('Unexpected error in updateCurrentPage:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  };
-
-  updateUserClass = async (req: AuthRequest, res: Response): Promise<void> => {
-    try {
-      if (!req.isAuthenticated || !req.isAuthenticated()) {
-        res.status(401).json({ message: 'Unauthorized' });
-        return;
-      }
-
-      const { email, class: classId } = req.body;
-
-      if (req.user?.email !== email && !isAdmin(req.user)) {
-        res.status(403).json({ message: 'Forbidden: You can only update your own profile' });
-        return;
-      }
-
-      if (!email || !classId) {
-        res.status(400).json({ error: 'Email and class are required.' });
-        return;
-      }
-
-      this.db.query(
-        'UPDATE Users SET `class` = ? WHERE email = ?',
-        [classId, email],
-        (err, result) => {
-          if (err) {
-            console.error('Database error:', err);
-            res.status(500).json({ error: 'Failed to update class.' });
-            return;
-          }
-
-          const updateResult = result as RowDataPacket;
-          if (updateResult.affectedRows === 0) {
-            res.status(404).json({ error: 'User not found.' });
-            return;
-          }
-
-          res.json({ message: 'Class updated successfully!' });
-        }
-      );
-    } catch (error) {
-      console.error('Unexpected error in updateUserClass:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   };
