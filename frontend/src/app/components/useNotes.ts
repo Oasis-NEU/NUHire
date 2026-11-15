@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { API_BASE_URL } from '../../lib/api';
 import { useAuth } from './AuthContext';
 import { useSocket } from './socketContext';
-import type { Note } from '../../types';
+import type { JobUpdatedEvent, Note } from '../../types';
 
 // The notes API reads the student from the session, so neither request names one.
 export async function loadNotes(): Promise<Note[]> {
@@ -72,8 +72,8 @@ export const useNotes = () => {
   useEffect(() => {
     if (!socket) return;
     // Notes are only erased by a reset, so a plain job change leaves them alone.
-    const onJobUpdated = ({ reset }: { reset?: boolean }) => {
-      if (reset === false) return;
+    const onJobUpdated = ({ reset }: JobUpdatedEvent) => {
+      if (!reset) return;
       setNotes([]);
     };
     socket.on('jobUpdated', onJobUpdated);

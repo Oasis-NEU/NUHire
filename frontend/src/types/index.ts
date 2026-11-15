@@ -140,6 +140,13 @@ export interface JobOption {
   title: string;
 }
 
+/** The `jobUpdated` socket event: the professor changed a group's job.
+ *  `reset` is true only when that change also erased the group's work. */
+export interface JobUpdatedEvent {
+  job: string;
+  reset: boolean;
+}
+
 /** A candidate as the teacher panel lists one: id plus display name. */
 export interface CandidateOption {
   id: number;

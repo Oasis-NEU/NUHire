@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../AuthContext';
 import { useSocket } from '../socketContext';
 import { dropOtherUsersKeys, userScope } from '../../../lib/userStorage';
+import type { JobUpdatedEvent } from '../../../types';
 
 export const NOTEBOOK_TABS = [
   { id: 'notes', label: 'Notes' },
@@ -87,8 +88,8 @@ export function NotebookProvider({ children }: { children: ReactNode }) {
   // before an effect would get to run.
   useEffect(() => {
     if (!socket || !userId) return;
-    const onJobUpdated = ({ reset }: { reset?: boolean }) => {
-      if (reset === false) return;
+    const onJobUpdated = ({ reset }: JobUpdatedEvent) => {
+      if (!reset) return;
       const saved = { ...readSaved(userId), draft: '' };
       writeSaved(userId, saved);
       setLoaded({ userId, saved });

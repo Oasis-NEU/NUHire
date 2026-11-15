@@ -7,11 +7,15 @@ import { useAuth } from '../components/AuthContext';
 import { PageLoader } from '../components/spinner';
 
 const NotesPage: React.FC = () => {
-  const { loading } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return <PageLoader />;
   }
+
+  // The notebook state is read before paint once a user arrives, so from here
+  // the editor's draft is always the signed-in student's.
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-white">
