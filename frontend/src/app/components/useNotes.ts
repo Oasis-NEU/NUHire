@@ -26,22 +26,12 @@ export async function saveNote(content: string): Promise<Note> {
 
 export type NotesStatus = 'loading' | 'loaded' | 'failed';
 
-interface Options {
-  // Called when a job reset erases the notes, so a caller can clear its draft too.
-  onReset?: () => void;
-}
-
 // The signed-in student's notes, newest first, as the API returns them.
-export const useNotes = ({ onReset }: Options = {}) => {
+export const useNotes = () => {
   const { user } = useAuth();
   const socket = useSocket();
   const [notes, setNotes] = useState<Note[]>([]);
   const [status, setStatus] = useState<NotesStatus>('loading');
-
-  const onResetRef = useRef(onReset);
-  useEffect(() => {
-    onResetRef.current = onReset;
-  }, [onReset]);
 
   // A reply for the previous student on a shared browser must not land on the next one.
   const latestRequest = useRef(0);
@@ -85,7 +75,6 @@ export const useNotes = ({ onReset }: Options = {}) => {
     const onJobUpdated = ({ reset }: { reset?: boolean }) => {
       if (reset === false) return;
       setNotes([]);
-      onResetRef.current?.();
     };
     socket.on('jobUpdated', onJobUpdated);
     return () => {
