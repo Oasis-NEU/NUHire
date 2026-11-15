@@ -1,82 +1,15 @@
 'use client'; // Declares that this page is a client component
-import { API_BASE_URL } from '../../lib/api';
-import React, { useState, useCallback, useEffect } from 'react';
-import { useAuth } from './AuthContext';
-import { useSocket } from './socketContext';
-import type { Note } from '../../types';
+import React, { useState } from 'react';
+import { useNotes } from './useNotes';
+
 const NotesPage = () => {
-  // State variables to manage notes and their visibility
   const [isOpen, setIsOpen] = useState(false);
   const [note, setNote] = useState('');
-
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [userEmail, setUserEmail] = useState('');
-  const { user } = useAuth();
-  // Use the app-wide socket. This component previously called io() at module
-  // scope, which opened a SECOND connection per browser tab (the navbar renders
-  // it on every page), doubling connection count for the whole class.
-  const socket = useSocket();
-
-  useEffect(() => {
-    if (user && user.email) {
-      setUserEmail(user.email);
-    }
-  }, [user]);
-
-  const fetchNotes = useCallback(async () => {
-    if (!userEmail) return;
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/notes?user_email=${encodeURIComponent(userEmail)}`,
-        {
-          credentials: 'include',
-        }
-      );
-      if (!response.ok) throw new Error('Failed to fetch notes');
-      const data = await response.json();
-      setNotes(data);
-    } catch (error) {
-      console.error('Error fetching notes:', error);
-    }
-  }, [userEmail]);
-
-  useEffect(() => {
-    fetchNotes();
-  }, [fetchNotes]);
-
-  useEffect(() => {
-    if (!socket) return;
-    // Notes are only erased by a reset, so a plain job change leaves them alone.
-    const onJobUpdated = ({ reset }: { reset?: boolean }) => {
-      if (reset === false) return;
-      setNotes([]);
-      setNote('');
-    };
-    socket.on('jobUpdated', onJobUpdated);
-    return () => {
-      socket.off('jobUpdated', onJobUpdated);
-    };
-  }, [socket]);
+  const { notes, add } = useNotes({ onReset: () => setNote('') });
 
   const saveNote = async () => {
     if (!note.trim()) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/notes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ user_email: userEmail, content: note }),
-      });
-
-      if (!response.ok) throw new Error(`Failed to save note: ${userEmail}`);
-      const newNote = await response.json();
-      setNotes([...notes, newNote]);
-      fetchNotes();
-      setNote('');
-    } catch (error) {
-      console.error('Error saving note:', error);
-    }
+    if (await add(note)) setNote('');
   };
 
   return (

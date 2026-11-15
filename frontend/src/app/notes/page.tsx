@@ -1,83 +1,20 @@
 'use client';
 export const dynamic = 'force-dynamic';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Navbar from '../components/navbar';
-import { useSocket } from '../components/socketContext';
 import { useAuth } from '../components/AuthContext';
 import { PageLoader } from '../components/spinner';
-import { API_BASE_URL } from '../../lib/api';
+import { useNotes } from '../components/useNotes';
 
 const NotesPage: React.FC = () => {
-  const socket = useSocket();
-
-  interface Note {
-    id: number;
-    content: string;
-  }
-
-  const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState('');
-
-  const { user, loading: userloading } = useAuth();
+  const { notes, add } = useNotes({ onReset: () => setNewNote('') });
+  const { loading: userloading } = useAuth();
 
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/notes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ user_email: user?.email, content: newNote }),
-      });
-
-      if (!response.ok) throw new Error(`Failed to save note: ${user?.email}`);
-      const newN = await response.json();
-      setNotes([...notes, newN]);
-      fetchNotes();
-      setNewNote('');
-    } catch (error) {
-      console.error('Error saving note:', error);
-    }
+    if (await add(newNote)) setNewNote('');
   };
-
-  const fetchNotes = async () => {
-    if (!user?.email) return;
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/notes?user_email=${encodeURIComponent(user!.email)}`,
-        {
-          credentials: 'include',
-        }
-      );
-      if (!response.ok) throw new Error('Failed to fetch notes');
-      const data = await response.json();
-      setNotes(data);
-    } catch (error) {
-      console.error('Error fetching notes:', error);
-    }
-  };
-
-  useEffect(() => {
-    if (!socket) return;
-
-    // Notes are only erased by a reset, so a plain job change leaves them alone.
-    const handleJobUpdated = ({ reset }: { reset?: boolean }) => {
-      if (reset === false) return;
-      setNotes([]);
-      setNewNote('');
-    };
-
-    socket.on('jobUpdated', handleJobUpdated);
-
-    return () => {
-      socket.off('jobUpdated', handleJobUpdated);
-    };
-  }, [socket]);
-
-  useEffect(() => {
-    fetchNotes();
-  }, [user?.email]);
 
   if (userloading) {
     return <PageLoader />;
