@@ -2,6 +2,29 @@ import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { Pool } from 'mysql2';
 
+// A group has one offer, so two members submitting at once update the same
+// row rather than showing the professor the group twice.
+//
+// `status` is not taken from the body. The only caller sends 'pending', and
+// accepting is the professor's call through PUT /offers/:id (requireAdmin);
+// a student posting status: 'accepted' would otherwise accept their own.
+//
+// The ON DUPLICATE clause moves candidate_id only while the offer is pending
+// or rejected, and puts a rejected offer back to pending, so the group can
+// try again after a rejection but a late click cannot repoint an accepted one.
+// LAST_INSERT_ID(id) makes insertId the existing row's id on the update path,
+// where it would otherwise be 0 and the client would store a bogus offer id.
+//
+// Exported so every way of making an offer uses this one statement and they
+// cannot drift.
+// Parameters: group_id, class_id, candidate_id.
+export const UPSERT_GROUP_OFFER_SQL = `INSERT INTO Offers (group_id, class_id, candidate_id, status)
+       VALUES (?, ?, ?, 'pending')
+       ON DUPLICATE KEY UPDATE
+         candidate_id = IF(status IN ('pending', 'rejected'), VALUES(candidate_id), candidate_id),
+         status       = IF(status = 'rejected', 'pending', status),
+         id           = LAST_INSERT_ID(id)`;
+
 export class OfferController {
   constructor(private db: Pool) {}
 
@@ -24,25 +47,8 @@ export class OfferController {
       return;
     }
 
-    // A group has one offer, so two members submitting at once update the same
-    // row rather than showing the professor the group twice.
-    //
-    // `status` is not taken from the body. The only caller sends 'pending', and
-    // accepting is the professor's call through PUT /offers/:id (requireAdmin);
-    // a student posting status: 'accepted' would otherwise accept their own.
-    //
-    // The ON DUPLICATE clause moves candidate_id only while the offer is pending
-    // or rejected, and puts a rejected offer back to pending, so the group can
-    // try again after a rejection but a late click cannot repoint an accepted one.
-    // LAST_INSERT_ID(id) makes insertId the existing row's id on the update path,
-    // where it would otherwise be 0 and the client would store a bogus offer id.
     this.db.query(
-      `INSERT INTO Offers (group_id, class_id, candidate_id, status)
-       VALUES (?, ?, ?, 'pending')
-       ON DUPLICATE KEY UPDATE
-         candidate_id = IF(status IN ('pending', 'rejected'), VALUES(candidate_id), candidate_id),
-         status       = IF(status = 'rejected', 'pending', status),
-         id           = LAST_INSERT_ID(id)`,
+      UPSERT_GROUP_OFFER_SQL,
       [group_id, class_id, candidate_id],
       (err, result: any) => {
         if (err) {

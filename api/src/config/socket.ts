@@ -207,6 +207,44 @@ export function broadcastGroupBarrier(
   });
 }
 
+// Tell a class's teachers that a group is making an offer, and tell the group
+// which candidate it went to. Kept apart from the makeOfferRequest handler so
+// every way of making an offer can share it and the professor's accept/reject
+// view sees one shape.
+export async function announceGroupOffer(
+  io: SocketIOServer,
+  db: Pool,
+  classId: number,
+  groupId: number,
+  candidateId: number
+): Promise<void> {
+  const [candidates] = await db
+    .promise()
+    .query<(RowDataPacket & { f_name: string; l_name: string })[]>(
+      'SELECT f_name, l_name FROM Candidates WHERE resume_id = ?',
+      [candidateId]
+    );
+
+  const firstName = candidates[0]?.f_name ?? '';
+  const lastName = candidates[0]?.l_name ?? '';
+  const candidateName = candidates[0] ? `${firstName} ${lastName}` : `Candidate #${candidateId}`;
+
+  emitToClassModerators(io, db, classId, 'makeOfferRequest', {
+    classId,
+    groupId,
+    candidateId,
+    candidateName,
+    firstName,
+    lastName,
+  });
+  io.to(`group_${groupId}_class_${classId}`).emit('groupMemberOffer', {
+    candidateId,
+    candidateName,
+    firstName,
+    lastName,
+  });
+}
+
 // Read live, not from `onlineStudents`, which misses anyone who reconnected.
 export async function connectedEmails(io: SocketIOServer): Promise<Set<string>> {
   const sockets = await io.fetchSockets();
@@ -510,29 +548,8 @@ export function initializeSocketHandlers(io: SocketIOServer, db: Pool): Record<s
 
     onStudent<SocketEvents['makeOfferRequest']>(
       'makeOfferRequest',
-      async ({ candidateId }, { groupId, classId, room }) => {
-        const [candidates] = await db
-          .promise()
-          .query<(RowDataPacket & { f_name: string; l_name: string })[]>(
-            'SELECT f_name, l_name FROM Candidates WHERE resume_id = ?',
-            [candidateId]
-          );
-
-        const firstName = candidates[0]?.f_name ?? '';
-        const lastName = candidates[0]?.l_name ?? '';
-        const candidateName = candidates[0]
-          ? `${firstName} ${lastName}`
-          : `Candidate #${candidateId}`;
-
-        emitToClassModerators(io, db, classId, 'makeOfferRequest', {
-          classId,
-          groupId,
-          candidateId,
-          candidateName,
-          firstName,
-          lastName,
-        });
-        io.to(room).emit('groupMemberOffer', { candidateId, candidateName, firstName, lastName });
+      async ({ candidateId }, { groupId, classId }) => {
+        await announceGroupOffer(io, db, classId, groupId, candidateId);
       }
     );
 
