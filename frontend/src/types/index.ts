@@ -53,6 +53,14 @@ export interface Group {
   progress?: string;
 }
 
+/** Everything the Manage Groups board draws for one class, loaded as one value
+ *  so the header's counts and the cards always come from the same moment. */
+export interface ClassBoard {
+  students: Student[];
+  groupIds: number[];
+  groups: Group[];
+}
+
 /** A course section. `crn` is the value every query and socket room calls
  *  `class`. */
 export interface ClassInfo {
