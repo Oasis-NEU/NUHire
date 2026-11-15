@@ -3,7 +3,7 @@ import { Lato } from 'next/font/google';
 import './globals.css';
 import { SocketProvider } from './components/socketContext';
 import { AuthProvider } from './components/AuthContext';
-import { NotebookProvider } from './components/notebook/NotebookContext';
+import { NotebookProvider } from './components/NotebookContext';
 
 const lato = Lato({
   variable: '--font-lato',

@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import NotesEditor from '../NotesEditor';
 import Tabs from '../tabs';
-import { NOTEBOOK_TABS, useNotebook, type NotebookTab } from './NotebookContext';
+import { NOTEBOOK_TABS, useNotebook, type NotebookTab } from '../NotebookContext';
 import JobTab from './JobTab';
 import ResumesTab from './ResumesTab';
 

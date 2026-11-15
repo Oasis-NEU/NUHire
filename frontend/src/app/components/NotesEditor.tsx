@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Popup from './popup';
 import PanelMessage from './PanelMessage';
 import { useNotes, type NotesStatus } from './useNotes';
-import { useNotebook } from './notebook/NotebookContext';
+import { useNotebook } from './NotebookContext';
 import type { Note } from '../../types';
 
 function NoteList({

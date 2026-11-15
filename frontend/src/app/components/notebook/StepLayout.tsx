@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useNotebook } from './NotebookContext';
+import { useNotebook } from '../NotebookContext';
 import NotebookPanel from './NotebookPanel';
 
 // Each student step's layout.tsx renders this, which docks the notebook beside

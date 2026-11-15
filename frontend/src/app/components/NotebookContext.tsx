@@ -9,10 +9,10 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useAuth } from '../AuthContext';
-import { useSocket } from '../socketContext';
-import { dropOtherUsersKeys, userScope } from '../../../lib/userStorage';
-import type { JobUpdatedEvent } from '../../../types';
+import { useAuth } from './AuthContext';
+import { useSocket } from './socketContext';
+import { dropOtherUsersKeys, userScope } from '../../lib/userStorage';
+import type { JobUpdatedEvent } from '../../types';
 
 export const NOTEBOOK_TABS = [
   { id: 'notes', label: 'Notes' },

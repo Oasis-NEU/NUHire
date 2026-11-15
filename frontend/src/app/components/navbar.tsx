@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { useNotebook } from './notebook/NotebookContext';
+import { useNotebook } from './NotebookContext';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
