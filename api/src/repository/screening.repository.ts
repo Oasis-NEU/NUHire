@@ -10,6 +10,11 @@ export interface ScreeningRepository {
    * already there, whatever its status. Returns how many were queued.
    */
   queue(group: GroupKey, jobId: number, resumeIds: number[], isSample: DbBool): Promise<number>;
+  /**
+   * Whether the queued resume is sample data, as it was queued: 1 or 0. Null
+   * if the resume was never queued for this group and posting.
+   */
+  isSample(group: GroupKey, target: ScreeningTarget): Promise<DbBool | null>;
   /** The group's results against one posting, by resume id. */
   listForGroup(group: GroupKey, jobId: number): Promise<ScreeningResult[]>;
   /** Stores a finished screen. False if the resume was never queued. */
@@ -59,6 +64,14 @@ export function createScreeningRepository(db: DbClient): ScreeningRepository {
         skipDuplicates: true,
       });
       return count;
+    },
+
+    isSample: async (group, target) => {
+      const row = await db.screening_Results.findUnique({
+        where: { class_group_id_job_id_resume_id: rowKey(group, target) },
+        select: { is_sample: true },
+      });
+      return row ? (row.is_sample ? 1 : 0) : null;
     },
 
     listForGroup: async ({ groupId, classId }, jobId) => {
