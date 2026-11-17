@@ -10,11 +10,16 @@ export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' :
 
 const fullName = (s: Student) => [s.f_name, s.l_name].filter(Boolean).join(' ') || s.email;
 
-function Unavailable({ what, onRetry }: { what: string; onRetry: () => void }) {
+interface RetryProps {
+  onRetry: () => void;
+  refreshing: boolean;
+}
+
+function Unavailable({ what, onRetry, refreshing }: RetryProps & { what: string }) {
   return (
     <div className="flex flex-col items-center gap-3 py-8 text-center">
       <p className="text-black">{what} could not be loaded.</p>
-      <Button size="sm" onClick={onRetry}>
+      <Button size="sm" busy={refreshing} onClick={onRetry}>
         Retry
       </Button>
     </div>
@@ -57,13 +62,12 @@ function GroupTile({
 function StudentsAndGroups({
   overview,
   onRetry,
-}: {
-  overview: ClassOverview;
-  onRetry: () => void;
-}) {
+  refreshing,
+}: RetryProps & { overview: ClassOverview }) {
   const router = useRouter();
   const { students, groups } = overview;
-  if (!students || !groups) return <Unavailable what="The roster" onRetry={onRetry} />;
+  if (!students || !groups)
+    return <Unavailable what="The roster" onRetry={onRetry} refreshing={refreshing} />;
 
   const byName = (a: Student, b: Student) => (a.f_name || '').localeCompare(b.f_name || '');
   const unassigned = students.filter((s) => s.group_id === null).sort(byName);
@@ -97,10 +101,15 @@ function StudentsAndGroups({
   );
 }
 
-function JobsAndResumes({ overview, onRetry }: { overview: ClassOverview; onRetry: () => void }) {
+function JobsAndResumes({
+  overview,
+  onRetry,
+  refreshing,
+}: RetryProps & { overview: ClassOverview }) {
   const router = useRouter();
   const { jobs, resumes } = overview;
-  if (!jobs || !resumes) return <Unavailable what="Jobs and résumés" onRetry={onRetry} />;
+  if (!jobs || !resumes)
+    return <Unavailable what="Jobs and résumés" onRetry={onRetry} refreshing={refreshing} />;
 
   return (
     <div className="flex flex-col gap-4">
@@ -150,10 +159,8 @@ function SettingRow({
 export function ManageClassPanel({
   overview,
   onRetry,
-}: {
-  overview: ClassOverview;
-  onRetry: () => void;
-}) {
+  refreshing,
+}: RetryProps & { overview: ClassOverview }) {
   const router = useRouter();
   return (
     <Card id="manage-class" className="mt-6 p-6 border border-gray1">
@@ -162,20 +169,20 @@ export function ManageClassPanel({
           <p className="text-sm text-gray3">Managing</p>
           <h2 className="text-2xl font-semibold text-black">Class {overview.crn}</h2>
         </div>
-        <Button size="sm" onClick={() => router.push('/live-class')}>
+        <Button size="sm" onClick={() => router.push(`/live-class?class=${overview.crn}`)}>
           Open live view
         </Button>
       </div>
       <Tabs>
         <div title="Students & groups">
-          <StudentsAndGroups overview={overview} onRetry={onRetry} />
+          <StudentsAndGroups overview={overview} onRetry={onRetry} refreshing={refreshing} />
         </div>
         <div title="Sessions">
           <p className="text-gray4">Set up sessions ahead of time, then start one during class.</p>
           <p className="py-6 text-center text-gray3">No sessions yet.</p>
         </div>
         <div title="Jobs & résumés">
-          <JobsAndResumes overview={overview} onRetry={onRetry} />
+          <JobsAndResumes overview={overview} onRetry={onRetry} refreshing={refreshing} />
         </div>
         <div title="Settings">
           <div className="divide-y divide-gray1 border-y border-gray1">

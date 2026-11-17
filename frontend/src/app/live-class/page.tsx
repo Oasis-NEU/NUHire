@@ -62,6 +62,11 @@ const LiveClass = () => {
     fetchClasses();
   }, [user?.email]);
 
+  useEffect(() => {
+    const crn = new URLSearchParams(window.location.search).get('class');
+    if (crn) setSelectedClass(crn);
+  }, []);
+
   // Polled as well as refreshed over the socket, so a dropped socket cannot leave the page stale.
   useEffect(() => {
     if (!selectedClass) return;

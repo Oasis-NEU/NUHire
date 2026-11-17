@@ -46,7 +46,11 @@ function ClassCard({
         </p>
       </div>
       <div className="flex flex-col gap-2">
-        <Button size="sm" className="w-full" onClick={() => router.push('/live-class')}>
+        <Button
+          size="sm"
+          className="w-full"
+          onClick={() => router.push(`/live-class?class=${overview.crn}`)}
+        >
           Open live view
         </Button>
         <Button size="sm" variant="outline" className="w-full" onClick={onManage}>
@@ -97,7 +101,7 @@ const Dashboard = () => {
         <p className="mt-1.5 text-gray4">One live session per class. Past sessions are saved.</p>
 
         <section aria-label="Classes" className="mt-6">
-          {loading ? (
+          {loading && classes.length === 0 ? (
             <Card className="flex flex-col items-center gap-3 py-12 border border-gray1">
               <Spinner label="Loading your classes" />
               <p className="text-gray3">Loading your classes…</p>
@@ -133,7 +137,9 @@ const Dashboard = () => {
           )}
         </section>
 
-        {!loading && !error && selected && <ManageClassPanel overview={selected} onRetry={retry} />}
+        {!error && selected && (
+          <ManageClassPanel overview={selected} onRetry={retry} refreshing={loading} />
+        )}
 
         <Card className="mt-6 p-6 border border-gray1">
           <h2 className="text-lg font-semibold text-black">Past sessions</h2>
