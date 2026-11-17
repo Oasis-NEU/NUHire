@@ -114,9 +114,18 @@ describe('screening repository', () => {
   function withResults(count = 1, rows: unknown[] = []) {
     const createMany = vi.fn(async () => ({ count }));
     const findMany = vi.fn(async () => rows);
+    const findUnique = vi.fn(async () => rows[0] ?? null);
     const updateMany = vi.fn(async () => ({ count }));
-    const db = { screening_Results: { createMany, findMany, updateMany } } as unknown as DbClient;
-    return { screening: createScreeningRepository(db), createMany, findMany, updateMany };
+    const db = {
+      screening_Results: { createMany, findMany, findUnique, updateMany },
+    } as unknown as DbClient;
+    return {
+      screening: createScreeningRepository(db),
+      createMany,
+      findMany,
+      findUnique,
+      updateMany,
+    };
   }
 
   it('queues each resume as pending under the group, class and posting, skipping ones already there', async () => {
@@ -135,6 +144,17 @@ describe('screening repository', () => {
     const { screening, createMany } = withResults();
     expect(await screening.queue(GROUP, 7, [], 0)).toBe(0);
     expect(createMany).not.toHaveBeenCalled();
+  });
+
+  it('reads whether a queued resume is sample data, as 0 or 1, by its full key', async () => {
+    const sample = withResults(1, [{ is_sample: true }]);
+    expect(await sample.screening.isSample(GROUP, TARGET)).toBe(1);
+    expect(sample.findUnique).toHaveBeenCalledWith({
+      where: { class_group_id_job_id_resume_id: KEY },
+      select: { is_sample: true },
+    });
+    expect(await withResults(1, [{ is_sample: false }]).screening.isSample(GROUP, TARGET)).toBe(0);
+    expect(await withResults(1, []).screening.isSample(GROUP, TARGET)).toBeNull();
   });
 
   it("lists one group's results in one class, with is_sample as 0 or 1 and keywords as strings", async () => {
