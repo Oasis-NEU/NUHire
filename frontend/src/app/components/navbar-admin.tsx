@@ -1,110 +1,148 @@
-'use client'; // Declares that this page is a client component
-import React from 'react'; // Importing React
+'use client';
+import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { useAuth } from './AuthContext';
+import { useLogout } from './useLogout';
+import { PROFESSOR_MENU, PROFESSOR_TABS, isActiveTab } from './professorNav';
 
 const NavbarAdmin = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
-  const router = useRouter();
+  const pathname = usePathname() ?? '';
+  const { user } = useAuth();
+  const logout = useLogout();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutFailed, setLogoutFailed] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+    if (!menuOpen) return;
+    const handleClick = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setMenuOpen(false);
     };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    } else {
-      document.removeEventListener('mousedown', handleClickOutside);
-    }
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKey);
     };
-  }, [isOpen]);
+  }, [menuOpen]);
 
-  const adminLinks = [
-    { label: 'Dashboard', path: '/advisor-dashboard' },
-    { label: 'Profile', path: '/userProfile' },
-    { label: 'Live Class', path: '/live-class' },
-    { label: 'Manage Groups', path: '/grouping' },
-    { label: 'Upload Jobs and Resumes', path: '/new-pdf' },
-    { label: 'Waiting Facts', path: '/adminFacts' },
-  ];
+  const name = [user?.f_name, user?.l_name].filter(Boolean).join(' ') || user?.email || '';
+  const initial = (user?.f_name || user?.email || '?').charAt(0).toUpperCase();
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    setLogoutFailed(false);
+    const ok = await logout();
+    if (!ok) {
+      setLoggingOut(false);
+      setLogoutFailed(true);
+    }
+  };
 
   return (
-    <nav className="navbar w-full relative">
-      {/* Top bar */}
-      <div className="bg-northeasternBlack text-northeasternWhite flex items-center justify-between px-6 py-4 font-rubik border-b-4 border-northeasternRed w-full">
-        <button
-          className="flex items-center gap-2 font-bold text-xl focus:outline-none"
-          onClick={() => setIsOpen((open) => !open)}
-        >
-          <span>Menu</span>
-          <span
-            className={`transform transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
-          >
-            ▶
-          </span>
-        </button>
+    <header className="relative z-40 w-full h-[72px] bg-white border-b border-gray1 flex items-center justify-between px-8">
+      <div className="flex items-center gap-8 h-full">
         <Link
           href="/advisor-dashboard"
-          className="text-3xl font-rubik font-bold text-northeasternRed drop-shadow-lg"
+          aria-label="NUHire home"
+          className="flex items-center gap-1"
         >
-          NUHire
+          <Image src="/nuhire-husky.png" alt="" width={44} height={44} priority />
+          <span className="text-[32px] leading-none font-semibold tracking-tight" aria-hidden>
+            <span className="text-northeasternRed">NU</span>
+            <span className="text-black">Hire</span>
+          </span>
         </Link>
-        <Link
-          href="/userProfile"
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-northeasternRed cursor-pointer transition duration-300 ease-in-out hover:bg-northeasternBlack hover:border-2 hover:border-northeasternRed relative"
+        <nav aria-label="Professor" className="flex items-center gap-8 h-full">
+          {PROFESSOR_TABS.map((tab) => {
+            const active = isActiveTab(tab, pathname);
+            return (
+              <Link
+                key={tab.path}
+                href={tab.path}
+                aria-current={active ? 'page' : undefined}
+                className={`relative h-full flex items-center text-base ${
+                  active ? 'font-semibold text-black' : 'text-gray4 hover:text-black'
+                }`}
+              >
+                {tab.label}
+                {active && (
+                  <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-northeasternRed" />
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      <div ref={menuRef} className="relative">
+        <button
+          type="button"
+          aria-label="Profile menu"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+          className={`size-9 rounded-full bg-red100 text-northeasternRed text-sm font-semibold flex items-center justify-center ${
+            menuOpen ? 'ring-2 ring-northeasternRed' : ''
+          }`}
         >
+          {initial}
+        </button>
+
+        {menuOpen && (
           <div
-            className="w-6 h-6 bg-cover bg-center rounded-full border-2 border-northeasternWhite"
-            style={{
-              backgroundImage: "url('https://cdn-icons-png.flaticon.com/512/847/847969.png')",
-            }}
+            role="menu"
+            className="absolute right-0 top-12 w-[300px] bg-white rounded-2xl shadow-raised border border-gray1 p-2"
           >
-            {' '}
-          </div>
-        </Link>
-      </div>
-      <div
-        ref={dropdownRef}
-        className={`fixed top-0 left-0 z-50 bg-northeasternWhite shadow-lg transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-auto min-w-max border-r-4 border-northeasternRed`}
-        style={{
-          borderTopRightRadius: isOpen ? '1rem' : '0',
-          borderBottomRightRadius: isOpen ? '1rem' : '0',
-          height: '400px',
-          top: '0',
-        }}
-      >
-        <div className="flex flex-col gap-2 pt-6 px-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="font-bold text-xl text-northeasternRed">Menu</span>
+            <div className="flex items-start gap-3 p-3">
+              <span className="size-10 shrink-0 rounded-full bg-northeasternRed text-white font-semibold flex items-center justify-center">
+                {initial}
+              </span>
+              <div className="min-w-0">
+                <p className="font-semibold text-black truncate">{name}</p>
+                <p className="text-sm text-gray3 truncate">{user?.email}</p>
+                <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full bg-red100/60 text-red700 text-xs">
+                  Instructor
+                </span>
+              </div>
+            </div>
+            <div className="border-t border-gray1 my-1" />
+            {PROFESSOR_MENU.map((item) => (
+              <Link
+                key={item.path}
+                href={item.path}
+                role="menuitem"
+                onClick={() => setMenuOpen(false)}
+                className="block px-3 py-2.5 rounded-lg text-black hover:bg-gray0"
+              >
+                {item.label}
+              </Link>
+            ))}
+            <div className="border-t border-gray1 my-1" />
             <button
-              className="text-xl text-gray-500 hover:text-northeasternRed"
-              onClick={() => setIsOpen(false)}
-              aria-label="Close menu"
+              type="button"
+              role="menuitem"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="w-full text-left px-3 py-2.5 rounded-lg text-black hover:bg-gray0 disabled:text-gray2"
             >
-              ✕
+              {loggingOut ? 'Logging out…' : 'Log out'}
             </button>
+            {logoutFailed && (
+              <p role="alert" className="px-3 pb-2 text-sm text-northeasternRed">
+                Could not log out. Try again.
+              </p>
+            )}
           </div>
-          {adminLinks.map((link) => (
-            <button
-              key={link.path}
-              className="block px-4 py-2 font-rubik text-northeasternRed hover:bg-northeasternRed hover:text-northeasternWhite rounded-md text-left"
-              onClick={() => {
-                setIsOpen(false);
-                router.push(link.path);
-              }}
-            >
-              {link.label}
-            </button>
-          ))}
-        </div>
+        )}
       </div>
-    </nav>
+    </header>
   );
 };
 

@@ -60,6 +60,13 @@ export interface ClassInfo {
   class_name: string;
 }
 
+/** A class card on the professor dashboard. A count is null when its request failed. */
+export interface ClassOverview {
+  crn: number;
+  students: number | null;
+  groups: number | null;
+}
+
 /** A row of `Notes`. `id` is `int AUTO_INCREMENT`, not a string. */
 export interface Note {
   id: number;
