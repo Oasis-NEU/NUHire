@@ -1,31 +1,13 @@
 'use client';
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 import Navbar from '../components/navbar';
 import NavbarAdmin from '../components/navbar-admin';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '../components/AuthContext';
 import { PageLoader } from '../components/spinner';
+import { useLogout } from '../components/useLogout';
 
 export default function UserProfile() {
-  const router = useRouter();
   const { user: authUser, loading: userloading } = useAuth();
-
-  const handleLogout = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include', // Ensures cookies clear if using sessions
-      });
-
-      if (response.ok) {
-        router.push('/'); // Redirect to home page
-      } else {
-        console.error('Failed to logout:', response.statusText);
-      }
-    } catch (error) {
-      console.error('Error logging out:', error);
-    }
-  };
+  const handleLogout = useLogout();
 
   if (userloading) {
     return <PageLoader />;
