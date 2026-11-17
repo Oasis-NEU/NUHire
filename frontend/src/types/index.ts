@@ -41,6 +41,7 @@ export interface Student {
   l_name: string;
   group_id: number | null;
   class: number;
+  affiliation: Affiliation;
 }
 
 /** One team, as the admin UI assembles it: a `GroupsInfo` row plus the roster
@@ -60,11 +61,13 @@ export interface ClassInfo {
   class_name: string;
 }
 
-/** A class card on the professor dashboard. A count is null when its request failed. */
+/** A class on the professor dashboard. A list is null when its request failed. */
 export interface ClassOverview {
   crn: number;
-  students: number | null;
-  groups: number | null;
+  students: Student[] | null;
+  groups: number[] | null;
+  jobs: JobOption[] | null;
+  resumes: ResumePdf[] | null;
 }
 
 /** A row of `Notes`. `id` is `int AUTO_INCREMENT`, not a string. */

@@ -1,6 +1,6 @@
 'use client';
 export const dynamic = 'force-dynamic';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import NavbarAdmin from '../components/navbar-admin';
 import { useSocket } from '../components/socketContext';
@@ -9,15 +9,28 @@ import { PageLoader, Spinner } from '../components/spinner';
 import { Button } from '../components/button';
 import { Card } from '../components/card';
 import { useModeratorClasses } from '../components/useModeratorClasses';
+import { ManageClassPanel, plural } from '../components/ManageClassPanel';
 import type { ClassOverview } from '../../types';
 
-const plural = (n: number | null, word: string) =>
-  n === null ? `— ${word}s` : `${n} ${word}${n === 1 ? '' : 's'}`;
+const count = (list: unknown[] | null, word: string) =>
+  list ? plural(list.length, word) : `— ${word}s`;
 
-function ClassCard({ overview }: { overview: ClassOverview }) {
+function ClassCard({
+  overview,
+  selected,
+  onManage,
+}: {
+  overview: ClassOverview;
+  selected: boolean;
+  onManage: () => void;
+}) {
   const router = useRouter();
   return (
-    <Card className="flex flex-col gap-4 p-6 border border-gray1">
+    <Card
+      tone={selected ? 'highlighted' : 'default'}
+      aria-current={selected ? 'true' : undefined}
+      className={`flex flex-col gap-4 p-6 ${selected ? '' : 'border border-gray1'}`}
+    >
       <div className="flex items-center justify-between">
         <span className="px-2.5 py-0.5 rounded-full bg-gray0 border border-gray1 text-xs text-gray4">
           No session
@@ -29,19 +42,14 @@ function ClassCard({ overview }: { overview: ClassOverview }) {
       <div>
         <h2 className="text-xl font-semibold text-black">Class {overview.crn}</h2>
         <p className="text-sm text-gray3">
-          {plural(overview.students, 'student')} · {plural(overview.groups, 'group')}
+          {count(overview.students, 'student')} · {count(overview.groups, 'group')}
         </p>
       </div>
       <div className="flex flex-col gap-2">
         <Button size="sm" className="w-full" onClick={() => router.push('/live-class')}>
           Open live view
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="w-full"
-          onClick={() => router.push('/grouping')}
-        >
+        <Button size="sm" variant="outline" className="w-full" onClick={onManage}>
           Manage class
         </Button>
       </div>
@@ -55,6 +63,13 @@ const Dashboard = () => {
   const { user, loading: userloading } = useAuth();
   const isAdmin = user?.affiliation === 'admin';
   const { classes, loading, error, retry } = useModeratorClasses(isAdmin ? user?.email : undefined);
+  const [selectedCrn, setSelectedCrn] = useState<number | null>(null);
+  const selected = classes.find((c) => c.crn === selectedCrn) ?? classes[0];
+
+  const manage = (crn: number) => {
+    setSelectedCrn(crn);
+    document.getElementById('manage-class')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   useEffect(() => {
     if (!socket || !user?.email) return;
@@ -98,7 +113,12 @@ const Dashboard = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {classes.map((overview) => (
-                <ClassCard key={overview.crn} overview={overview} />
+                <ClassCard
+                  key={overview.crn}
+                  overview={overview}
+                  selected={overview.crn === selected?.crn}
+                  onManage={() => manage(overview.crn)}
+                />
               ))}
               <div className="flex flex-col items-center justify-center gap-1 p-6 min-h-[200px] rounded-2xl border-2 border-dashed border-gray1 text-center">
                 <span className="text-2xl text-gray2" aria-hidden>
@@ -112,6 +132,8 @@ const Dashboard = () => {
             </div>
           )}
         </section>
+
+        {!loading && !error && selected && <ManageClassPanel overview={selected} onRetry={retry} />}
 
         <Card className="mt-6 p-6 border border-gray1">
           <h2 className="text-lg font-semibold text-black">Past sessions</h2>

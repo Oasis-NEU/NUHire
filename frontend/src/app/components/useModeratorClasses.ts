@@ -1,21 +1,21 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { API_BASE_URL } from '../../lib/api';
-import type { ClassOverview } from '../../types';
+import type { ClassOverview, JobOption, ResumePdf, Student } from '../../types';
 
-async function countOf(url: string): Promise<number | null> {
+async function listOf<T>(url: string): Promise<T[] | null> {
   try {
     const response = await fetch(url, { credentials: 'include' });
     if (!response.ok) return null;
     const rows: unknown = await response.json();
-    return Array.isArray(rows) ? rows.length : null;
+    return Array.isArray(rows) ? (rows as T[]) : null;
   } catch (error) {
     console.error(`Error loading ${url}:`, error);
     return null;
   }
 }
 
-// One failed count shows as unknown on its own card instead of failing the page.
+// One failed list shows as unknown on its own class instead of failing the page.
 export function useModeratorClasses(email: string | undefined) {
   const [classes, setClasses] = useState<ClassOverview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,11 +41,19 @@ export function useModeratorClasses(email: string | undefined) {
 
         const overviews = await Promise.all(
           rows.map(async ({ crn }) => {
-            const [students, groups] = await Promise.all([
-              countOf(`${API_BASE_URL}/groups/students-by-class/${crn}`),
-              countOf(`${API_BASE_URL}/groups?class=${crn}`),
+            const [students, groups, jobs, resumes] = await Promise.all([
+              listOf<Student>(`${API_BASE_URL}/groups/students-by-class/${crn}`),
+              listOf<number>(`${API_BASE_URL}/groups?class=${crn}`),
+              listOf<JobOption>(`${API_BASE_URL}/jobs?class_id=${crn}`),
+              listOf<ResumePdf>(`${API_BASE_URL}/resume_pdf?class_id=${crn}`),
             ]);
-            return { crn: Number(crn), students, groups };
+            return {
+              crn: Number(crn),
+              students: students?.filter((s) => s.affiliation !== 'admin') ?? null,
+              groups: groups?.map(Number) ?? null,
+              jobs,
+              resumes,
+            };
           })
         );
         if (!cancelled) setClasses(overviews.sort((a, b) => a.crn - b.crn));
