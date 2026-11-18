@@ -1,7 +1,8 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../../lib/api';
-import type { ClassOverview, JobOption, ResumePdf, Student } from '../../types';
+import type { ClassInfo, ClassOverview, JobOption, ResumePdf, Student } from '../../types';
+import { useModeratorClassList } from './useModeratorClassList';
 
 async function listOf<T>(url: string): Promise<T[] | null> {
   try {
@@ -15,61 +16,47 @@ async function listOf<T>(url: string): Promise<T[] | null> {
   }
 }
 
+const overviewOf = async ({ crn }: ClassInfo): Promise<ClassOverview> => {
+  const [students, groups, jobs, resumes] = await Promise.all([
+    listOf<Student>(`${API_BASE_URL}/groups/students-by-class/${crn}`),
+    listOf<number>(`${API_BASE_URL}/groups?class=${crn}`),
+    listOf<JobOption>(`${API_BASE_URL}/jobs?class_id=${crn}`),
+    listOf<ResumePdf>(`${API_BASE_URL}/resume_pdf?class_id=${crn}`),
+  ]);
+  return {
+    crn: Number(crn),
+    students: students?.filter((s) => s.affiliation !== 'admin') ?? null,
+    groups: groups?.map(Number) ?? null,
+    jobs,
+    resumes,
+  };
+};
+
 // One failed list shows as unknown on its own class instead of failing the page.
 export function useModeratorClasses(email: string | undefined) {
-  const [classes, setClasses] = useState<ClassOverview[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-
-  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  const list = useModeratorClassList(email);
+  // Which class list these overviews were built from, so a new list reads as loading.
+  const [loaded, setLoaded] = useState<{ from: ClassInfo[]; classes: ClassOverview[] } | null>(
+    null
+  );
 
   useEffect(() => {
-    if (!email) return;
+    if (list.loading || list.error) return;
     let cancelled = false;
-
-    const load = async () => {
-      setLoading(true);
-      setError(false);
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/moderator/classes-full/${encodeURIComponent(email)}`,
-          { credentials: 'include' }
-        );
-        if (!response.ok) throw new Error(`classes-full ${response.status}`);
-        const rows: { crn: number }[] = await response.json();
-
-        const overviews = await Promise.all(
-          rows.map(async ({ crn }) => {
-            const [students, groups, jobs, resumes] = await Promise.all([
-              listOf<Student>(`${API_BASE_URL}/groups/students-by-class/${crn}`),
-              listOf<number>(`${API_BASE_URL}/groups?class=${crn}`),
-              listOf<JobOption>(`${API_BASE_URL}/jobs?class_id=${crn}`),
-              listOf<ResumePdf>(`${API_BASE_URL}/resume_pdf?class_id=${crn}`),
-            ]);
-            return {
-              crn: Number(crn),
-              students: students?.filter((s) => s.affiliation !== 'admin') ?? null,
-              groups: groups?.map(Number) ?? null,
-              jobs,
-              resumes,
-            };
-          })
-        );
-        if (!cancelled) setClasses(overviews.sort((a, b) => a.crn - b.crn));
-      } catch (err) {
-        console.error('Error loading classes:', err);
-        if (!cancelled) setError(true);
-      } finally {
-        if (!cancelled) setLoading(false);
+    Promise.all(list.classes.map(overviewOf)).then((overviews) => {
+      if (!cancelled) {
+        setLoaded({ from: list.classes, classes: overviews.sort((a, b) => a.crn - b.crn) });
       }
-    };
-
-    load();
+    });
     return () => {
       cancelled = true;
     };
-  }, [email, attempt]);
+  }, [list.classes, list.loading, list.error]);
 
-  return { classes, loading, error, retry };
+  return {
+    classes: loaded?.classes ?? [],
+    loading: list.loading || (!list.error && loaded?.from !== list.classes),
+    error: list.error,
+    retry: list.retry,
+  };
 }
