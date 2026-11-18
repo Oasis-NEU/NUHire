@@ -3,6 +3,7 @@ import type { Pool } from 'mysql2';
 import type { Response } from 'express';
 import { ResumeController } from '../src/controller/resume.controller';
 import type { AuthRequest } from '../src/models/AuthRequest';
+import { fakeScreens } from './fakeScreens';
 
 // `checked` is the group's shortlist flag, stored on every vote row. A vote row
 // created after the group shortlisted a resume used to start at 0, and the
@@ -42,7 +43,7 @@ describe('submitVote', () => {
     } as unknown as Pool;
     const { res, out, done } = fakeRes();
 
-    new ResumeController(db, io).submitVote(
+    new ResumeController(db, io, fakeScreens().screens).submitVote(
       {
         body: {
           student_id: 9,

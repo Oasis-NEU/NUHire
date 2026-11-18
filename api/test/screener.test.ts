@@ -27,18 +27,17 @@ EXPERIENCE
 Acme Robotics, Software Co-op, Jan 2024 – Jun 2024
 Built REST APIs in Python and SQL; cut triage time by 30%.`;
 
+const SCREEN = { group: { groupId: 3, classId: 101 }, jobId: 7, resumeId: 42, run: 2 };
+
 const REQUEST: ScreenRequest = {
-  group: { groupId: 3, classId: 101 },
-  jobId: 7,
+  screen: SCREEN,
   job: {
     title: 'Backend Co-op',
     text: 'Build REST APIs in Python.',
     keywords: ['Python', 'SQL', 'Docker'],
   },
-  resume: { id: 42, text: REAL_LOOKING, names: ['Jordan', 'Rivera'] },
+  resume: { text: REAL_LOOKING, names: ['Jordan', 'Rivera'] },
 };
-
-const TARGET = { jobId: 7, resumeId: 42 };
 
 const REPLY = {
   strengths: ['"Built REST APIs in Python and SQL" fits the backend work.'],
@@ -54,6 +53,10 @@ function setup(isSample: DbBool | null, ...replies: (string | Error)[]) {
   }
   const screening = {
     queue: vi.fn(),
+    queueAssigned: vi.fn(),
+    replaceJobKeywords: vi.fn(),
+    nextPending: vi.fn(),
+    inputsFor: vi.fn(),
     listForGroup: vi.fn(),
     isSample: vi.fn(async () => isSample),
     saveDone: vi.fn(async () => true),
@@ -69,7 +72,7 @@ describe('screenResume: the real-resume guard', () => {
 
     expect(await screenResume({ ...deps, allowRealResumes: false }, REQUEST)).toBe('refused');
     expect(deps.generate).not.toHaveBeenCalled();
-    expect(deps.screening.markFailed).toHaveBeenCalledWith(REQUEST.group, TARGET);
+    expect(deps.screening.markFailed).toHaveBeenCalledWith(SCREEN);
     expect(deps.screening.saveDone).not.toHaveBeenCalled();
   });
 
@@ -85,7 +88,7 @@ describe('screenResume: the real-resume guard', () => {
   it('reads whether a resume is a sample from its queued row', async () => {
     const deps = setup(1, JSON.stringify(REPLY));
     expect(await screenResume({ ...deps, allowRealResumes: false }, REQUEST)).toBe('done');
-    expect(deps.screening.isSample).toHaveBeenCalledWith(REQUEST.group, TARGET);
+    expect(deps.screening.isSample).toHaveBeenCalledWith(SCREEN.group, SCREEN);
   });
 
   it('sends a real resume once the flag is on', async () => {
@@ -131,13 +134,22 @@ describe('screenResume: the call', () => {
   it("stores the score from code and the reply's fields, whatever score Gemini adds", async () => {
     const deps = setup(1, JSON.stringify({ ...REPLY, score: 100 }));
     expect(await screenResume(deps, REQUEST)).toBe('done');
-    expect(deps.screening.saveDone).toHaveBeenCalledWith(REQUEST.group, TARGET, {
+    expect(deps.screening.saveDone).toHaveBeenCalledWith(SCREEN, {
       score: 67,
       matched_keywords: ['Python', 'SQL'],
       missed_keywords: ['Docker'],
       ai_summary: JSON.stringify(REPLY),
     });
     expect(deps.screening.markFailed).not.toHaveBeenCalled();
+  });
+});
+
+describe('screenResume: a re-run while it ran', () => {
+  it('reports stale, not done, when the row was queued again before the result was saved', async () => {
+    const deps = setup(1, JSON.stringify(REPLY));
+    deps.screening.saveDone.mockResolvedValueOnce(false);
+    expect(await screenResume(deps, REQUEST)).toBe('stale');
+    expect(deps.screening.saveDone).toHaveBeenCalledWith(SCREEN, expect.anything());
   });
 });
 
@@ -163,7 +175,7 @@ describe('screenResume: retries', () => {
 
     expect(await screenResume(deps, REQUEST)).toBe('failed');
     expect(deps.generate).toHaveBeenCalledTimes(2);
-    expect(deps.screening.markFailed).toHaveBeenCalledWith(REQUEST.group, TARGET);
+    expect(deps.screening.markFailed).toHaveBeenCalledWith(SCREEN);
     expect(deps.screening.saveDone).not.toHaveBeenCalled();
   });
 
