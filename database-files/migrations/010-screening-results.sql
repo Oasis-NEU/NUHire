@@ -1,5 +1,5 @@
 -- migrate:up
--- 009: `Screening_Results`, the screener's result for each resume a group
+-- 010: `Screening_Results`, the screener's result for each resume a group
 -- reviews, against the job posting the group is hiring for.
 --
 -- A row starts `pending` when a resume is queued and ends `done` with a score
