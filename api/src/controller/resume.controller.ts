@@ -8,6 +8,7 @@ import { Pool } from 'mysql2';
 import { Server as SocketIOServer } from 'socket.io';
 import fs from 'fs';
 import path from 'path';
+import { extractPdfText } from '../config/pdfText';
 
 export class ResumeController {
   constructor(
@@ -34,7 +35,7 @@ export class ResumeController {
 
     this.db.query(query, [group_id, class_id], (err, results: any[]) => {
       if (err) {
-        console.error('❌ [GET-FINISHED-COUNT] Database error:', err);
+        console.error('Database error reading finished count:', err);
         res.status(500).json({ error: 'Database error' });
         return;
       }
@@ -95,7 +96,7 @@ export class ResumeController {
           ],
           (err) => {
             if (err) {
-              console.error('❌ [BACKEND-VOTE] Error saving vote:', err);
+              console.error('Error saving vote:', err);
               res.status(500).json({ error: 'Database error' });
               return;
             }
@@ -149,7 +150,7 @@ export class ResumeController {
 
     this.db.query(getVotesQuery, [group_id, studentClass], (err, votes: any[]) => {
       if (err) {
-        console.error('❌ [BACKEND-GET-VOTES] Error fetching votes:', err);
+        console.error('Error fetching votes:', err);
         res.status(500).json({ error: err.message });
         return;
       }
@@ -190,7 +191,7 @@ export class ResumeController {
     });
   };
 
-  createResumePdf = (req: AuthRequest, res: Response): void => {
+  createResumePdf = async (req: AuthRequest, res: Response): Promise<void> => {
     const { resTitle, filePath, f_name, l_name, vid, class_id } = req.body;
 
     if (!resTitle || !filePath || !f_name || !l_name || !vid || !class_id) {
@@ -200,8 +201,10 @@ export class ResumeController {
       return;
     }
 
-    const resumeSql = 'INSERT INTO Resume_pdfs (title, file_path, class_id) VALUES (?, ?, ?)';
-    this.db.query(resumeSql, [resTitle, filePath, class_id], (err, resumeResult: any) => {
+    const text = await extractPdfText('Resume_pdfs', filePath);
+    const resumeSql =
+      'INSERT INTO Resume_pdfs (title, file_path, class_id, extracted_text) VALUES (?, ?, ?, ?)';
+    this.db.query(resumeSql, [resTitle, filePath, class_id, text], (err, resumeResult: any) => {
       if (err) {
         console.error('Error inserting resume:', err);
 

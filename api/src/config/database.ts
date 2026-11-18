@@ -14,6 +14,7 @@
 
 import mysql, { Pool, PoolOptions } from 'mysql2';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+import type { ITXClientDenyList } from '@prisma/client/runtime/client';
 import { PrismaClient } from '../generated/prisma/client';
 
 /**
@@ -142,7 +143,7 @@ function positiveIntFromEnv(name: string, fallback: number): number {
   }
   const parsed = Number.parseInt(raw, 10);
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    console.error(`⚠️ ${name}="${raw}" is not a positive integer; falling back to ${fallback}`);
+    console.error(`${name}="${raw}" is not a positive integer; falling back to ${fallback}`);
     return fallback;
   }
   return parsed;
@@ -208,6 +209,15 @@ function createPrismaClient(settings: typeof POOL_DEFAULTS) {
 
 export type PrismaDb = ReturnType<typeof createPrismaClient>;
 
+/**
+ * What a repository queries through: the shared client, or the one
+ * `$transaction` hands its callback. Repositories take this rather than
+ * `PrismaDb`, so the same methods also run inside a transaction. The exception
+ * is a repository with a method that opens a transaction itself: it takes
+ * `PrismaDb`, because a transaction client cannot open another one.
+ */
+export type DbClient = Omit<PrismaDb, ITXClientDenyList>;
+
 export class DatabaseService {
   private pool: Pool | null = null;
   private prisma: PrismaDb | null = null;
@@ -235,19 +245,19 @@ export class DatabaseService {
         this.pool = await this.createPool();
         this.prisma = await this.connectPrisma();
         await this.initializeDatabase();
-        console.log('✅ Database connection pool established successfully');
+        console.info('Database connection pool established successfully');
         return this.pool;
       } catch (error) {
         retryCount++;
-        console.error(`❌ Database pool creation attempt ${retryCount} failed:`, error);
+        console.error(`Database pool creation attempt ${retryCount} failed:`, error);
         await this.closeFailedAttempt();
 
         if (retryCount < this.maxRetries) {
           const delay = Math.min(10000, retryCount * 1000);
-          console.log(`🔄 Retrying in ${delay / 1000} seconds...`);
+          console.warn(`Retrying in ${delay / 1000} seconds...`);
           await this.sleep(delay);
         } else {
-          console.error('❌ All database connection attempts failed. Exiting application.');
+          console.error('All database connection attempts failed. Exiting application.');
           process.exit(1);
         }
       }
@@ -303,7 +313,7 @@ export class DatabaseService {
         },
       };
 
-      console.log(
+      console.info(
         `Creating pool: host=${poolConfig.host}, port=${poolConfig.port}, database=${poolConfig.database}, connectionLimit=${poolConfig.connectionLimit}, queueLimit=${poolConfig.queueLimit}`
       );
 
@@ -319,7 +329,7 @@ export class DatabaseService {
       // Test the pool with a connection
       pool.getConnection((err, connection) => {
         if (err) {
-          console.error('❌ Database pool connection test failed:', err.message);
+          console.error('Database pool connection test failed:', err.message);
           reject(err);
         } else {
           connection.release(); // Release test connection back to pool
@@ -361,15 +371,15 @@ export class DatabaseService {
       // not know the variable just errors, so failure here is not fatal.
       connection.query('SET SESSION max_execution_time = ?', [this.queryTimeoutMs], (err) => {
         if (err) {
-          console.error('⚠️ Could not set max_execution_time on pooled connection:', err.code);
+          console.error('Could not set max_execution_time on pooled connection:', err.code);
         }
       });
     });
 
     pool.on('error', (err) => {
-      console.error('❌ Database pool error:', err);
+      console.error('Database pool error:', err);
       if (err.code === 'PROTOCOL_CONNECTION_LOST') {
-        console.log('🔄 Database connection lost. Pool will reconnect automatically.');
+        console.warn('Database connection lost. Pool will reconnect automatically.');
       } else {
         console.error('Unexpected pool error:', err);
       }

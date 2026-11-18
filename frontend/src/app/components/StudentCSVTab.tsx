@@ -4,8 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Popup from './popup';
 import { useAuth } from './AuthContext';
 import type { ClassInfo } from '../../types';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { API_BASE_URL } from '../../lib/api';
 
 /** Students per group when the professor has not said otherwise. Four members
  *  reviewing ten resumes is what the activity is written for. */
@@ -366,14 +365,14 @@ export function StudentCSVTab() {
         setPopup({ headline: 'Success', message: '✅ Group assignments submitted successfully!' });
       } else {
         const errorData = await response.json();
-        console.error('❌ Response error:', errorData);
+        console.error('Response error:', errorData);
         setPopup({
           headline: 'Error',
           message: `Failed to submit group assignments: ${errorData.error || 'Unknown error'}`,
         });
       }
     } catch (error) {
-      console.error('🔥 Fetch error:', error);
+      console.error('Fetch error:', error);
       setPopup({
         headline: 'Error',
         message: 'An error occurred while submitting group assignments. Please try again.',
