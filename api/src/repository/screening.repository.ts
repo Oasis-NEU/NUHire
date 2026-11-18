@@ -70,6 +70,13 @@ export function createScreeningRepository(db: DbClient): ScreeningRepository {
     },
 
     saveDone: async (group, target, outcome) => {
+      // The column is tinyint unsigned, so MySQL would store 101 to 255 and
+      // round a fraction. Throw rather than return false, which means never queued.
+      if (!Number.isInteger(outcome.score) || outcome.score < 0 || outcome.score > 100) {
+        throw new RangeError(
+          `Screening score must be an integer from 0 to 100, got ${outcome.score}`
+        );
+      }
       const { count } = await db.screening_Results.updateMany({
         where: rowKey(group, target),
         data: {

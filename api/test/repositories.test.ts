@@ -183,6 +183,20 @@ describe('screening repository', () => {
     });
   });
 
+  it('stores scores of 0 and 100 and refuses any other score outside 0 to 100 or a fraction', async () => {
+    const { screening, updateMany } = withResults();
+    const outcome = { matched_keywords: [], missed_keywords: [], ai_summary: null };
+    for (const score of [0, 100]) {
+      expect(await screening.saveDone(GROUP, TARGET, { ...outcome, score })).toBe(true);
+    }
+    for (const score of [-1, 101, 75.5, NaN]) {
+      await expect(screening.saveDone(GROUP, TARGET, { ...outcome, score })).rejects.toThrow(
+        RangeError
+      );
+    }
+    expect(updateMany).toHaveBeenCalledTimes(2);
+  });
+
   it('says so when a result is written for a resume that was never queued', async () => {
     const { screening } = withResults(0);
     expect(
