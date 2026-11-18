@@ -1,5 +1,6 @@
 import { DbBool } from './DbBool';
 import { GroupKey } from './GroupKey';
+import { ScreenerReply } from './ScreenerReply';
 
 export type ScreeningStatus = 'pending' | 'done' | 'failed';
 
@@ -62,4 +63,18 @@ export interface KeywordChange {
   requeued: number;
   /** Results deleted because the posting now has no keywords. */
   cleared: number;
+}
+
+/**
+ * A result as the read endpoints send it. `summary` is Gemini's reply, null
+ * until the screen is done; `score` and the keyword lists are from code.
+ */
+export interface ScreeningView {
+  job_id: number;
+  resume_id: number;
+  status: ScreeningStatus;
+  score: number | null;
+  matched_keywords: string[];
+  missed_keywords: string[];
+  summary: ScreenerReply | null;
 }
