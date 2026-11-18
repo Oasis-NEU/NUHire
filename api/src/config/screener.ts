@@ -22,7 +22,7 @@ import { askGemini, GeminiClient } from './gemini';
 import { matchKeywords } from './keywordMatch';
 import { screenerInstructions } from './screenerPrompt';
 import { ScreeningRepository } from '../repository/screening.repository';
-import { GroupKey } from '../models/GroupKey';
+import { ScreeningRun } from '../models/Screening';
 import { ScreenerReply } from '../models/ScreenerReply';
 
 /** Off unless set to exactly "true", so a deploy that leaves it unset sends no real resume. */
@@ -32,11 +32,11 @@ export const realResumesAllowed = (env: NodeJS.ProcessEnv = process.env): boolea
 const ATTEMPTS = 2;
 
 export interface ScreenRequest {
-  group: GroupKey;
-  jobId: number;
+  /** The queued row and the run it was queued on. */
+  screen: ScreeningRun;
   job: { title: string; text: string; keywords: readonly string[] };
   /** `names` are the candidate's own, from their Candidates row. */
-  resume: { id: number; text: string; names: readonly string[] };
+  resume: { text: string; names: readonly string[] };
 }
 
 export interface ScreenerDeps {
@@ -50,8 +50,9 @@ export interface ScreenerDeps {
  * - `failed`: Gemini failed twice, or the prompt could not be read; the row is failed
  * - `refused`: not sample data while real resumes are off; never sent, the row is failed
  * - `not_queued`: no row for this resume, group and posting; nothing sent or stored
+ * - `stale`: queued again while it ran, so its result was dropped for the new run
  */
-export type ScreenResult = 'done' | 'failed' | 'refused' | 'not_queued';
+export type ScreenResult = 'done' | 'failed' | 'refused' | 'not_queued' | 'stale';
 
 const isStringList = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === 'string' && item.trim() !== '');
@@ -73,18 +74,18 @@ export function parseScreenerReply(raw: string): ScreenerReply | null {
 
 export async function screenResume(
   { client, screening, allowRealResumes = realResumesAllowed() }: ScreenerDeps,
-  { group, jobId, job, resume }: ScreenRequest
+  { screen, job, resume }: ScreenRequest
 ): Promise<ScreenResult> {
-  const where = `group ${group.groupId}, class ${group.classId}, job ${jobId}, resume ${resume.id}`;
-  const target = { jobId, resumeId: resume.id };
+  const { group, jobId, resumeId } = screen;
+  const where = `group ${group.groupId}, class ${group.classId}, job ${jobId}, resume ${resumeId}`;
 
-  const isSample = await screening.isSample(group, target);
+  const isSample = await screening.isSample(group, screen);
   if (isSample === null) return 'not_queued';
   if (isSample === 0 && !allowRealResumes) {
     console.warn(
       `Screener refused ${where}: not sample data, and SCREENER_ALLOW_REAL_RESUMES is off`
     );
-    await screening.markFailed(group, target);
+    await screening.markFailed(screen);
     return 'refused';
   }
 
@@ -94,19 +95,19 @@ export async function screenResume(
     instructions = await screenerInstructions(job, match);
   } catch (err) {
     console.error(`Screener could not build instructions for ${where}:`, err);
-    await screening.markFailed(group, target);
+    await screening.markFailed(screen);
     return 'failed';
   }
 
   const reply = await askUntilValid(client, instructions, resume, where);
   if (!reply) {
     console.error(`Screener gave up on ${where} after ${ATTEMPTS} attempts`);
-    await screening.markFailed(group, target);
+    await screening.markFailed(screen);
     return 'failed';
   }
   // Outside the retries: a failed write must not send the resume to Gemini again.
-  await screening.saveDone(group, target, { ...match, ai_summary: JSON.stringify(reply) });
-  return 'done';
+  const saved = await screening.saveDone(screen, { ...match, ai_summary: JSON.stringify(reply) });
+  return saved ? 'done' : 'stale';
 }
 
 /** Gemini's reply, asked for up to ATTEMPTS times; null if none was a ScreenerReply. */

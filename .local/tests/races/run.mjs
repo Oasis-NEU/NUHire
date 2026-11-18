@@ -13,8 +13,9 @@ import { SeedError, run, say } from '../lib/util.mjs';
 import { RACE_CLASS_MIN, ROUNDS, WRITERS, outcome } from './harness.mjs';
 import facts from './cases/facts.mjs';
 import writes from './cases/writes.mjs';
+import screening from './cases/screening.mjs';
 
-const AREAS = [writes, facts];
+const AREAS = [writes, facts, screening];
 
 const fromApi = createRequire(path.join(ROOT, 'api/package.json'));
 
