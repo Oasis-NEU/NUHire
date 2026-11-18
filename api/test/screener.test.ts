@@ -58,6 +58,7 @@ function setup(isSample: DbBool | null, ...replies: (string | Error)[]) {
     nextPending: vi.fn(),
     inputsFor: vi.fn(),
     listForGroup: vi.fn(),
+    findOne: vi.fn(),
     isSample: vi.fn(async () => isSample),
     saveDone: vi.fn(async () => true),
     markFailed: vi.fn(async () => true),

@@ -47,6 +47,7 @@ function database(resumeIds: number[], { keywords = ['Python', 'SQL'], isSample 
     queue: vi.fn(),
     queueAssigned: vi.fn(),
     listForGroup: vi.fn(),
+    findOne: vi.fn(),
     // What the keyword endpoint commits: new keywords, and every row queued again.
     replaceJobKeywords: vi.fn(async (_classId: number, _jobId: number, keywords: string[]) => {
       job.keywords = keywords;

@@ -31,6 +31,7 @@ import uploadRoutes, { uploadedFileRoutes } from './routes/upload.routes';
 import csvRoutes from './routes/csv.routes';
 import deleteRoutes from './routes/delete.routes';
 import factsRoutes from './routes/facts.routes';
+import screeningRoutes from './routes/screening.routes';
 
 const routeCallCount: Record<string, number> = {};
 const routeCallTimestamps: Record<string, number[]> = {};
@@ -219,6 +220,7 @@ export class App {
     this.app.use('/uploads', uploadedFileRoutes());
     this.app.use('/csv', csvRoutes(this.db, this.io));
     this.app.use('/facts', factsRoutes(this.prisma, this.io));
+    this.app.use('/screening', screeningRoutes(this.db, this.screens));
     this.app.use('/delete', deleteRoutes(this.db, this.io, this.onlineStudents, this.screens));
 
     // Last. A throw inside a route used to become an unhandled rejection with

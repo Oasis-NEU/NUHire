@@ -3,6 +3,8 @@
 import { Response } from 'express';
 import { AuthRequest } from '../models/AuthRequest';
 import { queueScreens, Screens } from '../config/screeningQueue';
+import { parseScreenerReply } from '../config/screener';
+import { ScreeningResult, ScreeningView } from '../models/Screening';
 
 // Long enough for any real skill or tool, short enough that a pasted
 // paragraph is rejected rather than stored as one keyword.
@@ -23,6 +25,19 @@ function parseKeywords(value: unknown): string[] | null {
   }
   return words;
 }
+
+// The stored reply is checked again on the way out, so a row written by an
+// older shape reads as no summary rather than breaking the page.
+const toView = (result: ScreeningResult): ScreeningView => ({
+  job_id: result.job_id,
+  resume_id: result.resume_id,
+  status: result.status,
+  score: result.score,
+  matched_keywords: result.matched_keywords,
+  missed_keywords: result.missed_keywords,
+  summary:
+    result.status === 'done' && result.ai_summary ? parseScreenerReply(result.ai_summary) : null,
+});
 
 export class ScreeningController {
   constructor(private screens: Screens) {}
@@ -59,6 +74,50 @@ export class ScreeningController {
     } catch (err) {
       console.error(`Could not set keywords for job ${jobId} in class ${classId}:`, err);
       res.status(500).json({ error: 'Could not save the keywords' });
+    }
+  };
+
+  // GET /screening/:classId/:groupId/jobs/:jobId
+  // requireGroupMember has checked the class and group against the caller.
+  listResults = async (req: AuthRequest, res: Response): Promise<void> => {
+    const group = { classId: Number(req.params.classId), groupId: Number(req.params.groupId) };
+    const jobId = positiveInt(req.params.jobId);
+    if (jobId === null) {
+      res.status(400).json({ error: 'jobId must be a positive integer' });
+      return;
+    }
+    try {
+      const results = await this.screens.screening.listForGroup(group, jobId);
+      res.json(results.map(toView));
+    } catch (err) {
+      console.error(`Could not list screening results for job ${jobId}:`, group, err);
+      res.status(500).json({ error: 'Could not load the screening results' });
+    }
+  };
+
+  // GET /screening/:classId/:groupId/jobs/:jobId/resumes/:resumeId
+  getResult = async (req: AuthRequest, res: Response): Promise<void> => {
+    const group = { classId: Number(req.params.classId), groupId: Number(req.params.groupId) };
+    const jobId = positiveInt(req.params.jobId);
+    const resumeId = positiveInt(req.params.resumeId);
+    if (jobId === null || resumeId === null) {
+      res.status(400).json({ error: 'jobId and resumeId must be positive integers' });
+      return;
+    }
+    try {
+      const result = await this.screens.screening.findOne(group, { jobId, resumeId });
+      if (!result) {
+        res.status(404).json({ error: 'No screening result for this resume' });
+        return;
+      }
+      res.json(toView(result));
+    } catch (err) {
+      console.error(
+        `Could not load screening result for job ${jobId}, resume ${resumeId}:`,
+        group,
+        err
+      );
+      res.status(500).json({ error: 'Could not load the screening result' });
     }
   };
 }

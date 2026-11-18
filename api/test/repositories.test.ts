@@ -177,6 +177,22 @@ describe('screening repository', () => {
     );
   });
 
+  it("fetches one result by the group's full key, or null if it was never queued", async () => {
+    const stored = {
+      ...KEY,
+      status: 'done',
+      score: 67,
+      matched_keywords: ['Python'],
+      missed_keywords: [],
+      ai_summary: '{}',
+      is_sample: true,
+    };
+    const { screening, findUnique } = withResults(1, [stored]);
+    expect(await screening.findOne(GROUP, TARGET)).toEqual({ ...stored, is_sample: 1 });
+    expect(findUnique).toHaveBeenCalledWith({ where: { class_group_id_job_id_resume_id: KEY } });
+    expect(await withResults(1, []).screening.findOne(GROUP, TARGET)).toBeNull();
+  });
+
   it('stores a finished screen on the queued row', async () => {
     const { screening, updateMany } = withResults();
     const outcome = {

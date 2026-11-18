@@ -50,6 +50,8 @@ export interface ScreeningRepository {
   isSample(group: GroupKey, target: ScreeningTarget): Promise<DbBool | null>;
   /** The group's results against one posting, by resume id. */
   listForGroup(group: GroupKey, jobId: number): Promise<ScreeningResult[]>;
+  /** The group's result for one resume against one posting; null if never queued. */
+  findOne(group: GroupKey, target: ScreeningTarget): Promise<ScreeningResult | null>;
   /**
    * Stores a finished screen on the run it started on. False if the resume
    * was never queued or has been queued again since.
@@ -228,6 +230,13 @@ export function createScreeningRepository(db: PrismaDb): ScreeningRepository {
         orderBy: { resume_id: 'asc' },
       });
       return rows.map(toResult);
+    },
+
+    findOne: async (group, target) => {
+      const row = await db.screening_Results.findUnique({
+        where: { class_group_id_job_id_resume_id: rowKey(group, target) },
+      });
+      return row ? toResult(row) : null;
     },
 
     saveDone: async (screen, outcome) => {
