@@ -328,11 +328,11 @@ One of the five is fixed (`Resume` now has a unique key, migration `001`). Four
 remain, each of which independently corrupts a live class:
 
 - `GroupsInfo`'s "unique" key is `(class_id, id)` where `id` is the PK, so it constrains nothing
-- `Interview_Status`, `Offer_Status`, `Res2_Status` use `PRIMARY KEY (student_id)`, one row per student **globally**, so a student in two classes overwrites themselves
+- `Interview_Status` uses `PRIMARY KEY (student_id)`, one row per student **globally**, so a student in two classes overwrites themselves
 - `Offers` has no unique key on `(class_id, group_id)`, so two members clicking submit still create two pending rows
 - `Progress` is keyed on `email` but queried by `(crn, group_id)`, and never updates those on conflict, so a reassigned student keeps a stale group forever
 - [ ] Real `UNIQUE (class_id, group_id)` on `GroupsInfo` and `Offers`
-- [ ] Composite PKs on the three `*_Status` tables
+- [ ] Composite PK on `Interview_Status`
 - [ ] `getFinishedCount` uses `COUNT(DISTINCT resume_number)`, not `COUNT(*)`
 - [ ] Each change ships with a test proving the specific bug is fixed
 
@@ -382,7 +382,7 @@ Zero hot paths are indexed. `Interview_Status.group_id` is `varchar(45)` while
 everywhere else it is `int`, forcing a conversion that defeats indexing anyway.
 
 - [ ] Indexes on `Users(class, group_id)`, `Resume(group_id, class)`, `InterviewPage`, `Interview_Status`, `Offers`, `Progress(crn, group_id)`
-- [ ] `Interview_Status.group_id` and `Offer_Status.group_id` to `int`
+- [ ] `Interview_Status.group_id` to `int`
 - [ ] `EXPLAIN` before and after in the PR, against the 30-student fixture
 
 **API-11 [MED] 8h — Make boot-time seeding idempotent and opt-in** — deps: INFRA-10
