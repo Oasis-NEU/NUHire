@@ -10,7 +10,8 @@
 //   and "Node.js" are words of their own, and a full stop is not.
 // - A regular plural matches its singular either way: -s, -es and -ies, so
 //   "database" matches "databases", "box" matches "boxes", and "technology"
-//   matches "technologies".
+//   matches "technologies". Words in NO_PLURAL keep their s, so "Windows"
+//   does not match a "maintenance window".
 // - A keyword matches its synonyms too (SYNONYMS below).
 // - Keywords that differ only in case, plural or synonym count once, listed as
 //   first given. A keyword with no words in it, such as "  ", is ignored.
@@ -18,16 +19,16 @@
 //   and a posting without keywords is not shown to students.
 // - An empty resume matches nothing.
 
-export interface KeywordMatch {
-  score: number;
-  /** Keywords found in the resume, as given and in the order given. */
-  matched: string[];
-  /** Keywords not found, as given and in the order given. */
-  missed: string[];
-}
+import { ScreeningOutcome } from '../models/Screening';
+
+/** The keywords in each list are as given, in the order given. */
+export type KeywordMatch = Omit<ScreeningOutcome, 'ai_summary'>;
 
 // Spellings that mean the same skill. Lowercase; one group per line.
 const SYNONYMS: readonly (readonly string[])[] = [['js', 'javascript']];
+
+// Names that end in s but are not the plural of a skill. Lowercase.
+const NO_PLURAL = new Set(['windows']);
 
 const WORD = /[\p{L}\p{N}][\p{L}\p{N}+#]*(?:\.[\p{L}\p{N}+#]+)*/gu;
 
@@ -37,6 +38,7 @@ const toWords = (text: string): string[] => text.toLowerCase().match(WORD) ?? []
 // match when they share one, which works in both directions.
 function forms(word: string): string[] {
   const out = [word];
+  if (NO_PLURAL.has(word)) return out;
   if (word.length > 4 && word.endsWith('ies')) out.push(`${word.slice(0, -3)}y`);
   if (/(?:[sxz]|ch|sh)es$/.test(word)) out.push(word.slice(0, -2));
   // Not -ss ("class"), and not a word of three letters or fewer ("aws", "ios").
@@ -75,7 +77,7 @@ export function matchKeywords(resumeText: string, keywords: readonly string[]): 
     if (!duplicate) distinct.push({ label: keyword.trim(), spellings: candidate });
   }
 
-  if (distinct.length === 0) return { score: 0, matched: [], missed: [] };
+  if (distinct.length === 0) return { score: 0, matched_keywords: [], missed_keywords: [] };
 
   const resume = toWords(resumeText).map(forms);
   const matched: string[] = [];
@@ -87,5 +89,9 @@ export function matchKeywords(resumeText: string, keywords: readonly string[]): 
       missed.push(label);
     }
   }
-  return { score: Math.round((100 * matched.length) / distinct.length), matched, missed };
+  return {
+    score: Math.round((100 * matched.length) / distinct.length),
+    matched_keywords: matched,
+    missed_keywords: missed,
+  };
 }

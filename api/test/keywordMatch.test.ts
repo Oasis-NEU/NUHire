@@ -8,8 +8,8 @@ describe('matchKeywords', () => {
   it('scores the share of keywords found, from 0 to 100, keeping their order and spelling', () => {
     expect(matchKeywords('Python and SQL on Linux', ['SQL', 'Go', 'Python', 'Rust'])).toEqual({
       score: 50,
-      matched: ['SQL', 'Python'],
-      missed: ['Go', 'Rust'],
+      matched_keywords: ['SQL', 'Python'],
+      missed_keywords: ['Go', 'Rust'],
     });
     expect(matchKeywords('python', ['python']).score).toBe(100);
     expect(matchKeywords('python', ['rust']).score).toBe(0);
@@ -21,18 +21,20 @@ describe('matchKeywords', () => {
   });
 
   it('ignores case on both sides', () => {
-    expect(matchKeywords('Built a REST API in PYTHON', ['python', 'rest api']).matched).toEqual([
-      'python',
-      'rest api',
-    ]);
-    expect(matchKeywords('built in python', ['Python']).matched).toEqual(['Python']);
+    expect(
+      matchKeywords('Built a REST API in PYTHON', ['python', 'rest api']).matched_keywords
+    ).toEqual(['python', 'rest api']);
+    expect(matchKeywords('built in python', ['Python']).matched_keywords).toEqual(['Python']);
   });
 
   it('matches whole words only', () => {
-    expect(matchKeywords('Wrote JavaScript', ['Java']).missed).toEqual(['Java']);
-    expect(matchKeywords('a good team player', ['Go']).missed).toEqual(['Go']);
-    expect(matchKeywords('C++ and C# developer', ['C']).missed).toEqual(['C']);
-    expect(matchKeywords('Golang, Go and Java.', ['Go', 'Java']).matched).toEqual(['Go', 'Java']);
+    expect(matchKeywords('Wrote JavaScript', ['Java']).missed_keywords).toEqual(['Java']);
+    expect(matchKeywords('a good team player', ['Go']).missed_keywords).toEqual(['Go']);
+    expect(matchKeywords('C++ and C# developer', ['C']).missed_keywords).toEqual(['C']);
+    expect(matchKeywords('Golang, Go and Java.', ['Go', 'Java']).matched_keywords).toEqual([
+      'Go',
+      'Java',
+    ]);
   });
 
   it('keeps C++, C# and Node.js as words, and drops a full stop', () => {
@@ -62,39 +64,51 @@ describe('matchKeywords', () => {
 
   it('does not strip -s from -ss words or short words', () => {
     // Sass is a stylesheet language, SAS a statistics package; iOS is not IO.
-    expect(matchKeywords('Styled with Sass', ['SAS']).missed).toEqual(['SAS']);
-    expect(matchKeywords('Async IO in Rust', ['iOS']).missed).toEqual(['iOS']);
+    expect(matchKeywords('Styled with Sass', ['SAS']).missed_keywords).toEqual(['SAS']);
+    expect(matchKeywords('Async IO in Rust', ['iOS']).missed_keywords).toEqual(['iOS']);
+  });
+
+  it('does not read Windows as the plural of window, either way', () => {
+    expect(matchKeywords('Scheduled a maintenance window', ['Windows']).score).toBe(0);
+    expect(matchKeywords('Administered Windows servers', ['window']).score).toBe(0);
+    expect(matchKeywords('Administered Windows servers', ['windows']).score).toBe(100);
   });
 
   it('matches JS and JavaScript as synonyms, either way round', () => {
-    expect(matchKeywords('Frontend in JavaScript', ['JS']).matched).toEqual(['JS']);
-    expect(matchKeywords('Frontend in JS', ['JavaScript']).matched).toEqual(['JavaScript']);
+    expect(matchKeywords('Frontend in JavaScript', ['JS']).matched_keywords).toEqual(['JS']);
+    expect(matchKeywords('Frontend in JS', ['JavaScript']).matched_keywords).toEqual([
+      'JavaScript',
+    ]);
   });
 
   it('counts a keyword once when it repeats by case, plural or synonym', () => {
     expect(matchKeywords('python', ['Python', 'python', 'Pythons'])).toEqual({
       score: 100,
-      matched: ['Python'],
-      missed: [],
+      matched_keywords: ['Python'],
+      missed_keywords: [],
     });
-    expect(matchKeywords('', ['JS', 'JavaScript']).missed).toEqual(['JS']);
+    expect(matchKeywords('', ['JS', 'JavaScript']).missed_keywords).toEqual(['JS']);
   });
 
   it('scores an empty resume 0, with every keyword missed', () => {
     expect(matchKeywords('', ['Python', 'SQL'])).toEqual({
       score: 0,
-      matched: [],
-      missed: ['Python', 'SQL'],
+      matched_keywords: [],
+      missed_keywords: ['Python', 'SQL'],
     });
     expect(matchKeywords('   \n  ', ['Python']).score).toBe(0);
   });
 
   it('scores an empty keyword list 0, with both lists empty', () => {
-    expect(matchKeywords('Python and SQL', [])).toEqual({ score: 0, matched: [], missed: [] });
+    expect(matchKeywords('Python and SQL', [])).toEqual({
+      score: 0,
+      matched_keywords: [],
+      missed_keywords: [],
+    });
     expect(matchKeywords('Python and SQL', ['  ', '!!'])).toEqual({
       score: 0,
-      matched: [],
-      missed: [],
+      matched_keywords: [],
+      missed_keywords: [],
     });
   });
 });
