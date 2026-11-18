@@ -4,9 +4,8 @@ import { useRouter } from 'next/navigation';
 import Tabs from './tabs';
 import { Button } from './button';
 import { Card } from './card';
+import { plural } from '../../lib/plural';
 import type { ClassOverview, Student } from '../../types';
-
-export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 const fullName = (s: Student) => [s.f_name, s.l_name].filter(Boolean).join(' ') || s.email;
 

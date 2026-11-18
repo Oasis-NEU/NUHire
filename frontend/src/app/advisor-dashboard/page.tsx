@@ -9,7 +9,8 @@ import { PageLoader, Spinner } from '../components/spinner';
 import { Button } from '../components/button';
 import { Card } from '../components/card';
 import { useModeratorClasses } from '../components/useModeratorClasses';
-import { ManageClassPanel, plural } from '../components/ManageClassPanel';
+import { ManageClassPanel } from '../components/ManageClassPanel';
+import { plural } from '../../lib/plural';
 import type { ClassOverview } from '../../types';
 
 const count = (list: unknown[] | null, word: string) =>
