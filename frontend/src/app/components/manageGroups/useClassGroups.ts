@@ -15,7 +15,7 @@ export function useClassGroups(
   setPopup: (popup: { headline: string; message: string } | null) => void
 ) {
   const [selectedClass, setSelectedClass] = useState<string>('');
-  const { classes } = useModeratorClassList(user?.email);
+  const { classes } = useModeratorClassList(user?.email, setPopup);
   const [groups, setGroups] = useState<Group[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [availableGroups, setAvailableGroups] = useState<number[]>([]);

@@ -29,7 +29,7 @@ const Upload = () => {
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [resumes, setResumes] = useState<Resume[]>([]);
-  const { classes } = useModeratorClassList(user?.email);
+  const { classes } = useModeratorClassList(user?.email, setPopup);
   const [selectedClass, setSelectedClass] = useState('');
 
   // Separate states for Job Description

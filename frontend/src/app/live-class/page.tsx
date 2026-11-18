@@ -24,7 +24,6 @@ const UNSTICK_STEPS: Step[] = ['res_1', 'res_2', 'interview'];
 const LiveClass = () => {
   const { user, loading: userloading } = useAuth();
   const socket = useSocket();
-  const { classes } = useModeratorClassList(user?.email);
   const [selectedClass, setSelectedClass] = useState('');
   const [students, setStudents] = useState<LiveStudent[]>([]);
   const [groupSteps, setGroupSteps] = useState<Record<number, Step>>({});
@@ -43,6 +42,7 @@ const LiveClass = () => {
   const latestRequest = useRef(0);
   const [unsticking, setUnsticking] = useState(false);
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
+  const { classes } = useModeratorClassList(user?.email, setPopup);
 
   useEffect(() => {
     const crn = new URLSearchParams(window.location.search).get('class');

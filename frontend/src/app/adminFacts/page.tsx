@@ -8,24 +8,19 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function AdminFactsPage() {
   const { user } = useAuth();
-  const {
-    classes,
-    loading,
-    error: classesError,
-  } = useModeratorClassList(user?.affiliation === 'admin' ? user.email : undefined);
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [facts, setFacts] = useState(['', '', '']);
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
+  const { classes, loading } = useModeratorClassList(
+    user?.affiliation === 'admin' ? user.email : undefined,
+    setPopup
+  );
   const [currentFacts, setCurrentFacts] = useState<{
     one: string;
     two: string;
     three: string;
   } | null>(null);
   const socket = useSocket();
-
-  useEffect(() => {
-    if (classesError) setPopup({ headline: 'Error', message: 'Failed to fetch classes.' });
-  }, [classesError]);
 
   // Fetch current saved facts for the selected class
   useEffect(() => {

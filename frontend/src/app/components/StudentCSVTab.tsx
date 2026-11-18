@@ -34,9 +34,9 @@ export function StudentCSVTab() {
   const [submitSuccess, setSubmitSuccess] = useState(false); // Add submit success state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, loading: userloading } = useAuth();
-  const { classes } = useModeratorClassList(user?.email);
 
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
+  const { classes } = useModeratorClassList(user?.email, setPopup);
   // Held as the raw string the professor typed, not a number. When this was a
   // number coerced on every keystroke, clearing the box parsed '' as NaN and
   // wrote the default 4 back before the next key, so select-all, Backspace,
