@@ -2,7 +2,7 @@ import { DbClient } from '../config/database';
 import { Prisma, Screening_Results } from '../generated/prisma/client';
 import { DbBool } from '../models/DbBool';
 import { GroupKey } from '../models/GroupKey';
-import { ScreeningOutcome, ScreeningResult } from '../models/Screening';
+import { ScreeningOutcome, ScreeningResult, ScreeningTarget } from '../models/Screening';
 
 export interface ScreeningRepository {
   /**
@@ -13,20 +13,15 @@ export interface ScreeningRepository {
   /** The group's results against one posting, by resume id. */
   listForGroup(group: GroupKey, jobId: number): Promise<ScreeningResult[]>;
   /** Stores a finished screen. False if the resume was never queued. */
-  saveDone(
-    group: GroupKey,
-    jobId: number,
-    resumeId: number,
-    outcome: ScreeningOutcome
-  ): Promise<boolean>;
+  saveDone(group: GroupKey, target: ScreeningTarget, outcome: ScreeningOutcome): Promise<boolean>;
   /**
    * Marks a screen failed and clears any earlier result, so a failed row never
    * shows a stale score. False if the resume was never queued.
    */
-  markFailed(group: GroupKey, jobId: number, resumeId: number): Promise<boolean>;
+  markFailed(group: GroupKey, target: ScreeningTarget): Promise<boolean>;
 }
 
-const rowKey = ({ groupId, classId }: GroupKey, jobId: number, resumeId: number) => ({
+const rowKey = ({ groupId, classId }: GroupKey, { jobId, resumeId }: ScreeningTarget) => ({
   class: classId,
   group_id: groupId,
   job_id: jobId,
@@ -58,7 +53,7 @@ export function createScreeningRepository(db: DbClient): ScreeningRepository {
       if (resumeIds.length === 0) return 0;
       const { count } = await db.screening_Results.createMany({
         data: resumeIds.map((resumeId) => ({
-          ...rowKey(group, jobId, resumeId),
+          ...rowKey(group, { jobId, resumeId }),
           is_sample: isSample === 1,
         })),
         skipDuplicates: true,
@@ -74,9 +69,9 @@ export function createScreeningRepository(db: DbClient): ScreeningRepository {
       return rows.map(toResult);
     },
 
-    saveDone: async (group, jobId, resumeId, outcome) => {
+    saveDone: async (group, target, outcome) => {
       const { count } = await db.screening_Results.updateMany({
-        where: rowKey(group, jobId, resumeId),
+        where: rowKey(group, target),
         data: {
           status: 'done',
           score: outcome.score,
@@ -88,9 +83,9 @@ export function createScreeningRepository(db: DbClient): ScreeningRepository {
       return count > 0;
     },
 
-    markFailed: async (group, jobId, resumeId) => {
+    markFailed: async (group, target) => {
       const { count } = await db.screening_Results.updateMany({
-        where: rowKey(group, jobId, resumeId),
+        where: rowKey(group, target),
         data: {
           status: 'failed',
           score: null,

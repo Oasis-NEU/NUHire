@@ -109,6 +109,7 @@ describe('pdf text repository', () => {
 describe('screening repository', () => {
   const GROUP = { groupId: 3, classId: 101 };
   const KEY = { class: 101, group_id: 3, job_id: 7, resume_id: 42 };
+  const TARGET = { jobId: 7, resumeId: 42 };
 
   function withResults(count = 1, rows: unknown[] = []) {
     const createMany = vi.fn(async () => ({ count }));
@@ -163,13 +164,13 @@ describe('screening repository', () => {
       missed_keywords: ['python'],
       ai_summary: 'Strong on systems.',
     };
-    expect(await screening.saveDone(GROUP, 7, 42, outcome)).toBe(true);
+    expect(await screening.saveDone(GROUP, TARGET, outcome)).toBe(true);
     expect(updateMany).toHaveBeenCalledWith({ where: KEY, data: { status: 'done', ...outcome } });
   });
 
   it('marks a screen failed and clears any earlier result', async () => {
     const { screening, updateMany } = withResults();
-    expect(await screening.markFailed(GROUP, 7, 42)).toBe(true);
+    expect(await screening.markFailed(GROUP, TARGET)).toBe(true);
     expect(updateMany).toHaveBeenCalledWith({
       where: KEY,
       data: {
@@ -185,13 +186,13 @@ describe('screening repository', () => {
   it('says so when a result is written for a resume that was never queued', async () => {
     const { screening } = withResults(0);
     expect(
-      await screening.saveDone(GROUP, 7, 42, {
+      await screening.saveDone(GROUP, TARGET, {
         score: 1,
         matched_keywords: [],
         missed_keywords: [],
         ai_summary: null,
       })
     ).toBe(false);
-    expect(await screening.markFailed(GROUP, 7, 42)).toBe(false);
+    expect(await screening.markFailed(GROUP, TARGET)).toBe(false);
   });
 });

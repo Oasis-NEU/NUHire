@@ -18,10 +18,14 @@ export interface ScreeningResult {
   is_sample: DbBool;
 }
 
-/** What a finished screen stores. */
-export interface ScreeningOutcome {
-  score: number;
-  matched_keywords: string[];
-  missed_keywords: string[];
-  ai_summary: string | null;
+/** Which resume, screened against which posting. One object, so the two ids cannot be swapped. */
+export interface ScreeningTarget {
+  jobId: number;
+  resumeId: number;
 }
+
+/** What a finished screen stores. */
+export type ScreeningOutcome = Pick<
+  ScreeningResult,
+  'matched_keywords' | 'missed_keywords' | 'ai_summary'
+> & { score: number };
