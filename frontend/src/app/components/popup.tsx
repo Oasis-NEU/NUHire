@@ -1,6 +1,9 @@
 'use client';
 
 import React from 'react';
+import { Button } from './button';
+import { Card } from './card';
+import { Modal } from './modal';
 
 interface PopupProps {
   headline: string;
@@ -11,6 +14,8 @@ interface PopupProps {
   busy?: boolean;
 }
 
+// The Figma library has no popup yet, so this is built from its parts: the
+// highlighted card, a sub-header, body text and the library's buttons.
 const Popup = ({
   headline,
   message,
@@ -18,38 +23,27 @@ const Popup = ({
   onConfirm,
   confirmLabel = 'Confirm',
   busy = false,
-}: PopupProps) => {
-  return (
-    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border-4 border-northeasternRed p-8 w-96 rounded-md shadow-lg z-50">
-      <h2 className="font-bold text-black text-2xl mb-4">{headline}</h2>
-      <p className="text-black text-lg mb-6">{message}</p>
+}: PopupProps) => (
+  <Modal label={headline} onDismiss={busy ? undefined : onDismiss}>
+    <Card tone="highlighted" padding="lg" className="w-96 max-w-full">
+      <h2 className="text-subheader font-medium text-black mb-4">{headline}</h2>
+      <p className="text-base text-black mb-6">{message}</p>
       {onConfirm ? (
-        <div className="flex gap-3">
-          <button
-            onClick={onDismiss}
-            disabled={busy}
-            className="flex-1 px-4 py-2 border border-gray-300 text-black rounded hover:bg-gray-100"
-          >
+        <div className="flex gap-4">
+          <Button variant="secondary" className="flex-1" onClick={onDismiss} disabled={busy}>
             Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={busy}
-            className="flex-1 px-4 py-2 bg-northeasternRed text-white rounded hover:bg-gray-700 disabled:opacity-50"
-          >
+          </Button>
+          <Button className="flex-1" onClick={onConfirm} busy={busy}>
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       ) : (
-        <button
-          onClick={onDismiss}
-          className="w-full px-4 py-2 bg-northeasternRed text-white rounded hover:bg-gray-700"
-        >
+        <Button className="w-full" onClick={onDismiss}>
           Dismiss
-        </button>
+        </Button>
       )}
-    </div>
-  );
-};
+    </Card>
+  </Modal>
+);
 
 export default Popup;

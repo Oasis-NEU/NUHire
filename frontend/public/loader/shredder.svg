@@ -1,0 +1,24 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="168" height="98" viewBox="0 0 168 98" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Shredder" filter="url(#filter0_d_0_12)">
+<g clip-path="url(#clip0_0_12)">
+<path id="Body" d="M4 16C4 7.16344 11.1634 0 20 0H148C156.837 0 164 7.16344 164 16V90H4V16Z" fill="#DA192C"/>
+<circle id="Ellipse 1" cx="17.5" cy="14.5" r="6.5" fill="white"/>
+<rect id="Rectangle 9" x="34" width="100" height="27" fill="#48181D"/>
+</g>
+</g>
+<defs>
+<filter id="filter0_d_0_12" x="0" y="0" width="168" height="98" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="4"/>
+<feGaussianBlur stdDeviation="2"/>
+<feComposite in2="hardAlpha" operator="out"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_12"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_12" result="shape"/>
+</filter>
+<clipPath id="clip0_0_12">
+<rect width="160" height="90" fill="white" transform="translate(4)"/>
+</clipPath>
+</defs>
+</svg>
