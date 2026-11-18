@@ -98,3 +98,4 @@ the way the API does at start, and then all of them twice more.
 | `007-resume-group-lookup-index.sql` | Index `Resume` by group, class and resume for the shortlist lookups         |
 | `008-pdf-extracted-text.sql`        | `extracted_text` on `Resume_pdfs` and `job_descriptions`, for the ATS       |
 | `009-drop-unused-tables.sql`        | Drops five unused tables (irreversible)                                     |
+| `010-screening-results.sql`         | `Screening_Results` table; the screener's result per resume, group and job  |
