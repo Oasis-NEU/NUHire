@@ -652,10 +652,10 @@ grep -rnE "console\.[a-z]+\(\s*[\`'\"](❌|✅|🔄|🚀|🔥|⚠️|📊|🎉)"
 
 ### Done when
 
-- [ ] `grep -rn "console\.log" api/src frontend/src` returns only the example
+- [x] `grep -rn "console\.log" api/src frontend/src` returns only the example
       command in `server.ts:27` and the comment in `config/logger.ts`
-- [ ] The emoji grep returns 0
-- [ ] No message text changed beyond the prefix
+- [x] The emoji grep returns 0
+- [x] No message text changed beyond the prefix
 
 ---
 
@@ -809,8 +809,8 @@ done   # all 0
 
 ### Done when
 
-- [ ] Migration drops all five, guarded so a second run is a no-op
-- [ ] `Pandployer.sql` no longer defines them
+- [x] Migration drops all five, guarded so a second run is a no-op
+- [x] `Pandployer.sql` no longer defines them
 - [ ] Row counts from the live database are recorded in the PR
 
 ---
@@ -1188,8 +1188,8 @@ grep -rn "https://nuhire-api" frontend/src
 
 ### Done when
 
-- [ ] `grep -rn "process.env.NEXT_PUBLIC_API_BASE_URL" frontend/src` returns one line
-- [ ] Frontend typechecks, builds, and `npm test` passes
+- [x] `grep -rn "process.env.NEXT_PUBLIC_API_BASE_URL" frontend/src` returns one line
+- [x] Frontend typechecks, builds, and `npm test` passes
 
 ---
 

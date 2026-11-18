@@ -66,6 +66,10 @@ CREATE TABLE IF NOT EXISTS ...;
 Also update `Pandployer.sql`, so new databases get the change, and add a row to
 the migration list at the bottom of this file.
 
+Then, once the migration has run on your local database, run `npm run db:pull`
+and commit `api/prisma/schema.prisma` in the same PR. Prisma's types come from
+that file, and CI fails the PR if it does not match the migrated database.
+
 CI fails a PR that adds a migration without both marker lines, numbers it out
 of order, or edits an existing one. It also runs every migration with dbmate,
 the way the API does at start, and then all of them twice more.
@@ -83,12 +87,14 @@ the way the API does at start, and then all of them twice more.
 
 ## Migration list
 
-| File                               | What                                                                        |
-| ---------------------------------- | --------------------------------------------------------------------------- |
-| `001-resume-unique-vote.sql`       | One vote row per student per resume, and dedupe                             |
-| `002-offers-unique-per-group.sql`  | One offer row per group per class, and dedupe                               |
-| `003-resume-checked-per-group.sql` | `Resume.checked` is group-level; realign drifted rows                       |
-| `004-group-confirmations.sql`      | `GroupConfirmations` table; res-review-group confirm state survives refresh |
-| `005-step-completion.sql`          | `Step_Completion` table; the group barrier survives an API restart          |
-| `006-users-present-at.sql`         | `Users.present_at`; gates wait only for students who showed up              |
-| `007-resume-group-lookup-index.sql` | Index `Resume` by group, class and resume for the shortlist lookups |
+| File                                | What                                                                        |
+| ----------------------------------- | --------------------------------------------------------------------------- |
+| `001-resume-unique-vote.sql`        | One vote row per student per resume, and dedupe                             |
+| `002-offers-unique-per-group.sql`   | One offer row per group per class, and dedupe                               |
+| `003-resume-checked-per-group.sql`  | `Resume.checked` is group-level; realign drifted rows                       |
+| `004-group-confirmations.sql`       | `GroupConfirmations` table; res-review-group confirm state survives refresh |
+| `005-step-completion.sql`           | `Step_Completion` table; the group barrier survives an API restart          |
+| `006-users-present-at.sql`          | `Users.present_at`; gates wait only for students who showed up              |
+| `007-resume-group-lookup-index.sql` | Index `Resume` by group, class and resume for the shortlist lookups         |
+| `008-pdf-extracted-text.sql`        | `extracted_text` on `Resume_pdfs` and `job_descriptions`, for the ATS       |
+| `009-drop-unused-tables.sql`        | Drops five unused tables (irreversible)                                     |

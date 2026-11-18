@@ -46,8 +46,8 @@ Monorepo, three deployable pieces plus auth:
 `affiliation` (student/admin/none), `group_id`, `class` (= CRN). `Moderator` maps
 an advisor email to a CRN. `GroupsInfo` tracks whether a group is `started`.
 Everything is keyed by the `(group_id, class)` pair. Per-step tables:
-`Resume`/`Resumepage` (individual + group resume votes), `InterviewPage`/
-`InterviewPopup` (interview voting), `Offers`/`Offer_Status`, `Notes`,
+`Resume` (individual + group resume votes), `InterviewPage`/
+`InterviewPopup` (interview voting), `Offers`, `Notes`,
 `WaitingFacts`, `Progress`.
 
 **The student journey** (`frontend/src/app/dashboard/page.tsx` `steps[]`):
