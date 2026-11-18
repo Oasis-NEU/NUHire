@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import NavbarAdmin from '../components/navbar-admin';
 import Popup from '../components/popup';
 import { useAuth } from '../components/AuthContext';
+import { useModeratorClassList } from '../components/useModeratorClassList';
 
 interface Job {
   id: number;
@@ -23,18 +24,12 @@ interface Resume {
   class_id: number;
 }
 
-interface ClassInfo {
-  crn: number;
-  class_name?: string;
-  admin_email: string;
-}
-
 const Upload = () => {
   const { user, loading: userloading } = useAuth();
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [resumes, setResumes] = useState<Resume[]>([]);
-  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const { classes } = useModeratorClassList(user?.email);
   const [selectedClass, setSelectedClass] = useState('');
 
   // Separate states for Job Description
@@ -98,29 +93,10 @@ const Upload = () => {
     setTimeout(checkInitialScroll, 100);
   }, [jobs, resumes]);
 
-  // Fetch classes when user is loaded
+  // Selects the first class each time the list loads, as before.
   useEffect(() => {
-    const fetchClasses = async () => {
-      if (!user?.email) return;
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/moderator/classes-full/${user.email}`, {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const classData = await response.json();
-          setClasses(classData);
-          if (classData.length > 0) {
-            setSelectedClass(classData[0].crn.toString());
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching classes:', error);
-      }
-    };
-
-    fetchClasses();
-  }, [user]);
+    if (classes.length > 0) setSelectedClass(classes[0].crn.toString());
+  }, [classes]);
 
   // Fetch jobs and resumes when selectedClass changes
   useEffect(() => {

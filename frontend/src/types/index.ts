@@ -59,6 +59,7 @@ export interface Group {
 export interface ClassInfo {
   crn: number;
   class_name: string;
+  admin_email: string;
 }
 
 /** A class on the professor dashboard. A list is null when its request failed. */

@@ -8,7 +8,8 @@ import { PageLoader } from '../components/spinner';
 import { useAuth } from '../components/AuthContext';
 import { useSocket } from '../components/socketContext';
 import { STEP_LABEL, STEP_ORDER } from '../components/useProgress';
-import type { ClassInfo, LiveStudent, Step } from '../../types';
+import { useModeratorClassList } from '../components/useModeratorClassList';
+import type { LiveStudent, Step } from '../../types';
 
 // The gates saved server-side. Offer confirmations live only in the browser.
 const GATE_FIELD: Partial<Record<Step, 'review_completed_at' | 'confirmed_at'>> = {
@@ -23,7 +24,7 @@ const UNSTICK_STEPS: Step[] = ['res_1', 'res_2', 'interview'];
 const LiveClass = () => {
   const { user, loading: userloading } = useAuth();
   const socket = useSocket();
-  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const { classes } = useModeratorClassList(user?.email);
   const [selectedClass, setSelectedClass] = useState('');
   const [students, setStudents] = useState<LiveStudent[]>([]);
   const [groupSteps, setGroupSteps] = useState<Record<number, Step>>({});
@@ -42,25 +43,6 @@ const LiveClass = () => {
   const latestRequest = useRef(0);
   const [unsticking, setUnsticking] = useState(false);
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
-
-  useEffect(() => {
-    if (!user?.email) return;
-
-    const fetchClasses = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/moderator/classes-full/${user.email}`, {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          setClasses(await response.json());
-        }
-      } catch (error) {
-        console.error('Error fetching classes:', error);
-      }
-    };
-
-    fetchClasses();
-  }, [user?.email]);
 
   useEffect(() => {
     const crn = new URLSearchParams(window.location.search).get('class');

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import Popup from './popup';
 import { useAuth } from './AuthContext';
-import type { ClassInfo } from '../../types';
+import { useModeratorClassList } from './useModeratorClassList';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -26,7 +26,6 @@ interface ValidationError {
 
 export function StudentCSVTab() {
   const [selectedClass, setSelectedClass] = useState<string>('');
-  const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [csvStudents, setCsvStudents] = useState<CSVStudent[]>([]);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [dragActive, setDragActive] = useState(false);
@@ -35,6 +34,7 @@ export function StudentCSVTab() {
   const [submitSuccess, setSubmitSuccess] = useState(false); // Add submit success state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, loading: userloading } = useAuth();
+  const { classes } = useModeratorClassList(user?.email);
 
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
   // Held as the raw string the professor typed, not a number. When this was a
@@ -52,27 +52,6 @@ export function StudentCSVTab() {
   // real students behind a teammate who does not exist.
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const NORTHEASTERN_DOMAIN = '@northeastern.edu';
-
-  useEffect(() => {
-    const fetchClasses = async () => {
-      if (!user?.email) return;
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/moderator/classes-full/${user.email}`, {
-          credentials: 'include',
-        });
-
-        if (response.ok) {
-          const classData = await response.json();
-          setClasses(classData);
-        }
-      } catch (error) {
-        console.error('Error fetching classes:', error);
-      }
-    };
-
-    fetchClasses();
-  }, [user]);
 
   // Hand-rolled because this was `split(',')`, and a Canvas gradebook export
   // quotes any name containing a comma ("Doe, John"), which shifted every
