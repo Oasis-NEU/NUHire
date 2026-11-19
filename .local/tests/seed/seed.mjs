@@ -1,4 +1,4 @@
-// npm run seed [-- --scenario=fresh]
+// npm run seed [-- [--scenario=fresh] [--sample-pack]]
 //
 // Builds the simulated class (see ../lib/roster.mjs) in Keycloak and MySQL.
 // Safe to re-run, and nothing outside the class is touched. Needs the local
@@ -24,7 +24,7 @@ async function assertRealmReady(config) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2), { values: ['scenario'] });
+  const args = parseArgs(process.argv.slice(2), { flags: ['sample-pack'], values: ['scenario'] });
   const scenarioName = args.scenario ?? 'fresh';
   const scenario = getScenario(scenarioName);
 
@@ -68,6 +68,18 @@ async function main() {
         crn: SIM.crn,
       });
       say(`  ${SIM.crn} created`);
+    }
+
+    // The fictional resume pack, through the endpoint behind the professor's
+    // "Load sample resumes" button. It adds to the default ten rather than
+    // replacing them, and is safe to repeat: a second load adds nothing.
+    if (args['sample-pack']) {
+      say('Sample resumes');
+      const res = await callApi(config, await advisor(), 'POST', '/resume_pdf/sample-pack', {
+        class_id: SIM.crn,
+      });
+      const { added, alreadyLoaded } = await res.json();
+      say(`  ${added} added, ${alreadyLoaded} already there`);
     }
 
     // GroupsInfo has no unique key on (class_id, group_id), so inserting twice

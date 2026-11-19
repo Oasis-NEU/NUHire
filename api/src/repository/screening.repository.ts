@@ -1,5 +1,6 @@
 import path from 'path';
 import { DEFAULT_RESUME_PDFS, PrismaDb } from '../config/database';
+import { RESUME_PACK } from '../config/resumePack';
 import { Prisma, Screening_Results } from '../generated/prisma/client';
 import { DbBool } from '../models/DbBool';
 import { GroupKey } from '../models/GroupKey';
@@ -80,10 +81,12 @@ const runKey = ({ group, run, ...target }: ScreeningRun) => ({
 const keywords = (value: Prisma.JsonValue): string[] =>
   Array.isArray(value) ? value.filter((word): word is string => typeof word === 'string') : [];
 
-const SAMPLE_FILES = new Set(DEFAULT_RESUME_PDFS.map((pdf) => path.basename(pdf.file_path)));
+const SAMPLE_FILES = new Set(
+  [...DEFAULT_RESUME_PDFS, ...RESUME_PACK].map((pdf) => path.basename(pdf.file_path))
+);
 
-// Uploads are stored under a random name, so only a seeded sample has a
-// sample's file name, and only its text is read for the screen.
+// Uploads are stored under a random name, so only a seeded sample or a pack
+// resume has a sample's file name, and only its text is read for the screen.
 const isSampleFile = (filePath: string): boolean => SAMPLE_FILES.has(path.basename(filePath));
 
 const CLEARED = {

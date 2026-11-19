@@ -203,7 +203,7 @@ export class App {
     this.app.use('/auth', authRoutes(this.db));
     this.app.use('/users', userRoutes(this.db, this.io));
     this.app.use('/resume', resumeRoutes(this.db, this.io, this.screens));
-    this.app.use('/resume_pdf', resumePdfRoutes(this.db, this.io, this.screens));
+    this.app.use('/resume_pdf', resumePdfRoutes(this.db, this.prisma, this.io, this.screens));
     this.app.use('/interview', interviewRoutes(this.db, this.io));
     this.app.use('/jobs', jobRoutes(this.db, this.io, this.onlineStudents, this.screens));
     this.app.use('/groups', groupRoutes(this.db, this.io));

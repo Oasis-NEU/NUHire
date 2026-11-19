@@ -4,6 +4,7 @@ import { API_BASE_URL } from '../../lib/api';
 import { useState, useEffect } from 'react';
 import NavbarAdmin from '../components/navbar-admin';
 import Popup from '../components/popup';
+import SamplePackButton from '../components/samplePackButton';
 import { useAuth } from '../components/AuthContext';
 
 interface Job {
@@ -553,6 +554,14 @@ const Upload = () => {
                   {resumeUploading ? 'Uploading...' : 'Upload Candidate'}
                 </button>
               </div>
+
+              <SamplePackButton
+                classId={selectedClass}
+                onResult={(result, loaded) => {
+                  setPopup(result);
+                  if (loaded) fetchResumes();
+                }}
+              />
 
               <div className="mt-8">
                 <h3 className="text-lg font-semibold text-gray-700 mb-4">

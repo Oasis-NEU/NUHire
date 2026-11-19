@@ -5,6 +5,7 @@ import { createFactsRepository } from '../src/repository/facts.repository';
 import { createModeratorRepository } from '../src/repository/moderator.repository';
 import { createNotesRepository } from '../src/repository/notes.repository';
 import { createPdfTextRepository } from '../src/repository/pdfText.repository';
+import { RESUME_PACK } from '../src/config/resumePack';
 import { createScreeningRepository } from '../src/repository/screening.repository';
 
 // The controllers are tested against fake repositories, so these check the
@@ -292,6 +293,19 @@ describe('screening repository: the queue', () => {
       ],
       skipDuplicates: true,
     });
+  });
+
+  it('queues every sample pack resume as a sample', async () => {
+    const q = withQueue({
+      assignments: [{ group: 1, job_descriptions: { id: 7, keywords: ['Python'] } }],
+      resumes: RESUME_PACK.map((resume, i) => ({ id: 60 + i, file_path: resume.file_path })),
+    });
+    await q.screening.queueAssigned(101);
+    const [{ data }] = q.createMany.mock.calls[0] as unknown as [
+      { data: { is_sample: boolean }[] },
+    ];
+    expect(data).toHaveLength(RESUME_PACK.length);
+    expect(data.every((row) => row.is_sample)).toBe(true);
   });
 
   it('narrows to one posting, one resume or some groups', async () => {
