@@ -125,7 +125,7 @@ const CandidatePopup = ({ classId, groupId, candidateId, onDismiss }: CandidateP
               href={`${API_BASE_URL}/${candidate.file_path}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-navy hover:underline"
+              className="text-black hover:underline"
             >
               View / Download Resume
             </a>
@@ -145,7 +145,7 @@ const CandidatePopup = ({ classId, groupId, candidateId, onDismiss }: CandidateP
                   </span>
                 )}
               </div>
-              <div className="space-y-1 text-navy text-sm">
+              <div className="space-y-1 text-black text-sm">
                 {RATINGS.map((rating) => (
                   <p key={rating}>
                     <span className="font-medium">{RATING_LABEL[rating]}:</span>{' '}
@@ -158,7 +158,7 @@ const CandidatePopup = ({ classId, groupId, candidateId, onDismiss }: CandidateP
         </div>
 
         {curveballs && hasCurveball && (
-          <div className="mb-4 text-navy text-sm">
+          <div className="mb-4 text-black text-sm">
             <p className="font-semibold mb-1">Curveball adjustments</p>
             {isNoShow ? (
               <p>No Show</p>

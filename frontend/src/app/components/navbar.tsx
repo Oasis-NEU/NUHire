@@ -45,7 +45,7 @@ const Navbar = () => {
   return (
     <nav className="sticky top-0 z-50 navbar w-full relative">
       {/* Top bar - reduced height only */}
-      <div className="bg-northeasternBlack text-northeasternWhite flex items-center px-4 py-1 font-rubik border-b border-northeasternRed w-full relative">
+      <div className="bg-black text-white flex items-center px-4 py-1 border-b border-neu-red w-full relative">
         <button
           className="flex items-center gap-1 font-bold text-sm focus:outline-none"
           onClick={() => setIsOpen((open) => !open)}
@@ -58,17 +58,14 @@ const Navbar = () => {
           </span>
         </button>
         <div className="absolute left-1/2 transform -translate-x-1/2">
-          <Link
-            href="/dashboard"
-            className="text-2xl font-rubik font-bold text-northeasternRed drop-shadow-lg"
-          >
+          <Link href="/dashboard" className="text-2xl font-bold text-neu-red drop-shadow-lg">
             NUHire
           </Link>
         </div>
         <div className="flex items-center gap-2 ml-auto">
           {/* Help button - smaller */}
           {showHelpButton && (
-            <div className="bg-northeasternRed text-northeasternWhite px-3 py-1 rounded-md hover:bg-sand border-2 border-navy transition text-sm">
+            <div className="bg-neu-red text-white px-3 py-1 rounded-md hover:bg-white border-2 border-black transition text-sm">
               <button onClick={handleShowInstructions} className="w-full">
                 Instructions
               </button>
@@ -79,10 +76,10 @@ const Navbar = () => {
           </div>
           <Link
             href="/userProfile"
-            className="flex items-center justify-center w-8 h-8 rounded-full bg-northeasternRed cursor-pointer transition duration-300 ease-in-out hover:bg-northeasternBlack hover:border-2 hover:border-northeasternRed relative"
+            className="flex items-center justify-center w-8 h-8 rounded-full bg-neu-red cursor-pointer transition duration-300 ease-in-out hover:bg-black hover:border-2 hover:border-neu-red relative"
           >
             <div
-              className="w-5 h-5 bg-cover bg-center rounded-full border-2 border-northeasternWhite"
+              className="w-5 h-5 bg-cover bg-center rounded-full border-2 border-white"
               style={{
                 backgroundImage: "url('https://cdn-icons-png.flaticon.com/512/847/847969.png')",
               }}
@@ -95,7 +92,7 @@ const Navbar = () => {
       {/* Collapsible sidebar - smaller */}
       <div
         ref={dropdownRef}
-        className={`fixed top-0 left-0 z-50 bg-northeasternWhite shadow-lg transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-36 border-r-2 border-northeasternRed`}
+        className={`fixed top-0 left-0 z-50 bg-white shadow-lg transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-36 border-r-2 border-neu-red`}
         style={{
           borderTopRightRadius: isOpen ? '0.5rem' : '0',
           borderBottomRightRadius: isOpen ? '0.5rem' : '0',
@@ -105,9 +102,9 @@ const Navbar = () => {
       >
         <div className="flex flex-col gap-1 pt-4 px-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="font-bold text-base text-northeasternRed">Menu</span>
+            <span className="font-bold text-base text-neu-red">Menu</span>
             <button
-              className="text-lg text-gray-500 hover:text-northeasternRed"
+              className="text-lg text-gray-500 hover:text-neu-red"
               onClick={() => setIsOpen(false)}
               aria-label="Close menu"
             >
@@ -115,7 +112,7 @@ const Navbar = () => {
             </button>
           </div>
           <button
-            className="block px-3 py-1 font-rubik text-sm text-northeasternBlack hover:bg-northeasternRed hover:text-northeasternWhite rounded-md text-left"
+            className="block px-3 py-1 text-sm text-black hover:bg-neu-red hover:text-white rounded-md text-left"
             onClick={() => {
               setIsOpen(false);
               router.push('/dashboard');
@@ -124,7 +121,7 @@ const Navbar = () => {
             Dashboard
           </button>
           <button
-            className="block px-3 py-1 font-rubik text-sm text-northeasternRed hover:bg-northeasternRed hover:text-northeasternWhite rounded-md text-left"
+            className="block px-3 py-1 text-sm text-neu-red hover:bg-neu-red hover:text-white rounded-md text-left"
             onClick={() => {
               setIsOpen(false);
               router.push('/userProfile');
@@ -133,7 +130,7 @@ const Navbar = () => {
             Profile
           </button>
           <button
-            className="block px-3 py-1 font-rubik text-sm text-northeasternRed hover:bg-northeasternRed hover:text-northeasternWhite rounded-md text-left"
+            className="block px-3 py-1 text-sm text-neu-red hover:bg-neu-red hover:text-white rounded-md text-left"
             onClick={() => {
               setIsOpen(false);
               router.push('/notes');

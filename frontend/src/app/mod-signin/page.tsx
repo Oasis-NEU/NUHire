@@ -28,17 +28,17 @@ export default function ModeratorSignIn() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-sand font-rubik">
+    <div className="flex flex-col min-h-screen bg-white">
       <div className="fixed inset-0 z-0">
         <Slideshow />
       </div>
-      <div className="fixed inset-0 bg-sand/80 z-[5]" />
+      <div className="fixed inset-0 bg-white/80 z-[5]" />
       <nav className="navbar w-full relative">
         {/* Top bar */}
-        <div className="bg-northeasternBlack text-northeasternWhite justify-center flex px-6 py-4 font-rubik border-b-4 border-northeasternRed w-full">
+        <div className="bg-black text-white justify-center flex px-6 py-4 border-b-4 border-neu-red w-full">
           <Link
             href="/advisor-dashboard"
-            className="text-3xl font-rubik text-center font-bold text-northeasternRed drop-shadow-lg"
+            className="text-3xl text-center font-bold text-neu-red drop-shadow-lg"
           >
             NUHire
           </Link>
@@ -50,7 +50,7 @@ export default function ModeratorSignIn() {
           onSubmit={handleSubmit}
           className="bg-white p-8 rounded-lg shadow-md flex flex-col gap-4 w-full max-w-sm z-10"
         >
-          <h2 className="text-2xl font-bold text-center text-northeasternRed">Admin Sign In</h2>
+          <h2 className="text-2xl font-bold text-center text-neu-red">Admin Sign In</h2>
           <input
             type="text"
             placeholder="Admin Username"
@@ -69,7 +69,7 @@ export default function ModeratorSignIn() {
           />
           <button
             type="submit"
-            className="bg-navy text-white py-2 rounded hover:bg-navy/80 transition"
+            className="bg-black text-white py-2 rounded hover:bg-black/80 transition"
           >
             Sign In
           </button>

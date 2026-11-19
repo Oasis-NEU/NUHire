@@ -586,14 +586,14 @@ export default function Interview() {
   // Error state
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-sand">
+      <div className="flex items-center justify-center min-h-screen bg-white">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded max-w-md">
           <h2 className="text-xl font-bold mb-2">Error</h2>
           <p>{error}</p>
           <p className="mt-2">Please try refreshing the page or return to the dashboard.</p>
           <button
             onClick={() => (window.location.href = '/dashboard')}
-            className="mt-4 bg-redHeader text-white px-4 py-2 rounded hover:bg-navy transition"
+            className="mt-4 bg-neu-red text-white px-4 py-2 rounded hover:bg-black transition"
           >
             Return to Dashboard
           </button>
@@ -605,13 +605,13 @@ export default function Interview() {
   // No user state
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-sand">
+      <div className="flex items-center justify-center min-h-screen bg-white">
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded max-w-md">
           <h2 className="text-xl font-bold mb-2">Authentication Required</h2>
           <p>Please log in to access this page.</p>
           <button
             onClick={() => (window.location.href = '/')}
-            className="mt-4 bg-redHeader text-white px-4 py-2 rounded hover:bg-navy transition"
+            className="mt-4 bg-neu-red text-white px-4 py-2 rounded hover:bg-black transition"
           >
             Go to Login
           </button>
@@ -622,14 +622,14 @@ export default function Interview() {
 
   if (videosLoading) {
     return (
-      <div className="bg-sand font-rubik min-h-screen">
+      <div className="bg-white min-h-screen">
         <Navbar />
         <div className="container mx-auto px-4 py-8">
           <div className="bg-white p-8 rounded-lg shadow-lg">
             <h1 className="text-2xl font-bold text-center mb-6">Interview Stage</h1>
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="w-20 h-20 border-t-4 border-redHeader border-solid rounded-full animate-spin mb-6"></div>
-              <p className="text-lg font-semibold text-navy mb-2">Loading Interview Videos...</p>
+              <div className="w-20 h-20 border-t-4 border-neu-red border-solid rounded-full animate-spin mb-6"></div>
+              <p className="text-lg font-semibold text-black mb-2">Loading Interview Videos...</p>
               <p className="text-sm text-gray-600">
                 Please wait while we fetch the candidate interviews
               </p>
@@ -644,7 +644,7 @@ export default function Interview() {
   // No interviews state
   if (interviews.length === 0) {
     return (
-      <div className="bg-sand font-rubik min-h-screen">
+      <div className="bg-white min-h-screen">
         <Navbar />
         <div className="container mx-auto px-4 py-8">
           <div className="bg-white p-8 rounded-lg shadow-lg">
@@ -656,13 +656,13 @@ export default function Interview() {
             <div className="flex justify-between">
               <button
                 onClick={() => (window.location.href = '/res-review-group')}
-                className="px-4 py-2 bg-redHeader text-white rounded-lg shadow-md hover:bg-navy transition duration-300 font-rubik"
+                className="px-4 py-2 bg-neu-red text-white rounded-lg shadow-md hover:bg-black transition duration-300"
               >
                 ← Go to Resume Review Group
               </button>
               <button
                 onClick={() => (window.location.href = '/dashboard')}
-                className="px-4 py-2 bg-redHeader text-white rounded-lg shadow-md hover:bg-navy transition duration-300 font-rubik"
+                className="px-4 py-2 bg-neu-red text-white rounded-lg shadow-md hover:bg-black transition duration-300"
               >
                 Return to Dashboard
               </button>
@@ -675,7 +675,7 @@ export default function Interview() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-sand font-rubik overflow-hidden">
+    <div className="h-screen flex flex-col bg-white overflow-hidden">
       {showInstructions && (
         <Instructions
           instructions={interviewInstructions}
@@ -686,7 +686,7 @@ export default function Interview() {
       )}
       <Navbar />
 
-      <div className="flex justify-center items-center font-rubik text-redHeader text-xl font-bold py-1">
+      <div className="flex justify-center items-center text-neu-red text-xl font-bold py-1">
         Interview Page
       </div>
 
@@ -696,17 +696,17 @@ export default function Interview() {
           key={videoIndex}
           className="w-1/3 bg-blue-50 shadow-lg p-3 flex flex-col rounded-lg overflow-hidden"
         >
-          <h1 className="text-lg text-redHeader font-bold mb-1">Evaluation</h1>
-          <h3 className="text-xs text-navy text-center mb-2">
+          <h1 className="text-lg text-neu-red font-bold mb-1">Evaluation</h1>
+          <h3 className="text-xs text-black text-center mb-2">
             Watch the interview and rate on a scale from 1-10. Submit to move to the next interview.
           </h3>
 
           {/* View toggle buttons */}
           <div className="flex flex-col gap-1 w-full mb-2">
             <button
-              className={`px-2 py-1 rounded-lg shadow-md transition duration-300 font-rubik text-xs ${
+              className={`px-2 py-1 rounded-lg shadow-md transition duration-300 text-xs ${
                 viewMode === 'video'
-                  ? 'bg-redHeader text-white'
+                  ? 'bg-neu-red text-white'
                   : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
               }`}
               onClick={() => {
@@ -717,9 +717,9 @@ export default function Interview() {
               Interview Video
             </button>
             <button
-              className={`px-2 py-1 rounded-lg shadow-md transition duration-300 font-rubik text-xs ${
+              className={`px-2 py-1 rounded-lg shadow-md transition duration-300 text-xs ${
                 viewMode === 'resume'
-                  ? 'bg-redHeader text-white'
+                  ? 'bg-neu-red text-white'
                   : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
               }`}
               onClick={() => {
@@ -730,9 +730,9 @@ export default function Interview() {
               Resume
             </button>
             <button
-              className={`px-2 py-1 rounded-lg shadow-md transition duration-300 font-rubik text-xs ${
+              className={`px-2 py-1 rounded-lg shadow-md transition duration-300 text-xs ${
                 viewMode === 'jobDescription'
-                  ? 'bg-redHeader text-white'
+                  ? 'bg-neu-red text-white'
                   : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
               }`}
               onClick={() => {
@@ -746,19 +746,19 @@ export default function Interview() {
 
           {/* Page navigation for resume */}
           {viewMode === 'resume' && resumeNumPages && resumeNumPages > 1 && (
-            <div className="flex items-center justify-between bg-navy p-1 rounded-lg w-full mb-2">
+            <div className="flex items-center justify-between bg-black p-1 rounded-lg w-full mb-2">
               <button
-                className="px-2 py-0.5 bg-sand text-navy rounded disabled:opacity-50 text-xs"
+                className="px-2 py-0.5 bg-white text-black rounded disabled:opacity-50 text-xs"
                 onClick={() => setResumePageNumber((prev) => Math.max(1, prev - 1))}
                 disabled={resumePageNumber <= 1}
               >
                 ←
               </button>
-              <span className="text-sand text-xs">
+              <span className="text-white text-xs">
                 {resumePageNumber}/{resumeNumPages}
               </span>
               <button
-                className="px-2 py-0.5 bg-sand text-navy rounded disabled:opacity-50 text-xs"
+                className="px-2 py-0.5 bg-white text-black rounded disabled:opacity-50 text-xs"
                 onClick={() => setResumePageNumber((prev) => Math.min(resumeNumPages, prev + 1))}
                 disabled={resumePageNumber >= resumeNumPages}
               >
@@ -769,19 +769,19 @@ export default function Interview() {
 
           {/* Page navigation for job description */}
           {viewMode === 'jobDescription' && jobDescNumPages && jobDescNumPages > 1 && (
-            <div className="flex items-center justify-between bg-navy p-1 rounded-lg w-full mb-2">
+            <div className="flex items-center justify-between bg-black p-1 rounded-lg w-full mb-2">
               <button
-                className="px-2 py-0.5 bg-sand text-navy rounded disabled:opacity-50 text-xs"
+                className="px-2 py-0.5 bg-white text-black rounded disabled:opacity-50 text-xs"
                 onClick={() => setJobDescPageNumber((prev) => Math.max(1, prev - 1))}
                 disabled={jobDescPageNumber <= 1}
               >
                 ←
               </button>
-              <span className="text-sand text-xs">
+              <span className="text-white text-xs">
                 {jobDescPageNumber}/{jobDescNumPages}
               </span>
               <button
-                className="px-2 py-0.5 bg-sand text-navy rounded disabled:opacity-50 text-xs"
+                className="px-2 py-0.5 bg-white text-black rounded disabled:opacity-50 text-xs"
                 onClick={() => setJobDescPageNumber((prev) => Math.min(jobDescNumPages, prev + 1))}
                 disabled={jobDescPageNumber >= jobDescNumPages}
               >
@@ -793,14 +793,12 @@ export default function Interview() {
           {/* Rating sliders - compact */}
           <div className="flex-1 flex flex-col justify-around">
             <div className="flex flex-col items-center text-center w-full">
-              <h2 className="text-xs text-redHeader font-semibold mb-0.5">
-                {RATING_LABEL.overall}
-              </h2>
+              <h2 className="text-xs text-neu-red font-semibold mb-0.5">{RATING_LABEL.overall}</h2>
               <RatingSlider onChange={handleOverallSliderChange} value={overall} />
             </div>
 
             <div className="flex flex-col items-center text-center w-full">
-              <h2 className="text-xs text-redHeader font-semibold mb-0.5">
+              <h2 className="text-xs text-neu-red font-semibold mb-0.5">
                 {RATING_LABEL.professionalPresence}
               </h2>
               <RatingSlider
@@ -810,14 +808,14 @@ export default function Interview() {
             </div>
 
             <div className="flex flex-col items-center text-center w-full">
-              <h2 className="text-xs text-redHeader font-semibold mb-0.5">
+              <h2 className="text-xs text-neu-red font-semibold mb-0.5">
                 {RATING_LABEL.qualityOfAnswer}
               </h2>
               <RatingSlider onChange={handleQualityOfAnswerSliderChange} value={qualityOfAnswer} />
             </div>
 
             <div className="flex flex-col items-center text-center w-full">
-              <h2 className="text-xs text-redHeader font-semibold mb-0.5">
+              <h2 className="text-xs text-neu-red font-semibold mb-0.5">
                 {RATING_LABEL.personality}
               </h2>
               <RatingSlider onChange={handlePersonalitySliderChange} value={personality} />
@@ -828,7 +826,7 @@ export default function Interview() {
           <button
             onClick={handleSubmit}
             disabled={finished || !videoLoaded || submitting}
-            className={`px-3 py-2 rounded-lg shadow-md transition duration-300 font-rubik text-xs mt-2 ${
+            className={`px-3 py-2 rounded-lg shadow-md transition duration-300 text-xs mt-2 ${
               finished || !videoLoaded || submitting
                 ? 'bg-gray-400 text-white opacity-50 cursor-not-allowed'
                 : 'bg-blue-500 text-white hover:bg-blue-900'
@@ -847,14 +845,14 @@ export default function Interview() {
 
         {/* Content display - video, resume, or job description */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <h1 className="text-lg font-rubik font-bold mb-2 text-center">
+          <h1 className="text-lg font-bold mb-2 text-center">
             {noShow
               ? 'Candidate No-Show'
               : currentVid && currentVid.first_name && currentVid.last_name
                 ? `Evaluating ${currentVid.first_name} ${currentVid.last_name}`
                 : 'Evaluation'}
           </h1>
-          <div className="flex-1 border-4 border-redHeader rounded-lg shadow-lg overflow-hidden bg-white">
+          <div className="flex-1 border-4 border-neu-red rounded-lg shadow-lg overflow-hidden bg-white">
             {viewMode === 'video' &&
               (noShow ? (
                 <div className="flex items-center justify-center h-full">
@@ -949,18 +947,18 @@ export default function Interview() {
       <div className="flex justify-between px-4 py-1">
         <button
           onClick={() => (window.location.href = '/res-review-group')}
-          className="px-3 py-1.5 bg-redHeader text-white rounded-lg shadow-md cursor-not-allowed opacity-50 transition duration-300 font-rubik text-xs"
+          className="px-3 py-1.5 bg-neu-red text-white rounded-lg shadow-md cursor-not-allowed opacity-50 transition duration-300 text-xs"
           disabled={true}
         >
           ← Back: Resume Review Pt.2
         </button>
         <button
           onClick={completeInterview}
-          className={`px-3 py-1.5 bg-redHeader text-white rounded-lg shadow-md transition duration-300 font-rubik text-xs
+          className={`px-3 py-1.5 bg-neu-red text-white rounded-lg shadow-md transition duration-300 text-xs
             ${
               !finished || !groupFinished
                 ? 'cursor-not-allowed opacity-50'
-                : 'cursor-pointer hover:bg-navy'
+                : 'cursor-pointer hover:bg-black'
             }`}
           disabled={!finished || !groupFinished}
         >
@@ -988,8 +986,8 @@ export default function Interview() {
 
       {finished && !groupFinished && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-          <div className="bg-white border-4 border-navy rounded-lg shadow-lg p-8 text-center max-w-md mx-auto">
-            <h2 className="text-2xl font-bold text-navy mb-4">Waiting for Teammates</h2>
+          <div className="bg-white border-4 border-black rounded-lg shadow-lg p-8 text-center max-w-md mx-auto">
+            <h2 className="text-2xl font-bold text-black mb-4">Waiting for Teammates</h2>
             <p className="text-lg text-gray-700 mb-4">
               You have completed your interviews and ratings.
               <br />

@@ -121,7 +121,7 @@ export function GroupCard({
                     groupOffer.candidateName
                   )
                 }
-                className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                className="px-6 py-3 bg-red-500 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
               >
                 × Reject
               </button>
