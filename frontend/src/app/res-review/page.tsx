@@ -862,7 +862,7 @@ export default function ResumesPage() {
     <div className="h-screen flex flex-col">
       <Navbar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex justify-center items-center font-rubik text-redHeader text-2xl font-bold py-2">
+        <div className="flex justify-center items-center text-neu-red text-2xl font-bold py-2">
           <h1>Resume Review Part 1</h1>
         </div>
 
@@ -877,12 +877,12 @@ export default function ResumesPage() {
 
         <div className="flex-1 flex gap-3 px-4 pb-2 overflow-hidden">
           <div className="flex flex-col gap-2 w-[280px] min-w-[280px]">
-            <div className="bg-navy shadow-lg rounded-lg p-3 text-sand text-center">
+            <div className="bg-black shadow-lg rounded-lg p-3 text-white text-center">
               <h2 className="text-sm font-semibold">Time Remaining:</h2>
               <h2 className="text-2xl font-bold">{timeRemaining} sec</h2>
             </div>
 
-            <div className="bg-navy shadow-lg rounded-lg p-3 text-sand text-sm">
+            <div className="bg-black shadow-lg rounded-lg p-3 text-white text-sm">
               <div className="grid grid-cols-2 gap-1">
                 <span className="text-left">Resume</span>
                 <span className="text-right">{Math.min(currentResumeIndex + 1, 10)} / 10</span>
@@ -902,7 +902,7 @@ export default function ResumesPage() {
                 </h2>
                 <p className="text-xs mb-2">Your group cannot move on until these are saved.</p>
                 <button
-                  className={`w-full bg-red-700 text-white font-rubik px-3 py-1.5 rounded-lg shadow-md text-sm transition duration-300 ${
+                  className={`w-full bg-red-700 text-white px-3 py-1.5 rounded-lg shadow-md text-sm transition duration-300 ${
                     retrying ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-800'
                   }`}
                   onClick={retryUnsavedVotes}
@@ -914,7 +914,7 @@ export default function ResumesPage() {
             )}
 
             <button
-              className="bg-blue-600 text-white font-rubik px-4 py-2 rounded-lg shadow-md transition duration-300 hover:bg-blue-700"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md transition duration-300 hover:bg-blue-700"
               onClick={() => {
                 setShowJobDescription(!showJobDescription);
                 setJobDescPageNumber(1);
@@ -924,19 +924,19 @@ export default function ResumesPage() {
             </button>
 
             {showJobDescription && jobDescNumPages && jobDescNumPages > 1 && (
-              <div className="flex items-center justify-between bg-navy p-2 rounded-lg">
+              <div className="flex items-center justify-between bg-black p-2 rounded-lg">
                 <button
-                  className="px-3 py-1 bg-sand text-navy rounded disabled:opacity-50"
+                  className="px-3 py-1 bg-white text-black rounded disabled:opacity-50"
                   onClick={() => setJobDescPageNumber((prev) => Math.max(1, prev - 1))}
                   disabled={jobDescPageNumber <= 1}
                 >
                   ←
                 </button>
-                <span className="text-sand text-sm">
+                <span className="text-white text-sm">
                   Page {jobDescPageNumber} / {jobDescNumPages}
                 </span>
                 <button
-                  className="px-3 py-1 bg-sand text-navy rounded disabled:opacity-50"
+                  className="px-3 py-1 bg-white text-black rounded disabled:opacity-50"
                   onClick={() =>
                     setJobDescPageNumber((prev) => Math.min(jobDescNumPages, prev + 1))
                   }
@@ -951,7 +951,7 @@ export default function ResumesPage() {
               {!restricted && (
                 <>
                   <button
-                    className={`bg-[#a2384f] text-white font-rubik px-4 py-2 rounded-lg shadow-md transition duration-300 ${
+                    className={`bg-red-700 text-white px-4 py-2 rounded-lg shadow-md transition duration-300 ${
                       resumes > 10 || resumeLoading
                         ? 'opacity-50 cursor-not-allowed'
                         : 'hover:bg-red-600'
@@ -963,7 +963,7 @@ export default function ResumesPage() {
                   </button>
 
                   <button
-                    className={`bg-gray-500 text-white font-rubik px-4 py-2 rounded-lg shadow-md transition duration-300 ${
+                    className={`bg-gray-500 text-white px-4 py-2 rounded-lg shadow-md transition duration-300 ${
                       resumes > 10 || resumeLoading
                         ? 'opacity-50 cursor-not-allowed'
                         : 'hover:bg-gray-600'
@@ -977,7 +977,7 @@ export default function ResumesPage() {
               )}
 
               <button
-                className={`bg-[#367b62] text-white font-rubik px-4 py-2 rounded-lg shadow-md transition duration-300 ${
+                className={`bg-[#367b62] text-white px-4 py-2 rounded-lg shadow-md transition duration-300 ${
                   resumes > 10 || resumeLoading
                     ? 'opacity-50 cursor-not-allowed'
                     : 'hover:bg-green-600'
@@ -1048,13 +1048,13 @@ export default function ResumesPage() {
         <div className="flex justify-between px-4 pb-2 gap-2">
           <button
             onClick={() => (window.location.href = '/jobdes')}
-            className="px-4 py-2 bg-redHeader text-white rounded-lg shadow-md hover:bg-blue-400 transition duration-300 font-rubik text-sm"
+            className="px-4 py-2 bg-neu-red text-white rounded-lg shadow-md hover:bg-blue-400 transition duration-300 text-sm"
           >
             ← Back: Job Description
           </button>
           <button
             onClick={completeResumes}
-            className={`px-4 py-2 bg-redHeader text-white rounded-lg shadow-md hover:bg-blue-400 transition duration-300 font-rubik text-sm
+            className={`px-4 py-2 bg-neu-red text-white rounded-lg shadow-md hover:bg-blue-400 transition duration-300 text-sm
               ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-blue-400'}`}
             disabled={disabled}
           >
@@ -1098,7 +1098,7 @@ export default function ResumesPage() {
                   Your group cannot move on until they are.
                 </p>
                 <button
-                  className={`bg-red-700 text-white font-rubik px-4 py-2 rounded-lg shadow-md transition duration-300 ${
+                  className={`bg-red-700 text-white px-4 py-2 rounded-lg shadow-md transition duration-300 ${
                     retrying ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-800'
                   }`}
                   onClick={retryUnsavedVotes}
@@ -1108,8 +1108,8 @@ export default function ResumesPage() {
                 </button>
               </div>
             ) : (
-              <div className="bg-white border-4 border-navy rounded-lg shadow-lg p-8 text-center max-w-md mx-auto">
-                <h2 className="text-2xl font-bold text-navy mb-4">Waiting for Teammates</h2>
+              <div className="bg-white border-4 border-black rounded-lg shadow-lg p-8 text-center max-w-md mx-auto">
+                <h2 className="text-2xl font-bold text-black mb-4">Waiting for Teammates</h2>
                 <p className="text-lg text-gray-700 mb-4">
                   You have completed your resume decisions.
                   <br />

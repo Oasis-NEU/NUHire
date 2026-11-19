@@ -178,24 +178,24 @@ export default function AdminFactsPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-sand font-rubik">
+    <div className="flex flex-col min-h-screen bg-white">
       <NavbarAdmin />
       {/* Page Title */}
       <div className="flex justify-center items-center py-6">
-        <h1 className="text-4xl font-bold text-northeasternBlack text-center drop-shadow-lg">
+        <h1 className="text-4xl font-bold text-black text-center drop-shadow-lg">
           Waiting Page Facts
         </h1>
       </div>
       <div className="flex-1 p-6 flex justify-center items-start">
-        <div className="max-w-lg w-full bg-white border-4 border-northeasternBlack justify-center rounded-lg shadow-lg p-8 mt-10">
-          <h1 className="text-3xl font-bold text-northeasternRed mb-6 text-center">
+        <div className="max-w-lg w-full bg-white border-4 border-black justify-center rounded-lg shadow-lg p-8 mt-10">
+          <h1 className="text-3xl font-bold text-neu-red mb-6 text-center">
             Add Waiting Room Facts
           </h1>
 
           {/* Display current facts (if any) */}
           {selectedClass ? (
             <div className="mb-6 p-4 rounded bg-gray-50 border border-gray-200">
-              <h3 className="font-semibold text-northeasternBlack mb-2">
+              <h3 className="font-semibold text-black mb-2">
                 Current Facts for CRN {selectedClass}
               </h3>
               {currentFacts ? (
@@ -219,13 +219,11 @@ export default function AdminFactsPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Class Dropdown */}
             <div>
-              <label className="block text-lg font-medium mb-2 text-northeasternBlack">
-                Select Class:
-              </label>
+              <label className="block text-lg font-medium mb-2 text-black">Select Class:</label>
               <select
                 value={selectedClass}
                 onChange={(e) => setSelectedClass(e.target.value)}
-                className="w-full p-3 border border-wood rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">-- Select a Class --</option>
                 {classes.map((cls) => (
@@ -241,14 +239,14 @@ export default function AdminFactsPage() {
               <div className="space-y-4">
                 {[0, 1, 2].map((i) => (
                   <div key={i}>
-                    <label className="block text-md font-medium mb-1 text-northeasternBlack">
+                    <label className="block text-md font-medium mb-1 text-black">
                       Fact {i + 1}:
                     </label>
                     <input
                       type="text"
                       value={facts[i]}
                       onChange={(e) => handleFactChange(i, e.target.value)}
-                      className="w-full p-3 border border-wood rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder={`Enter fact ${i + 1}`}
                     />
                   </div>
@@ -257,7 +255,7 @@ export default function AdminFactsPage() {
             )}
             <button
               type="submit"
-              className="w-full mt-6 px-6 py-3 font-semibold rounded-md bg-northeasternRed text-white hover:bg-navy transition"
+              className="w-full mt-6 px-6 py-3 font-semibold rounded-md bg-neu-red text-white hover:bg-black transition"
               disabled={loading}
             >
               Add Facts

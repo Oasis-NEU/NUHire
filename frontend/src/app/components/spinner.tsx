@@ -10,13 +10,13 @@ export const Spinner: React.FC<SpinnerProps> = ({ className = '', label = 'Loadi
   <div
     role="status"
     aria-label={label}
-    className={`w-16 h-16 border-t-4 border-navy border-solid rounded-full animate-spin mx-auto ${className}`}
+    className={`w-16 h-16 border-t-4 border-black border-solid rounded-full animate-spin mx-auto ${className}`}
   />
 );
 
 // Full-screen loading state, shown while a page waits on auth.
 export const PageLoader: React.FC = () => (
-  <div className="flex items-center justify-center min-h-screen bg-sand">
+  <div className="flex items-center justify-center min-h-screen bg-white">
     <div className="text-center">
       <h2 className="text-2xl font-bold mb-4">Loading...</h2>
       <Spinner />

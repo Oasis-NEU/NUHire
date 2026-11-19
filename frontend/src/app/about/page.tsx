@@ -45,19 +45,19 @@ export default function AboutPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden font-rubik flex flex-col">
+    <div className="relative min-h-screen w-full overflow-hidden flex flex-col">
       <div className="fixed inset-0 z-0">
         <Slideshow />
       </div>
 
-      <div className="fixed inset-0 bg-sand/80 z-[5]" />
+      <div className="fixed inset-0 bg-white/80 z-[5]" />
 
-      <div className="w-full flex justify-center p-4 bg-navy/90 backdrop-blur-sm shadow-md font-rubik text-lg z-20">
-        <h1 className="text-6xl font-extrabold mb-1 text-northeasternRed">NUHire</h1>
+      <div className="w-full flex justify-center p-4 bg-black/90 backdrop-blur-sm shadow-md text-lg z-20">
+        <h1 className="text-6xl font-extrabold mb-1 text-neu-red">NUHire</h1>
       </div>
 
       <div className="relative z-10 flex flex-col items-center flex-grow">
-        <div className="flex flex-col items-center text-redHeader text-center space-y-2 mb-2 mt-4">
+        <div className="flex flex-col items-center text-neu-red text-center space-y-2 mb-2 mt-4">
           <h1 className="text-4xl font-extrabold mb-1">Welcome to NUHire</h1>
           <p className="text-lg text-gray-800 mb-2">
             Work in small teams to experience what it's like to be a hiring manager.
@@ -70,15 +70,15 @@ export default function AboutPage() {
             Then, watch interview clips and choose the top two finalists for the role.
           </p>
           <p className="text-lg text-gray-800">Who will your group select to be your NUHire?</p>
-          <p className="text-xl font-rubik mb-4 max-w-3xl">
+          <p className="text-xl mb-4 max-w-3xl">
             An Applicant Tracking System (ATS) is a software that streamlines the hiring process by
             automating tasks like resume screening and applicant tracking. It helps organizations
             manage the flow of applications and identify qualified candidates.
           </p>
-          <h1 className="text-2xl font-rubik font-bold mb-4">
+          <h1 className="text-2xl font-bold mb-4">
             Before you get started on this activity, watch the short video below:
           </h1>
-          <div className="w-full max-w-5xl aspect-video border-4 border-[#1c2a63] mb-5 rounded-lg shadow-lg">
+          <div className="w-full max-w-5xl aspect-video border-4 border-blue-900 mb-5 rounded-lg shadow-lg">
             <iframe
               className="w-full h-full rounded-lg shadow-lg"
               src="https://www.youtube.com/embed/fHpVPkIGVyY?si=9L9JBYH8sWTEZYe6"
@@ -91,15 +91,15 @@ export default function AboutPage() {
         </div>
         <button
           onClick={handleContinue}
-          className="px-6 py-4 bg-navy text-sand border-4 border-navy rounded-md text-xl font-bold transition-opacity hover:opacity-60 active:opacity-30 my-8"
+          className="px-6 py-4 bg-black text-white border-4 border-black rounded-md text-xl font-bold transition-opacity hover:opacity-60 active:opacity-30 my-8"
         >
           Continue to Instructions
         </button>
       </div>
 
-      <footer className="w-full flex justify-center p-2 bg-navy/90 backdrop-blur-sm shadow-md font-rubik text-2xl z-20">
+      <footer className="w-full flex justify-center p-2 bg-black/90 backdrop-blur-sm shadow-md text-2xl z-20">
         <a
-          className="flex items-center text-wood hover:text-blue-300 transition-colors duration-200"
+          className="flex items-center text-gray-200 hover:text-blue-300 transition-colors duration-200"
           href="https://discord.com/invite/jyvzqyJHy6"
           target="_blank"
           rel="noopener noreferrer"

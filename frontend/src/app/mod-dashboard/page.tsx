@@ -196,24 +196,24 @@ const ModDashboard = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-rubik relative overflow-hidden">
+    <div className="flex flex-col min-h-screen relative overflow-hidden">
       <div className="fixed inset-0 z-0">
         <Slideshow />
       </div>
-      <div className="fixed inset-0 bg-sand/80 z-[5]" />
+      <div className="fixed inset-0 bg-white/80 z-[5]" />
       <nav className="navbar w-full relative">
         {/* Top bar */}
-        <div className="bg-northeasternBlack text-northeasternWhite flex items-center justify-center px-6 py-4 font-rubik border-b-4 border-northeasternRed w-full">
+        <div className="bg-black text-white flex items-center justify-center px-6 py-4 border-b-4 border-neu-red w-full">
           <Link
             href="/advisor-dashboard"
-            className="text-3xl font-rubik text-center font-bold text-northeasternRed drop-shadow-lg"
+            className="text-3xl text-center font-bold text-neu-red drop-shadow-lg"
           >
             NUHire
           </Link>
         </div>
       </nav>
       <div className="flex-1 flex flex-col px-4 py-8 z-10">
-        <h1 className="text-3xl font-extrabold text-redHeader text-center mb-8">
+        <h1 className="text-3xl font-extrabold text-neu-red text-center mb-8">
           Admin Class Management
         </h1>
 
@@ -221,8 +221,8 @@ const ModDashboard = () => {
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col md:flex-row gap-8 w-full max-w-6xl mx-auto">
             {/* Left: List of Classes */}
-            <div className="flex-1 bg-white border-2 border-northeasternRed rounded-xl shadow-md p-6">
-              <h4 className="text-xl font-bold text-northeasternRed mb-4 text-center">Classes</h4>
+            <div className="flex-1 bg-white border-2 border-neu-red rounded-xl shadow-md p-6">
+              <h4 className="text-xl font-bold text-neu-red mb-4 text-center">Classes</h4>
               {info.length === 0 ? (
                 <div className="text-center text-gray-600">No CRNs found.</div>
               ) : (
@@ -230,15 +230,15 @@ const ModDashboard = () => {
                   {info.map((i) => (
                     <div
                       key={i.id}
-                      className="w-full bg-northeasternWhite border border-northeasternRed rounded-lg shadow flex flex-col md:flex-row md:items-center justify-between p-4"
+                      className="w-full bg-white border border-neu-red rounded-lg shadow flex flex-col md:flex-row md:items-center justify-between p-4"
                     >
                       <div>
-                        <div className="font-bold text-northeasternRed">CRN: {i.crn}</div>
-                        <div className="text-navy text-sm">Teacher: {i.admin_email}</div>
+                        <div className="font-bold text-neu-red">CRN: {i.crn}</div>
+                        <div className="text-black text-sm">Teacher: {i.admin_email}</div>
                       </div>
                       <button
                         onClick={() => handleDelete(i.crn)}
-                        className="mt-2 md:mt-0 px-4 py-2 bg-northeasternRed text-white rounded hover:bg-navy transition"
+                        className="mt-2 md:mt-0 px-4 py-2 bg-neu-red text-white rounded hover:bg-black transition"
                         disabled={deletingCRN === i.crn}
                       >
                         {deletingCRN === i.crn ? 'Deleting...' : 'Delete'}
@@ -250,10 +250,8 @@ const ModDashboard = () => {
             </div>
 
             {/* Right: Add a Class */}
-            <div className="flex-1 bg-white border-2 border-northeasternRed rounded-xl shadow-md p-6">
-              <h4 className="text-xl font-bold text-northeasternRed mb-4 text-center">
-                Add a Class
-              </h4>
+            <div className="flex-1 bg-white border-2 border-neu-red rounded-xl shadow-md p-6">
+              <h4 className="text-xl font-bold text-neu-red mb-4 text-center">Add a Class</h4>
               <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
                 <input
                   type="email"
@@ -275,7 +273,7 @@ const ModDashboard = () => {
                 />
                 <button
                   type="submit"
-                  className="bg-navy text-white py-2 rounded hover:bg-navy/80 transition"
+                  className="bg-black text-white py-2 rounded hover:bg-black/80 transition"
                   disabled={submitting}
                 >
                   {submitting ? 'Adding...' : 'Add Class'}
@@ -297,7 +295,7 @@ const ModDashboard = () => {
             <div className="flex space-x-3">
               <button
                 onClick={executeDelete}
-                className="flex-1 bg-northeasternRed text-white py-2 px-4 rounded-lg hover:bg-red-700"
+                className="flex-1 bg-neu-red text-white py-2 px-4 rounded-lg hover:bg-red-700"
               >
                 Delete
               </button>

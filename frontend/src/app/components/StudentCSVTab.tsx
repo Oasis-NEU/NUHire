@@ -415,7 +415,7 @@ export function StudentCSVTab() {
 
   if (userloading) {
     return (
-      <div className="flex flex-col min-h-screen bg-northeasternWhite font-rubik">
+      <div className="flex flex-col min-h-screen bg-white">
         <div className="max-w-4xl mx-auto p-4">
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center justify-center h-40">
@@ -430,7 +430,7 @@ export function StudentCSVTab() {
 
   if (!user) {
     return (
-      <div className="flex flex-col min-h-screen bg-northeasternWhite font-rubik">
+      <div className="flex flex-col min-h-screen bg-white">
         <div className="max-w-4xl mx-auto p-4">
           <div className="bg-white rounded-lg shadow-lg p-6 text-center">
             <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
@@ -442,7 +442,7 @@ export function StudentCSVTab() {
   }
 
   return (
-    <div className="bg-northeasternWhite font-rubik">
+    <div className="bg-white">
       <div className="w-full p-4">
         <div className="bg-white rounded-lg shadow-lg p-6 w-full">
           {/* Class Selection */}
@@ -497,7 +497,7 @@ export function StudentCSVTab() {
                   Drop your CSV file here or{' '}
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="text-blue-600 hover:text-blue-500 underline"
+                    className="text-blue-600 hover:text-blue-400 underline"
                   >
                     browse
                   </button>

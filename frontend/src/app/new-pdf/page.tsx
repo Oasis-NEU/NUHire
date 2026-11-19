@@ -405,7 +405,7 @@ const Upload = () => {
           <select
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-navy"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
           >
             <option value="">Choose a class...</option>
             {classes.map((cls) => (
@@ -426,14 +426,14 @@ const Upload = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Job Description Upload Section */}
             <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-2xl font-bold text-navy mb-6">Upload Job Description</h2>
+              <h2 className="text-2xl font-bold text-black mb-6">Upload Job Description</h2>
               <div className="space-y-4">
                 <input
                   type="text"
                   placeholder="Job Title"
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-navy"
+                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                 />
                 <input
                   type="file"
@@ -444,7 +444,7 @@ const Upload = () => {
                 <button
                   onClick={uploadJobDescription}
                   disabled={jobUploading}
-                  className="w-full bg-navy text-white py-3 rounded-md hover:bg-opacity-90 transition duration-200 disabled:opacity-50"
+                  className="w-full bg-black text-white py-3 rounded-md hover:bg-opacity-90 transition duration-200 disabled:opacity-50"
                 >
                   {jobUploading ? 'Uploading...' : 'Upload Job Description'}
                 </button>
@@ -481,13 +481,13 @@ const Upload = () => {
                               href={`${API_BASE_URL}/${job.file_path.replace(/^\//, '')}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-3 py-1 bg-navy text-white rounded hover:bg-opacity-90 transition duration-200"
+                              className="px-3 py-1 bg-black text-white rounded hover:bg-opacity-90 transition duration-200"
                             >
                               View PDF
                             </a>
                             <button
                               onClick={() => deleteJob(job.file_path, job.class_id)}
-                              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition duration-200"
+                              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-700 transition duration-200"
                             >
                               Delete
                             </button>
@@ -507,14 +507,14 @@ const Upload = () => {
 
             {/* Resume Upload Section */}
             <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-2xl font-bold text-navy mb-6">Upload Candidate</h2>
+              <h2 className="text-2xl font-bold text-black mb-6">Upload Candidate</h2>
               <div className="space-y-4">
                 <input
                   type="text"
                   placeholder="Resume Title"
                   value={resTitle}
                   onChange={(e) => setResTitle(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-navy"
+                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <input
@@ -522,14 +522,14 @@ const Upload = () => {
                     placeholder="First Name"
                     value={resFirstName}
                     onChange={(e) => setResFirstName(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-navy"
+                    className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                   />
                   <input
                     type="text"
                     placeholder="Last Name"
                     value={resLastName}
                     onChange={(e) => setResLastName(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-navy"
+                    className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                   />
                 </div>
                 <input
@@ -537,7 +537,7 @@ const Upload = () => {
                   placeholder="YouTube Video URL or Embed Code"
                   value={resYouTubeVideo}
                   onChange={(e) => setResYouTubeVideo(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-navy"
+                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                 />
                 <input
                   type="file"
@@ -548,7 +548,7 @@ const Upload = () => {
                 <button
                   onClick={uploadResume}
                   disabled={resumeUploading}
-                  className="w-full bg-navy text-white py-3 rounded-md hover:bg-opacity-90 transition duration-200 disabled:opacity-50"
+                  className="w-full bg-black text-white py-3 rounded-md hover:bg-opacity-90 transition duration-200 disabled:opacity-50"
                 >
                   {resumeUploading ? 'Uploading...' : 'Upload Candidate'}
                 </button>
@@ -582,7 +582,7 @@ const Upload = () => {
                               href={`${API_BASE_URL}/${resume.file_path.replace(/^\//, '')}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-3 py-1 bg-navy text-white rounded hover:bg-opacity-90 transition duration-200 text-sm"
+                              className="px-3 py-1 bg-black text-white rounded hover:bg-opacity-90 transition duration-200 text-sm"
                             >
                               View PDF
                             </a>
@@ -598,7 +598,7 @@ const Upload = () => {
                             )}
                             <button
                               onClick={() => deleteResume(resume.file_path, resume.class_id)}
-                              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition duration-200 ml-auto text-sm"
+                              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-700 transition duration-200 ml-auto text-sm"
                             >
                               Delete
                             </button>

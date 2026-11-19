@@ -109,7 +109,7 @@ export function SendPopupModal({
           <button
             onClick={onSend}
             disabled={isSending || !headline || !message}
-            className={`flex-1 bg-northeasternRed text-white py-2 px-4 rounded-lg hover:bg-red-700 ${
+            className={`flex-1 bg-neu-red text-white py-2 px-4 rounded-lg hover:bg-red-700 ${
               isSending || !headline || !message ? 'opacity-50 cursor-not-allowed' : ''
             }
             }`}

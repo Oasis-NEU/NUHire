@@ -1,23 +1,13 @@
-@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-.font-rubik {
-  font-family: 'Rubik', sans-serif;
-}
-
-.font-montserrat {
-  font-family: 'Montserrat', sans-serif;
-}
 
 html,
 body {
   height: 100%;
   margin: 0;
   padding: 0;
-  background-color: #e7e2db;
+  background-color: theme('colors.gray.50');
 }
 
 .pdf-container .react-pdf__Page {

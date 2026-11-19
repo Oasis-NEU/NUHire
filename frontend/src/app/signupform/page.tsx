@@ -168,25 +168,25 @@ export default function SignupDetails() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-sand font-rubik">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-white">
       <div className="fixed inset-0 z-0">
         <Slideshow />
       </div>
-      <div className="fixed inset-0 bg-sand/80 z-[5]" />
-      <div className="w-full flex justify-center p-4 bg-navy/90 backdrop-blur-sm shadow-md font-rubik text-lg fixed top-0 z-20">
-        <h1 className="text-6xl font-extrabold mb-1 text-northeasternRed">NUHire</h1>
+      <div className="fixed inset-0 bg-white/80 z-[5]" />
+      <div className="w-full flex justify-center p-4 bg-black/90 backdrop-blur-sm shadow-md text-lg fixed top-0 z-20">
+        <h1 className="text-6xl font-extrabold mb-1 text-neu-red">NUHire</h1>
       </div>
       <div className="z-10">
-        <h1 className="text-3xl font-bold text-navy mb-6">Complete Your Signup</h1>
+        <h1 className="text-3xl font-bold text-black mb-6">Complete Your Signup</h1>
 
         <form
           onSubmit={handleSubmit}
-          className="w-full max-w-md bg-navy shadow-lg rounded-lg p-6 flex flex-col gap-4"
+          className="w-full max-w-md bg-black shadow-lg rounded-lg p-6 flex flex-col gap-4"
         >
           <input
             type="text"
             placeholder="First Name *"
-            className="w-full px-4 py-3 border border-wood bg-springWater rounded-md bg-gray-200 cursor-not-allowed"
+            className="w-full px-4 py-3 border border-gray-200 bg-gray-50 rounded-md bg-gray-200 cursor-not-allowed"
             value={firstName}
             disabled
           />
@@ -194,21 +194,21 @@ export default function SignupDetails() {
           <input
             type="text"
             placeholder="Last Name *"
-            className="w-full px-4 py-3 border border-wood bg-springWater rounded-md bg-gray-200 cursor-not-allowed"
+            className="w-full px-4 py-3 border border-gray-200 bg-gray-50 rounded-md bg-gray-200 cursor-not-allowed"
             value={lastName}
             disabled
           />
 
           <input
             type="email"
-            className="w-full px-4 py-3 border border-wood bg-springWater rounded-md bg-gray-200 cursor-not-allowed"
+            className="w-full px-4 py-3 border border-gray-200 bg-gray-50 rounded-md bg-gray-200 cursor-not-allowed"
             value={email}
             disabled
           />
 
           <select
             value={affiliation}
-            className="w-full px-4 py-3 border border-wood bg-springWater rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-3 border border-gray-200 bg-gray-50 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             onChange={(e) => setAffiliation(e.target.value)}
             required
           >
@@ -219,7 +219,7 @@ export default function SignupDetails() {
 
           <button
             type="submit"
-            className={`w-full bg-northeasternWhite text-northeasternRed font-semibold px-4 py-3 rounded-md hover:bg-northeasternRed hover:text-northeasternWhite transition ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`w-full bg-white text-neu-red font-semibold px-4 py-3 rounded-md hover:bg-neu-red hover:text-white transition ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={submitting}
           >
             {submitting ? 'Please wait...' : 'Submit'}
@@ -227,15 +227,15 @@ export default function SignupDetails() {
         </form>
         {message && (
           <div className="flex justify-center">
-            <div className="mt-4 text-northeasternBlack px-4 py-3 rounded text-center w-full max-w-md">
+            <div className="mt-4 text-black px-4 py-3 rounded text-center w-full max-w-md">
               {message}
             </div>
           </div>
         )}
       </div>
-      <footer className="w-full flex justify-center p-2 bg-navy/90 backdrop-blur-sm shadow-md font-rubik text-2xl fixed bottom-0 z-20">
+      <footer className="w-full flex justify-center p-2 bg-black/90 backdrop-blur-sm shadow-md text-2xl fixed bottom-0 z-20">
         <a
-          className="flex items-center text-wood hover:text-blue-300 transition-colors duration-200"
+          className="flex items-center text-gray-200 hover:text-blue-300 transition-colors duration-200"
           href="https://discord.com/invite/jyvzqyJHy6"
           target="_blank"
           rel="noopener noreferrer"

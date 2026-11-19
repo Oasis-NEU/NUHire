@@ -22,7 +22,7 @@ export function ConfirmActionModal({ actionType, onConfirm, onCancel }: ConfirmA
         <div className="flex space-x-3">
           <button
             onClick={onConfirm}
-            className="flex-1 bg-northeasternRed text-white py-2 px-4 rounded-lg hover:bg-red-700"
+            className="flex-1 bg-neu-red text-white py-2 px-4 rounded-lg hover:bg-red-700"
           >
             Confirm
           </button>

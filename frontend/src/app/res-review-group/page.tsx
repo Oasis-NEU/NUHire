@@ -510,7 +510,7 @@ export default function ResReviewGroup() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-sand font-rubik overflow-hidden">
+    <div className="h-screen flex flex-col bg-white overflow-hidden">
       {showInstructions && (
         <Instructions
           instructions={resumeInstructions}
@@ -524,9 +524,9 @@ export default function ResReviewGroup() {
       <div className="flex-1 flex px-8 py-4 gap-6 overflow-hidden">
         {/* Resume/Job Description Viewer */}
         <div className="w-1/2 flex flex-col overflow-hidden">
-          <div className="mb-3 p-3 bg-gray-100 border-2 border-northeasternRed rounded-lg flex-shrink-0">
+          <div className="mb-3 p-3 bg-gray-100 border-2 border-neu-red rounded-lg flex-shrink-0">
             <div className="flex items-center justify-between mb-1">
-              <h3 className="font-bold text-navy text-sm">📖 Document Viewer</h3>
+              <h3 className="font-bold text-black text-sm">📖 Document Viewer</h3>
               <button
                 onClick={() => {
                   setShowJobDescription(!showJobDescription);
@@ -537,7 +537,7 @@ export default function ResReviewGroup() {
                 {showJobDescription ? 'View Resume' : 'View Job Description'}
               </button>
             </div>
-            <p className="text-xs text-navy">
+            <p className="text-xs text-black">
               {showJobDescription
                 ? 'Viewing the job description. This viewer is for your personal use.'
                 : "Click on any candidate card to preview their resume. This viewer is for your personal use - other group members won't see what you're viewing here."}
@@ -545,22 +545,22 @@ export default function ResReviewGroup() {
           </div>
 
           {showJobDescription && jobDescPath ? (
-            <div className="flex-1 flex flex-col border-4 border-northeasternBlack rounded-lg overflow-hidden bg-white">
+            <div className="flex-1 flex flex-col border-4 border-black rounded-lg overflow-hidden bg-white">
               {/* Page navigation for job description */}
               {jobDescNumPages && jobDescNumPages > 1 && (
-                <div className="flex items-center justify-between bg-navy px-2 py-1">
+                <div className="flex items-center justify-between bg-black px-2 py-1">
                   <button
-                    className="px-2 py-0.5 bg-sand text-navy rounded disabled:opacity-50 text-xs"
+                    className="px-2 py-0.5 bg-white text-black rounded disabled:opacity-50 text-xs"
                     onClick={() => setJobDescPageNumber((prev) => Math.max(1, prev - 1))}
                     disabled={jobDescPageNumber <= 1}
                   >
                     ←
                   </button>
-                  <span className="text-sand text-xs font-semibold">
+                  <span className="text-white text-xs font-semibold">
                     Page {jobDescPageNumber} / {jobDescNumPages}
                   </span>
                   <button
-                    className="px-2 py-0.5 bg-sand text-navy rounded disabled:opacity-50 text-xs"
+                    className="px-2 py-0.5 bg-white text-black rounded disabled:opacity-50 text-xs"
                     onClick={() =>
                       setJobDescPageNumber((prev) => Math.min(jobDescNumPages, prev + 1))
                     }
@@ -594,7 +594,7 @@ export default function ResReviewGroup() {
               </div>
             </div>
           ) : selectedResume ? (
-            <div className="flex-1 border-4 border-northeasternBlack rounded-lg overflow-hidden">
+            <div className="flex-1 border-4 border-black rounded-lg overflow-hidden">
               <iframe
                 src={`${getResumeUrl(selectedResume.file_path)}#toolbar=0&navpanes=0&statusbar=0&messages=0`}
                 title={`Resume Preview ${selectedResume.resume_number}`}
@@ -612,9 +612,9 @@ export default function ResReviewGroup() {
 
         {/* Candidate Cards */}
         <div className="w-1/2 flex flex-col overflow-hidden">
-          <div className="mb-3 p-3 bg-gray-100 border-2 border-northeasternRed rounded-lg flex-shrink-0">
-            <h3 className="font-bold text-navy mb-1 text-sm">✅ Group Selection (Shared)</h3>
-            <p className="text-xs text-navy">
+          <div className="mb-3 p-3 bg-gray-100 border-2 border-neu-red rounded-lg flex-shrink-0">
+            <h3 className="font-bold text-black mb-1 text-sm">✅ Group Selection (Shared)</h3>
+            <p className="text-xs text-black">
               Select exactly 4 resumes as a group to advance to interviews. Click a card to preview,
               check the box to select. Changes are visible to all team members in real-time.
             </p>
@@ -631,12 +631,12 @@ export default function ResReviewGroup() {
                   key={n}
                   onClick={() => handleCardClick(n)}
                   className={`bg-gray-100 border-2 rounded-lg shadow-lg p-3 flex flex-col justify-between transition cursor-pointer hover:shadow-xl ${
-                    isSelected ? 'border-blue-500 bg-blue-50' : 'border-northeasternRed'
+                    isSelected ? 'border-blue-500 bg-blue-50' : 'border-neu-red'
                   }`}
                 >
                   {/* Name and votes on same line */}
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-xl font-semibold text-navy">
+                    <h3 className="text-xl font-semibold text-black">
                       {resume.first_name} {resume.last_name}
                     </h3>
 
@@ -669,7 +669,7 @@ export default function ResReviewGroup() {
                       onChange={() => handleCheckboxChange(n)}
                       className="mr-1.5 h-3 w-3"
                     />
-                    <span className="text-navy font-semibold text-m">Select for Interview</span>
+                    <span className="text-black font-semibold text-m">Select for Interview</span>
                   </label>
                 </div>
               );
@@ -682,7 +682,7 @@ export default function ResReviewGroup() {
         <button
           onClick={() => router.push('/res-review')}
           disabled={true}
-          className="px-3 py-1.5 bg-redHeader text-white rounded-lg shadow hover:bg-blue-400 transition text-sm opacity-50 cursor-not-allowed"
+          className="px-3 py-1.5 bg-neu-red text-white rounded-lg shadow hover:bg-blue-400 transition text-sm opacity-50 cursor-not-allowed"
         >
           ← Back: Resume Review Pt.1
         </button>
@@ -695,7 +695,7 @@ export default function ResReviewGroup() {
               {selectedCount}/4 candidates selected
             </p>
             {selectedCount === 4 && (
-              <p className="text-xs text-navy">
+              <p className="text-xs text-black">
                 Team Confirmation: {teamConfirmations.length}/{groupSize} members ready
               </p>
             )}
@@ -740,7 +740,7 @@ export default function ResReviewGroup() {
               disabled={selectedCount !== 4 || teamConfirmations.length < groupSize}
               className={`px-4 py-1.5 rounded-lg shadow font-bold transition text-sm ${
                 selectedCount === 4 && teamConfirmations.length >= groupSize
-                  ? 'bg-redHeader text-white hover:bg-blue-400'
+                  ? 'bg-neu-red text-white hover:bg-blue-400'
                   : 'bg-gray-300 text-gray-600 cursor-not-allowed'
               }`}
             >
