@@ -9,6 +9,8 @@ RUN npm ci
 COPY prisma/ ./prisma/
 COPY src/ ./src/
 COPY uploads/ ./uploads/
+# Read at runtime by src/config/screenerPrompt.ts.
+COPY GEMINI.md ./GEMINI.md
 # Generates the Prisma client, then compiles, as in production.
 RUN npm run build
 

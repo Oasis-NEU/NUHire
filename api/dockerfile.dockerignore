@@ -10,4 +10,5 @@
 !api/prisma/
 !api/src/
 !api/uploads/
+!api/GEMINI.md
 !database-files/migrations/
