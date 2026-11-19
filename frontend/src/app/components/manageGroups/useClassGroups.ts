@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Socket } from 'socket.io-client';
-import type { ClassInfo, Group, Student, User } from '../../../types';
+import type { Group, Student, User } from '../../../types';
+import { useModeratorClassList } from '../useModeratorClassList';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -14,7 +15,7 @@ export function useClassGroups(
   setPopup: (popup: { headline: string; message: string } | null) => void
 ) {
   const [selectedClass, setSelectedClass] = useState<string>('');
-  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const { classes } = useModeratorClassList(user?.email, setPopup);
   const [groups, setGroups] = useState<Group[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [availableGroups, setAvailableGroups] = useState<number[]>([]);
@@ -247,27 +248,6 @@ export function useClassGroups(
       socket.off('progressUpdated', handleProgressUpdated);
     };
   }, [socket, selectedClass]);
-
-  useEffect(() => {
-    const fetchClasses = async () => {
-      if (!user?.email) return;
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/moderator/classes-full/${user.email}`, {
-          credentials: 'include',
-        });
-
-        if (response.ok) {
-          const classData = await response.json();
-          setClasses(classData);
-        }
-      } catch (error) {
-        console.error('Error fetching classes:', error);
-      }
-    };
-
-    fetchClasses();
-  }, [user]);
 
   useEffect(() => {
     const fetchAvailableGroups = async () => {

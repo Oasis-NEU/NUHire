@@ -2,49 +2,25 @@
 import React, { useEffect, useState } from 'react';
 import NavbarAdmin from '../components/navbar-admin'; // Importing the admin navbar component
 import { useSocket } from '../components/socketContext'; // Importing custom hook to use socket context
+import { useAuth } from '../components/AuthContext';
+import { useModeratorClassList } from '../components/useModeratorClassList';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-interface ModeratorClass {
-  crn: number;
-  class_name: string;
-}
-
 export default function AdminFactsPage() {
-  const [classes, setClasses] = useState<ModeratorClass[]>([]);
+  const { user } = useAuth();
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [facts, setFacts] = useState(['', '', '']);
-  const [loading, setLoading] = useState(true);
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
+  const { classes, loading } = useModeratorClassList(
+    user?.affiliation === 'admin' ? user.email : undefined,
+    setPopup
+  );
   const [currentFacts, setCurrentFacts] = useState<{
     one: string;
     two: string;
     three: string;
   } | null>(null);
   const socket = useSocket();
-
-  // Fetch classes for dropdown
-  useEffect(() => {
-    const fetchClasses = async () => {
-      try {
-        const userRes = await fetch(`${API_BASE_URL}/auth/user`, { credentials: 'include' });
-        const userData = await userRes.json();
-        if (userRes.ok && userData.email && userData.affiliation === 'admin') {
-          const res = await fetch(`${API_BASE_URL}/moderator/classes-full/${userData.email}`, {
-            credentials: 'include',
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setClasses(data);
-          }
-        }
-      } catch (error) {
-        setPopup({ headline: 'Error', message: 'Failed to fetch classes.' });
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchClasses();
-  }, []);
 
   // Fetch current saved facts for the selected class
   useEffect(() => {
