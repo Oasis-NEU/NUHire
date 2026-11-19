@@ -809,8 +809,8 @@ done   # all 0
 
 ### Done when
 
-- [ ] Migration drops all five, guarded so a second run is a no-op
-- [ ] `Pandployer.sql` no longer defines them
+- [x] Migration drops all five, guarded so a second run is a no-op
+- [x] `Pandployer.sql` no longer defines them
 - [ ] Row counts from the live database are recorded in the PR
 
 ---
