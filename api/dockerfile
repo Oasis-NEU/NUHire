@@ -34,6 +34,10 @@ COPY api/prisma/ ./prisma/
 
 COPY api/uploads/ ./uploads/
 
+# The screener's instructions to Gemini, read at runtime from ../../GEMINI.md
+# relative to dist/config (see src/config/screenerPrompt.ts).
+COPY api/GEMINI.md ./GEMINI.md
+
 # Where `npm run db:migrate` looks for them: ../database-files/migrations,
 # relative to this WORKDIR.
 COPY database-files/migrations/ /database-files/migrations/
