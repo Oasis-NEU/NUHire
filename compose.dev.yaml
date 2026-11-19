@@ -44,7 +44,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 30s
+      # The API answers only after tsc's first compile (see api/dockerfile.dev),
+      # which can take a minute on a slow machine; it waits up to two.
+      start_period: 120s
     depends_on:
       db:
         condition: service_healthy
