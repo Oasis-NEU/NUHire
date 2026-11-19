@@ -9,11 +9,13 @@ import { Server as SocketIOServer } from 'socket.io';
 import fs from 'fs';
 import path from 'path';
 import { extractPdfText } from '../config/pdfText';
+import { queueScreens, Screens } from '../config/screeningQueue';
 
 export class ResumeController {
   constructor(
     private db: Pool,
-    private io: SocketIOServer
+    private io: SocketIOServer,
+    private screens: Screens
   ) {}
 
   getFinishedCount = (req: AuthRequest, res: Response): void => {
@@ -224,13 +226,15 @@ export class ResumeController {
 
       const candidateSql =
         'INSERT INTO Candidates (resume_id, interview, f_name, l_name) VALUES (?, ?, ?, ?)';
-      this.db.query(candidateSql, [resumeId, vid, f_name, l_name], (err2) => {
+      this.db.query(candidateSql, [resumeId, vid, f_name, l_name], async (err2) => {
         if (err2) {
           console.error('Error inserting candidate:', err2);
           res.status(500).json({ error: 'Database error' });
           return;
         }
 
+        // Only the rows go in here; the screens run in the background.
+        await queueScreens(this.screens, Number(class_id), { resumeId });
         res.json({
           message: 'Resume and candidate added successfully!',
           resumeId: resumeId,

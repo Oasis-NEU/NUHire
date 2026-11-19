@@ -211,6 +211,7 @@ model job_descriptions {
   uploaded_at       DateTime?           @default(now()) @db.Timestamp(0)
   class_id          Int
   extracted_text    String?             @db.MediumText
+  keywords          Json?
   Job_Assignment    Job_Assignment[]
   Screening_Results Screening_Results[]
   Moderator         Moderator           @relation(fields: [class_id], references: [crn], onDelete: Cascade, onUpdate: NoAction, map: "job_descriptions_class_fk")
@@ -240,6 +241,7 @@ model Screening_Results {
   missed_keywords  Json?
   ai_summary       String?                  @db.Text
   is_sample        Boolean                  @default(false)
+  run              Int                      @default(0) @db.UnsignedInt
   job_descriptions job_descriptions         @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "screening_results_job_fk")
   Resume_pdfs      Resume_pdfs              @relation(fields: [resume_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "screening_results_resume_fk")
 

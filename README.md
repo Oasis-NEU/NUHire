@@ -94,6 +94,27 @@ Two things that catch everyone out:
 The "Admin" button on the landing page is a separate legacy login (`admin` /
 `admin`) that only gates the page for adding new teachers. You do not need it.
 
+## Resume screener
+
+The screener sends resumes to Google's Gemini, with contact details stripped
+first, for a written explanation of each keyword score. Two settings in
+`api/.env` control it:
+
+| Variable                      | Default | What it does                                                                                     |
+| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------ |
+| `GEMINI_API_KEY`              | unset   | The Gemini key. Unset, nothing is screened.                                                      |
+| `SCREENER_ALLOW_REAL_RESUMES` | `false` | Off, only resumes queued as sample data are sent. Any other is refused and never leaves the API. |
+
+> **Do not turn on `SCREENER_ALLOW_REAL_RESUMES` with a free-tier key.** On
+> the free tier, Google uses what is sent "to provide, improve, and develop"
+> its products, and "human reviewers may read, annotate, and process your API
+> input and output". Its terms say not to send it personal information. A
+> stripped resume still is: a student's school, jobs and dates identify them.
+> Sample resumes are made up, which is why they are sent with the flag off.
+> On a paid key, Google does not use prompts or responses to improve its
+> products. Source: the [Gemini API terms](https://ai.google.dev/gemini-api/terms),
+> "Unpaid Services" and "Paid Services".
+
 ## Contributing
 
 Read **[AGENTS.md](AGENTS.md)** first. It covers the architecture, the conventions,

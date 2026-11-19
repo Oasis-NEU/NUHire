@@ -10,6 +10,7 @@ import type { Pool as PromisePool, PoolConnection, RowDataPacket } from 'mysql2/
 import fs from 'fs';
 import path from 'path';
 import { extractPdfText } from '../config/pdfText';
+import { queueScreens, Screens } from '../config/screeningQueue';
 
 // Every group-scoped table a reset wipes. The reset deletes from this list and
 // the reset preview counts from it, so the warning the professor reads cannot
@@ -127,7 +128,8 @@ export class JobController {
   constructor(
     private db: Pool,
     private io: SocketIOServer,
-    private onlineStudents: Record<string, string>
+    private onlineStudents: Record<string, string>,
+    private screens: Screens
   ) {}
 
   getAllJobs = (req: AuthRequest, res: Response): void => {
@@ -377,6 +379,7 @@ export class JobController {
           reset,
         });
       }
+      await queueScreens(this.screens, classIdInt, { groupIds });
 
       res.json({
         message: reset
@@ -460,6 +463,7 @@ export class JobController {
         job: jobTitle,
         reset,
       });
+      await queueScreens(this.screens, classIdInt, { groupIds: [groupIdInt] });
 
       res.json({
         message: reset
