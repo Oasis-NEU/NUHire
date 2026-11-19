@@ -123,6 +123,5 @@ export const STREET_BEFORE_CITY = new RegExp(
   `\\b\\d{1,6}[A-Za-z]?${SAME_LINE}(?:${WORD_IN_STREET}${SAME_LINE}){0,3}${WORD_IN_STREET}${UNIT},?\\s*(?=\\[ADDRESS\\])`,
   'gu'
 );
-export const UK_POSTCODE = /\b(?:[A-Z]{1,2}\d[A-Z\d]?|GIR)\s*\d[A-Z]{2}\b/g;
 export const CANADIAN_POSTCODE = /\b[A-Z]\d[A-Z][ -]?\d[A-Z]\d\b/g;
 export const PO_BOX = /\b(?:P\.?\s?O\.?|Post\s+Office)\s*Box\s+\d+\b/gi;

@@ -24,8 +24,9 @@
 //              written 5 and 5; any run of 10 to 15 digits
 //   [ADDRESS]  a numbered street with its suffix and unit; a numbered street
 //              without a suffix when a city and zip follow it; "City, ST
-//              12345" or "City, State 12345", commas optional; UK and Canadian
-//              postcodes; PO boxes
+//              12345" or "City, State 12345", commas optional; Canadian
+//              postcodes; PO boxes. Not UK postcodes: "EC2 2GB" is one, and
+//              tech resumes say it about AWS.
 //   [NAME]     each part of the names passed in, as a whole word, with or
 //              without accents, with any apostrophe, and with its letters
 //              spaced out ("J O R D A N")
@@ -69,7 +70,6 @@ import {
   STREET,
   CITY_STATE_ZIP,
   STREET_BEFORE_CITY,
-  UK_POSTCODE,
   CANADIAN_POSTCODE,
   PO_BOX,
 } from './contactPatterns';
@@ -239,7 +239,6 @@ export class StrippedText {
       .replace(STREET, TAGS.address)
       .replace(CITY_STATE_ZIP, TAGS.address)
       .replace(PO_BOX, TAGS.address)
-      .replace(UK_POSTCODE, TAGS.address)
       .replace(CANADIAN_POSTCODE, TAGS.address);
     out = collapse(out.replace(STREET_BEFORE_CITY, TAGS.address), TAGS.address);
 
