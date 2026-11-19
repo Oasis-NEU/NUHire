@@ -232,6 +232,70 @@ export const DEFAULT_RESUME_PDFS = [
   { title: 'sample10', file_path: 'uploads/resumes/sample10.pdf' },
 ];
 
+/** The interview and name for each sample resume above, by its id in class 1. */
+export const DEFAULT_CANDIDATES = [
+  {
+    resume_id: 1,
+    interview: 'https://www.youtube.com/embed/aA7k6WM4_7A?si=ahwZZpSKUow0-dG2',
+    f_name: 'Aisha',
+    l_name: 'Patel',
+  },
+  {
+    resume_id: 2,
+    interview: 'https://www.youtube.com/embed/4d6v7p0N9Sg?si=nax_IkG0gk3zNae-',
+    f_name: 'Casey',
+    l_name: 'Fisch',
+  },
+  {
+    resume_id: 3,
+    interview: 'https://www.youtube.com/embed/typ4aN11feI?si=7jFsNwhB9ZkKyuo9',
+    f_name: 'Ethan',
+    l_name: 'Martinez',
+  },
+  {
+    resume_id: 4,
+    interview: 'https://www.youtube.com/embed/ySKRfElNPCY?si=2B1cl7djMtE1GLJL',
+    f_name: 'Jason',
+    l_name: 'Jones',
+  },
+  {
+    resume_id: 5,
+    interview: 'https://www.youtube.com/embed/_KGOo1WGKZU?si=aTLlkNgS7di69Sga',
+    f_name: 'Lucas',
+    l_name: 'Nyugen',
+  },
+  {
+    resume_id: 6,
+    interview: 'https://www.youtube.com/embed/AhJrqbDTn1Y?si=_XjOXZJBzSvpN_aM',
+    f_name: 'Maya',
+    l_name: 'Collins',
+  },
+  {
+    resume_id: 7,
+    interview: 'https://www.youtube.com/embed/1dIhJmX4uLo?si=aAna0LIIsxRu8E0K',
+    f_name: 'Paula',
+    l_name: 'McCartney',
+  },
+  {
+    resume_id: 8,
+    interview: 'https://www.youtube.com/embed/cnIv3Zf5nJo?si=aa3ObgHLN5BBP-tp',
+    f_name: 'Alex',
+    l_name: 'Johnson',
+  },
+  {
+    resume_id: 9,
+    interview: 'https://www.youtube.com/embed/0aVcquEhOtQ?si=gzDkWve3Izy9uTFx',
+    f_name: 'Jordan',
+    l_name: 'Lee',
+  },
+  {
+    resume_id: 10,
+    interview: 'https://www.youtube.com/embed/HS3ShcKt288?si=uWmWIVKtNJRvqSu_',
+    f_name: 'Zhiyuan',
+    l_name: 'Yang',
+  },
+];
+
 export class DatabaseService {
   private pool: Pool | null = null;
   private prisma: PrismaDb | null = null;
@@ -458,70 +522,7 @@ export class DatabaseService {
       }
     }
 
-    const candidates = [
-      {
-        resume_id: 1,
-        interview: 'https://www.youtube.com/embed/aA7k6WM4_7A?si=ahwZZpSKUow0-dG2',
-        f_name: 'Aisha',
-        l_name: 'Patel',
-      },
-      {
-        resume_id: 2,
-        interview: 'https://www.youtube.com/embed/4d6v7p0N9Sg?si=nax_IkG0gk3zNae-',
-        f_name: 'Casey',
-        l_name: 'Fisch',
-      },
-      {
-        resume_id: 3,
-        interview: 'https://www.youtube.com/embed/typ4aN11feI?si=7jFsNwhB9ZkKyuo9',
-        f_name: 'Ethan',
-        l_name: 'Martinez',
-      },
-      {
-        resume_id: 4,
-        interview: 'https://www.youtube.com/embed/ySKRfElNPCY?si=2B1cl7djMtE1GLJL',
-        f_name: 'Jason',
-        l_name: 'Jones',
-      },
-      {
-        resume_id: 5,
-        interview: 'https://www.youtube.com/embed/_KGOo1WGKZU?si=aTLlkNgS7di69Sga',
-        f_name: 'Lucas',
-        l_name: 'Nyugen',
-      },
-      {
-        resume_id: 6,
-        interview: 'https://www.youtube.com/embed/AhJrqbDTn1Y?si=_XjOXZJBzSvpN_aM',
-        f_name: 'Maya',
-        l_name: 'Collins',
-      },
-      {
-        resume_id: 7,
-        interview: 'https://www.youtube.com/embed/1dIhJmX4uLo?si=aAna0LIIsxRu8E0K',
-        f_name: 'Paula',
-        l_name: 'McCartney',
-      },
-      {
-        resume_id: 8,
-        interview: 'https://www.youtube.com/embed/cnIv3Zf5nJo?si=aa3ObgHLN5BBP-tp',
-        f_name: 'Alex',
-        l_name: 'Johnson',
-      },
-      {
-        resume_id: 9,
-        interview: 'https://www.youtube.com/embed/0aVcquEhOtQ?si=gzDkWve3Izy9uTFx',
-        f_name: 'Jordan',
-        l_name: 'Lee',
-      },
-      {
-        resume_id: 10,
-        interview: 'https://www.youtube.com/embed/HS3ShcKt288?si=uWmWIVKtNJRvqSu_',
-        f_name: 'Zhiyuan',
-        l_name: 'Yang',
-      },
-    ];
-
-    for (const candidate of candidates) {
+    for (const candidate of DEFAULT_CANDIDATES) {
       try {
         await this.executeQuery(
           'INSERT IGNORE INTO Candidates (resume_id, f_name, l_name, interview) VALUES (?, ?, ?, ?)',
