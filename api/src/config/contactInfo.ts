@@ -194,64 +194,55 @@ const collapse = (text: string, tag: string) => {
   return text.replace(new RegExp(`${t}(?:[\\s,]*(?:\\p{Lu}\\.\\s*)?${t})+`, 'gu'), tag);
 };
 
+declare const stripped: unique symbol;
+
 /**
- * Resume text with its contact details replaced by tags. Only
- * stripContactInfo makes one, so a function that takes StrippedText cannot be
- * handed the raw text by mistake.
+ * Resume text with its contact details replaced by tags. The brand is a symbol
+ * nothing else can name, so only stripContactInfo makes one, and a function
+ * that takes StrippedText cannot be handed the raw text, or a plain
+ * { text: rawResume }, by mistake.
  */
-export class StrippedText {
-  // A private member makes tsc compare StrippedText by class, not by shape;
-  // without it, a plain { text: rawResume } would pass for one.
-  private readonly stripped = true;
-
-  private constructor(readonly text: string) {}
-
-  /** The same as stripContactInfo. */
-  static strip(text: string, names: readonly string[]): StrippedText {
-    let out = rejoinSplitLinks(text.normalize('NFKC').replace(INVISIBLE, ''));
-
-    out = out.replace(EMAIL, TAGS.email).replace(SPELLED_EMAIL, TAGS.email);
-
-    out = out
-      .replace(URL_WITH_SCHEME, tagKeepingEnd(TAGS.url))
-      .replace(PROFILE_SITE, tagKeepingEnd(TAGS.url))
-      .replace(DOMAIN_WITH_PATH, (match) =>
-        isSkill(match) ? match : tagKeepingEnd(TAGS.url)(match)
-      )
-      .replace(PERSONAL_DOMAIN, (domain) => (isSkill(domain) ? domain : TAGS.url))
-      .replace(PROFILE_LABEL, (match, value: string) => match.slice(0, -value.length) + TAGS.url)
-      .replace(HANDLE, TAGS.url);
-
-    // Digits counted after a + or 00 prefix, so a 9-digit ID starting 00 is
-    // not read as an international number.
-    const phone = (min: number, max: number) => (match: string) => {
-      const digits = digitCount(match.replace(/^(?:\+|00)/, ''));
-      return digits >= min && digits <= max ? TAGS.phone : match;
-    };
-    out = out
-      .replace(INTERNATIONAL_PHONE, phone(8, 15))
-      .replace(NORTH_AMERICAN_PHONE, TAGS.phone)
-      .replace(NATIONAL_PHONE, phone(10, 12))
-      .replace(FIVE_FIVE_PHONE, TAGS.phone)
-      .replace(DIGIT_RUN, TAGS.phone);
-
-    out = out
-      .replace(STREET, TAGS.address)
-      .replace(CITY_STATE_ZIP, TAGS.address)
-      .replace(PO_BOX, TAGS.address)
-      .replace(CANADIAN_POSTCODE, TAGS.address);
-    out = collapse(out.replace(STREET_BEFORE_CITY, TAGS.address), TAGS.address);
-
-    // Matched on the decomposed text, so a name passed as "José" also finds
-    // "Jose", and "Jose" finds "José".
-    out = out.normalize('NFD');
-    for (const part of nameParts(names)) {
-      out = out.replace(namePattern(part), TAGS.name);
-    }
-    return new StrippedText(collapse(out, TAGS.name).normalize('NFC'));
-  }
-}
+export type StrippedText = { readonly text: string; readonly [stripped]: true };
 
 /** The resume text with names, emails, phones, addresses and links replaced by tags. */
-export const stripContactInfo = (text: string, names: readonly string[]): StrippedText =>
-  StrippedText.strip(text, names);
+export function stripContactInfo(text: string, names: readonly string[]): StrippedText {
+  let out = rejoinSplitLinks(text.normalize('NFKC').replace(INVISIBLE, ''));
+
+  out = out.replace(EMAIL, TAGS.email).replace(SPELLED_EMAIL, TAGS.email);
+
+  out = out
+    .replace(URL_WITH_SCHEME, tagKeepingEnd(TAGS.url))
+    .replace(PROFILE_SITE, tagKeepingEnd(TAGS.url))
+    .replace(DOMAIN_WITH_PATH, (match) => (isSkill(match) ? match : tagKeepingEnd(TAGS.url)(match)))
+    .replace(PERSONAL_DOMAIN, (domain) => (isSkill(domain) ? domain : TAGS.url))
+    .replace(PROFILE_LABEL, (match, value: string) => match.slice(0, -value.length) + TAGS.url)
+    .replace(HANDLE, TAGS.url);
+
+  // Digits counted after a + or 00 prefix, so a 9-digit ID starting 00 is
+  // not read as an international number.
+  const phone = (min: number, max: number) => (match: string) => {
+    const digits = digitCount(match.replace(/^(?:\+|00)/, ''));
+    return digits >= min && digits <= max ? TAGS.phone : match;
+  };
+  out = out
+    .replace(INTERNATIONAL_PHONE, phone(8, 15))
+    .replace(NORTH_AMERICAN_PHONE, TAGS.phone)
+    .replace(NATIONAL_PHONE, phone(10, 12))
+    .replace(FIVE_FIVE_PHONE, TAGS.phone)
+    .replace(DIGIT_RUN, TAGS.phone);
+
+  out = out
+    .replace(STREET, TAGS.address)
+    .replace(CITY_STATE_ZIP, TAGS.address)
+    .replace(PO_BOX, TAGS.address)
+    .replace(CANADIAN_POSTCODE, TAGS.address);
+  out = collapse(out.replace(STREET_BEFORE_CITY, TAGS.address), TAGS.address);
+
+  // Matched on the decomposed text, so a name passed as "José" also finds
+  // "Jose", and "Jose" finds "José".
+  out = out.normalize('NFD');
+  for (const part of nameParts(names)) {
+    out = out.replace(namePattern(part), TAGS.name);
+  }
+  return { text: collapse(out, TAGS.name).normalize('NFC') } as StrippedText;
+}
