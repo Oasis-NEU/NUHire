@@ -167,3 +167,31 @@ export type LiveStudent = Pick<Student, 'id' | 'email' | 'f_name' | 'l_name'> & 
   confirmed_at: string | null;
   online: boolean;
 };
+
+/** Gemini's notes on one screened resume, as `api/src/models/ScreenerReply.ts` sends them. */
+export interface ScreenerReply {
+  /** What fits the posting, each quoting the resume. */
+  strengths: string[];
+  /** What the posting asks for that the resume does not show. */
+  gaps: string[];
+  /** Why the score is what it is. */
+  score_explanation: string;
+}
+
+/** A `Screening_Results` row's status. */
+export type ScreeningStatus = 'pending' | 'done' | 'failed';
+
+/**
+ * One resume's screening result for a group's posting, from
+ * `GET /screening/:classId/:groupId/jobs/:jobId`. `score` and the keyword lists
+ * come from code; `summary` is null until the screen is done.
+ */
+export interface ScreeningResult {
+  job_id: number;
+  resume_id: number;
+  status: ScreeningStatus;
+  score: number | null;
+  matched_keywords: string[];
+  missed_keywords: string[];
+  summary: ScreenerReply | null;
+}

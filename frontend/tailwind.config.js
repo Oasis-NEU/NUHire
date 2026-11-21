@@ -25,6 +25,12 @@ const gray3 = '#6B6B6B';
 const gray4 = '#484848';
 const gray5 = '#1A1A1A';
 
+// Status tints from the Figma Chip component (Kind=Success, Kind=Warning).
+const success50 = '#E3F3EA';
+const success700 = '#1A6B45';
+const warning50 = '#FCF0D6';
+const warning700 = '#8F5200';
+
 // Tailwind's default gray, red and blue scales are replaced so existing
 // gray-*/red-*/blue-* classes render the design system. Figma defines fewer
 // steps than Tailwind; a missing step takes the nearest Figma value. Every step
@@ -69,6 +75,8 @@ module.exports = {
           900: neuRed900,
           950: neuRed900,
         },
+        success: { 50: success50, 700: success700 },
+        warning: { 50: warning50, 700: warning700 },
         blue: {
           50: blue100,
           100: blue100,
@@ -82,6 +90,10 @@ module.exports = {
           900: steelBlue900,
           950: steelBlue900,
         },
+      },
+      // Figma's card elevation: a 1px contact shadow under a soft 18px one.
+      boxShadow: {
+        card: '0 1px 2px rgba(20, 22, 27, 0.04), 0 6px 18px rgba(20, 22, 27, 0.06)',
       },
       fontFamily: {
         sans: ['var(--font-lato)', 'sans-serif'],

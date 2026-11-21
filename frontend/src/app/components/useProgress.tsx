@@ -54,6 +54,9 @@ const allowedRoutes: Record<string, string[]> = {
   '/jobdes': ['job_description', 'res_1', 'res_2', 'interview', 'offer', 'employer'],
   '/res-review': ['res_1', 'res_2', 'interview', 'offer', 'employer'],
   '/res-review-group': ['res_2', 'interview', 'offer', 'employer'],
+  // Scores are shown only after each student's own votes, so they cannot sway
+  // them (docs/ATS_DECISION.md). Not a step: no STEP_TO_ROUTE entry.
+  '/screener': ['res_2', 'interview', 'offer', 'employer'],
   '/interview-stage': ['interview', 'offer', 'employer'],
   '/makeOffer': ['offer', 'employer'],
   '/employerPanel': ['employer'],
