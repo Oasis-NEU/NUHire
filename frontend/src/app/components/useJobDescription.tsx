@@ -10,6 +10,9 @@ export interface JobDescription {
   // Path of the job PDF relative to the API, or null when it was not fetched
   // (`includeFile: false`) or could not be found.
   filePath: string | null;
+  // The job_descriptions row's id, which the screener endpoints take. Null
+  // when the file was not fetched, since only that request returns the row.
+  id: number | null;
 }
 
 // Which step failed, so a page can keep its own rule for what to show:
@@ -44,7 +47,9 @@ export async function loadJobDescription(
 
     const assignment: { job?: string } = await assignmentResponse.json();
     if (!assignment.job) return { job: null, error: 'none' };
-    if (!includeFile) return { job: { title: assignment.job, filePath: null }, error: null };
+    if (!includeFile) {
+      return { job: { title: assignment.job, filePath: null, id: null }, error: null };
+    }
 
     const fileResponse = await fetch(
       `${API_BASE_URL}/jobs/title?title=${encodeURIComponent(assignment.job)}&class_id=${classId}`,
@@ -52,8 +57,15 @@ export async function loadJobDescription(
     );
     if (!fileResponse.ok) return { job: null, error: 'file' };
 
-    const file: { file_path?: string } = await fileResponse.json();
-    return { job: { title: assignment.job, filePath: file.file_path ?? null }, error: null };
+    const file: { file_path?: string; id?: number } = await fileResponse.json();
+    return {
+      job: {
+        title: assignment.job,
+        filePath: file.file_path ?? null,
+        id: typeof file.id === 'number' ? file.id : null,
+      },
+      error: null,
+    };
   } catch (err) {
     console.error('Error fetching job description:', err);
     return { job: null, error: 'network' };
