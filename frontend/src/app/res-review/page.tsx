@@ -18,6 +18,7 @@ import { useSocket } from '../components/socketContext';
 import Facts from '../components/facts';
 import { useAuth } from '../components/AuthContext';
 import { useJobDescription } from '../components/useJobDescription';
+import { useResReviewRelease } from '../components/useResReviewRelease';
 import { PageLoader, Spinner } from '../components/spinner';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -128,6 +129,7 @@ export default function ResumesPage() {
   const [verifyAttempt, setVerifyAttempt] = useState(0);
   const totalDecisions = accepted + rejected + noResponse;
   const maxDecisions = totalDecisions >= 10;
+  const released = useResReviewRelease(user, disabled && totalDecisions === 10);
   const resumeRef = useRef<HTMLDivElement | null>(null);
   const hasUpdatedPageRef = useRef(false);
   const hadSavedProgressRef = useRef(false);
@@ -424,18 +426,8 @@ export default function ResumesPage() {
   }, [socket, user]);
 
   useEffect(() => {
-    if (!socket) return;
-
-    const handleGroupCompletedResReview = () => {
-      setDisabled(false);
-    };
-
-    socket.on('groupCompletedResReview', handleGroupCompletedResReview);
-
-    return () => {
-      socket.off('groupCompletedResReview', handleGroupCompletedResReview);
-    };
-  }, [socket]);
+    if (released) setDisabled(false);
+  }, [released]);
 
   useEffect(() => {
     if (totalDecisions === 10 && groupSize > 0 && groupSubmissions >= groupSize) {

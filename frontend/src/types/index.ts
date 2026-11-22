@@ -167,3 +167,11 @@ export type LiveStudent = Pick<Student, 'id' | 'email' | 'f_name' | 'l_name'> & 
   confirmed_at: string | null;
   online: boolean;
 };
+
+/** `GET /groups/barrier-status/:classId/:groupId`: whether a group may move past a step. */
+export interface BarrierStatus {
+  step: Step;
+  completedCount: number;
+  totalCount: number;
+  released: boolean;
+}
