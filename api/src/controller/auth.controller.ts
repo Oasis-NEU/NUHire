@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import passport from 'passport';
 import { AuthRequest } from '../models/AuthRequest';
-import { User, isAdmin } from '../models/User';
+import { User, isAdmin, nameFromProfile } from '../models/User';
 import { Pool, RowDataPacket } from 'mysql2';
 
 // Pre-fills the signup form for someone who is not set up yet.
@@ -151,12 +151,8 @@ export class AuthController {
           }
 
           const email = user.email;
-          const prof = user.keycloakProfile;
-          const parts = prof.name.split(' ');
-          const firstName = parts[0];
-          const lastName = parts[1];
-
-          void this.sendPostLoginRedirect(email, { firstName, lastName }, setCookieAndRedirect);
+          const name = nameFromProfile(user.keycloakProfile ?? {}, email);
+          void this.sendPostLoginRedirect(email, name, setCookieAndRedirect);
         });
       });
     },

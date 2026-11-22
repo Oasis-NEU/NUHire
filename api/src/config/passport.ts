@@ -2,19 +2,8 @@
 
 import passport from 'passport';
 import { Pool } from 'mysql2';
+import { KeycloakProfile, nameFromProfile } from '../models/User';
 const KeycloakStrategy = require('passport-keycloak-oauth2-oidc').Strategy;
-
-interface KeycloakProfile {
-  id?: string;
-  username?: string;
-  email?: string;
-  given_name?: string;
-  family_name?: string;
-  firstName?: string;
-  lastName?: string;
-  keycloakId?: string;
-  [key: string]: any;
-}
 
 export function configurePassport(db: Pool): void {
   const keycloak_url = process.env.KEYCLOAK_URL!;
@@ -53,13 +42,10 @@ export function configurePassport(db: Pool): void {
       ) => {
         try {
           const userEmail = profile.email;
-          const parts = profile.name.split(' ');
-          const fname = parts[0];
-          const lname = parts[1];
-
           if (!userEmail) {
             throw new Error('No email found in Keycloak profile');
           }
+          const { firstName, lastName } = nameFromProfile(profile, userEmail);
 
           const [rows] = await db
             .promise()
@@ -73,7 +59,7 @@ export function configurePassport(db: Pool): void {
               .promise()
               .execute(
                 'INSERT INTO Users (email, f_name, l_name, affiliation) VALUES (?, ?, ?, ?)',
-                [userEmail, fname, lname, 'none']
+                [userEmail, firstName, lastName, 'none']
               );
 
             const [newUserRows] = await db
