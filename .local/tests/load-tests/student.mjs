@@ -148,9 +148,7 @@ export class Student {
     await this.classStarts();
     await this.jobDescription();
     await this.resumeReview();
-    while ((await this.groupReview()) === '/res-review-group') {
-      this.h.metrics.record('stray moveGroup reloads /res-review-group', 0);
-    }
+    await this.groupReview();
     await this.interviews();
     if (await this.makeOffer()) await this.dashboard({ reload: true });
   }
@@ -255,10 +253,13 @@ export class Student {
     const { metrics } = this.h;
     let released = false;
     let moved = false;
+    let announced = false;
     const socket = this.open((s) => {
       s.emit('studentOnline', { studentId: email });
       s.emit('joinGroup', this.room);
       s.emit('studentPageChanged', { studentId: email, currentPage: '/res-review' });
+      // The page re-sends its completion on every connect once it has sent it.
+      if (announced) s.emit('userCompletedResReview', { groupId: group_id });
     });
     socket.on('groupCompletedResReview', () => {
       if (!released) {
@@ -275,14 +276,12 @@ export class Student {
 
     await this.loadPage('res_1');
     const resumes = await this.call('GET', '/resume_pdf', `/resume_pdf?class_id=${classId}`);
-    const size = await this.groupSize();
-    const finishedCount = () =>
+    const barrierReleased = () =>
       this.call(
         'GET',
-        '/resume/finished-count/:group_id/:class_id',
-        `/resume/finished-count/${group_id}/${classId}`
-      ).then((r) => r.finishedCount);
-    await finishedCount();
+        '/groups/barrier-status/:classId/:groupId',
+        `/groups/barrier-status/${classId}/${group_id}`
+      ).then((r) => r.released);
     await this.jobFile();
     await this.call('GET', '/resume/student/:student_id', `/resume/student/${id}`);
     await this.currentPage('resumepage');
@@ -304,12 +303,22 @@ export class Student {
     await this.call('GET', '/resume/student/:student_id', `/resume/student/${id}`);
     this.h.barrierCause.set(group_id, performance.now());
     socket.emit('userCompletedResReview', { groupId: group_id });
+    announced = true;
     this.h.completedResReview();
-    // The page also unlocks Next when this count reaches the group size.
-    if ((await finishedCount()) >= size) released = true;
     if (NEEDS_TEACHER.has(group_id)) this.h.waiting(this, 'res_1');
 
-    await this.until(() => released || moved, 'the resume-review barrier');
+    // The page also polls the barrier every 5s while it waits. A failure is
+    // already counted by timedCall.
+    const pollBarrier = async () => {
+      if (await barrierReleased().catch(() => false)) released = true;
+    };
+    await pollBarrier();
+    const poll = setInterval(pollBarrier, 5000);
+    try {
+      await this.until(() => released || moved, 'the resume-review barrier');
+    } finally {
+      clearInterval(poll);
+    }
     await this.thinkUnless(THINK.click, () => moved);
     await this.progress('res_2');
     if (!moved) {
@@ -319,8 +328,7 @@ export class Student {
   }
 
   // res-review-group/page.tsx: shortlist four, everyone confirms, the driver
-  // clicks Next and moveGroup takes the group on. Returns where moveGroup sent
-  // the page, because this handler does not check targetPage.
+  // clicks Next and moveGroup takes the group on.
   async groupReview() {
     const { email, group_id, class: classId } = this.user;
     const confirmations = new Set();
@@ -340,7 +348,12 @@ export class Student {
     socket.on('teamConfirmSelection', ({ studentId }) => confirmations.add(studentId));
     socket.on('teamUnconfirmSelection', ({ studentId }) => confirmations.delete(studentId));
     socket.on('moveGroup', ({ groupId, classId: movedClass, targetPage }) => {
-      if (groupId == group_id && movedClass == classId && target === null) {
+      if (
+        groupId == group_id &&
+        movedClass == classId &&
+        targetPage === '/interview-stage' &&
+        target === null
+      ) {
         this.h.metrics.since('socket: moveGroup', this.h.moveEmitted.get(group_id));
         target = targetPage;
       }
@@ -382,7 +395,6 @@ export class Student {
     }
     await this.until(() => target !== null, 'moveGroup to the interview stage');
     await this.progress('interview');
-    return target;
   }
 
   // interview-stage/page.tsx: rate the four shortlisted candidates, wait for
