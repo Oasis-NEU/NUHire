@@ -5,6 +5,7 @@ import Popup from './popup';
 import { useAuth } from './AuthContext';
 import type { ClassInfo } from '../../types';
 import { API_BASE_URL } from '../../lib/api';
+import { emailColumnCandidates } from '../../lib/csvEmailColumn';
 
 /** Students per group when the professor has not said otherwise. Four members
  *  reviewing ten resumes is what the activity is written for. */
@@ -36,6 +37,11 @@ export function StudentCSVTab() {
   const { user, loading: userloading } = useAuth();
 
   const [popup, setPopup] = useState<{ headline: string; message: string } | null>(null);
+  // A file whose headers have several possible email columns, held until the
+  // professor says which one to import.
+  const [pendingCsv, setPendingCsv] = useState<{ rows: string[][]; columns: number[] } | null>(
+    null
+  );
   // Held as the raw string the professor typed, not a number. When this was a
   // number coerced on every keystroke, clearing the box parsed '' as NaN and
   // wrote the default 4 back before the next key, so select-all, Backspace,
@@ -168,7 +174,8 @@ export function StudentCSVTab() {
   };
 
   const validateAndExtractEmails = (
-    data: string[][]
+    data: string[][],
+    emailIndex: number
   ): { students: CSVStudent[]; errors: ValidationError[] } => {
     const students: CSVStudent[] = [];
     const errors: ValidationError[] = [];
@@ -177,10 +184,6 @@ export function StudentCSVTab() {
       errors.push({ row: 0, error: 'CSV file is empty' });
       return { students, errors };
     }
-
-    // Find email column
-    const headers = data[0].map((h) => h.toLowerCase().trim());
-    const emailIndex = headers.findIndex((h) => h.includes('email'));
 
     if (emailIndex === -1) {
       errors.push({ row: 1, error: 'No email column found in headers' });
@@ -209,6 +212,17 @@ export function StudentCSVTab() {
     return { students, errors };
   };
 
+  const importRows = (rows: string[][], emailIndex: number) => {
+    const { students, errors } = validateAndExtractEmails(rows, emailIndex);
+
+    // Resolve against the freshly parsed list, not csvStudents, which was
+    // just cleared and would clamp the size to 0.
+    setCsvStudents(
+      assignGroupsSequentially(students, resolveStudentsPerGroup(studentsPerGroup, students.length))
+    );
+    setValidationErrors(errors);
+  };
+
   const handleFileUpload = (file: File) => {
     if (!file.name.toLowerCase().endsWith('.csv')) {
       setValidationErrors([{ row: 0, error: 'Please upload a CSV file' }]);
@@ -219,22 +233,19 @@ export function StudentCSVTab() {
     setCsvStudents([]);
     setValidationErrors([]);
     setSubmitSuccess(false);
+    setPendingCsv(null);
 
     const reader = new FileReader();
     reader.onload = (e) => {
       const csvText = e.target?.result as string;
       const parsedData = parseCSV(csvText);
-      const { students, errors } = validateAndExtractEmails(parsedData);
+      const columns = emailColumnCandidates(parsedData[0] ?? []);
 
-      // Resolve against the freshly parsed list, not csvStudents, which was
-      // just cleared and would clamp the size to 0.
-      setCsvStudents(
-        assignGroupsSequentially(
-          students,
-          resolveStudentsPerGroup(studentsPerGroup, students.length)
-        )
-      );
-      setValidationErrors(errors);
+      if (columns.length > 1) {
+        setPendingCsv({ rows: parsedData, columns });
+      } else {
+        importRows(parsedData, columns[0] ?? -1);
+      }
     };
 
     reader.readAsText(file);
@@ -527,6 +538,30 @@ export function StudentCSVTab() {
               </div>
             </div>
           </div>
+
+          {pendingCsv && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <label htmlFor="email-column" className="block font-semibold text-yellow-900 mb-2">
+                More than one column looks like an email. Which one holds the students&apos;
+                Northeastern emails?
+              </label>
+              <select
+                id="email-column"
+                defaultValue=""
+                onChange={(e) => importRows(pendingCsv.rows, Number(e.target.value))}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="" disabled>
+                  Choose a column...
+                </option>
+                {pendingCsv.columns.map((column) => (
+                  <option key={column} value={column}>
+                    {pendingCsv.rows[0][column]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Validation Errors */}
           {validationErrors.length > 0 && (

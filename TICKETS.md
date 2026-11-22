@@ -685,6 +685,8 @@ Dead-ended, mid-class.
 
 **TCH-7 [GFI] 4h — Prefer an exact email-column match** — deps: TCH-5
 Takes the first header _containing_ "email", so `Secondary Email` silently wins.
+Done in OAS-107. An exact "Email" header wins, and when several columns could
+match the professor picks one.
 
 **TCH-9 [MED] 6h — Let a professor un-start a group** — deps: SEC-4b
 **No code anywhere sets `started` back to 0.** A mis-click needs database access
