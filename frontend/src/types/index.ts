@@ -117,6 +117,15 @@ export interface ResumePdf {
   uploaded_at: string | null;
 }
 
+/** An `Offers` row. */
+export interface Offer {
+  id: number;
+  class_id: number;
+  group_id: number;
+  candidate_id: number;
+  status: 'pending' | 'accepted' | 'rejected';
+}
+
 /** One card on the make-offer page: a candidate with their interview video and
  *  resume file resolved. `candidate_id` is the candidate's `resume_id`, which is
  *  what `InterviewPage.candidate_id` stores. */
