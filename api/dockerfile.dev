@@ -16,4 +16,9 @@ EXPOSE 5001
 
 # Migrations first, as `npm start` does in production: if one fails, the API
 # does not start. compose.dev.yaml mounts them at /database-files/migrations.
-CMD ["sh", "-c", "npm run db:migrate && { npx tsc --watch --preserveWatchOutput & exec node --watch dist/server.js; }"]
+#
+# node starts once tsc --watch has finished its first compile. That compile
+# rewrites dist/, so a server started alongside it restarted just after its
+# healthcheck passed, and a request in that gap got ECONNRESET. It waits up to
+# two minutes, then starts on the dist/ built above.
+CMD ["sh", "-c", "npm run db:migrate && { npx tsc --watch --preserveWatchOutput 2>&1 | tee /tmp/tsc.log & } && i=0 && until grep -qs 'Watching for file changes' /tmp/tsc.log || [ $i -ge 120 ]; do i=$((i+1)); sleep 1; done && exec node --watch dist/server.js"]
