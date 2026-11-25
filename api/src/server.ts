@@ -8,6 +8,9 @@ import { configurePassport } from './config/passport';
 import { initializeSocketHandlers } from './config/socket';
 import { backfillPdfText } from './config/pdfText';
 import { createPdfTextRepository } from './repository/pdfText.repository';
+import { createGeminiClient } from './config/geminiClient';
+import { IDLE_QUEUE, ScreeningWorker, startScreeningWorker } from './config/screeningQueue';
+import { createScreeningRepository, ScreeningRepository } from './repository/screening.repository';
 
 // Load environment variables
 dotenv.config();
@@ -62,6 +65,18 @@ function warnIfScaledOut(): void {
   }
 }
 
+// Without a Gemini key no worker runs: screens are still queued, and wait as
+// pending for the first start that has one.
+function startScreening(screening: ScreeningRepository): ScreeningWorker | null {
+  try {
+    return startScreeningWorker({ screening, client: createGeminiClient() });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    console.warn(`Screening is off: ${reason}. Queued screens stay pending.`);
+    return null;
+  }
+}
+
 async function bootstrap() {
   try {
     assertRequiredEnv();
@@ -69,7 +84,12 @@ async function bootstrap() {
 
     const db = await databaseService.connect();
     configurePassport(db);
-    const app = new App(db, databaseService.getPrisma());
+    const screening = createScreeningRepository(databaseService.getPrisma());
+    const worker = startScreening(screening);
+    const app = new App(db, databaseService.getPrisma(), {
+      screening,
+      queue: worker ?? IDLE_QUEUE,
+    });
 
     // Mounted here, not in app.ts, because the pool and its limits belong to
     // databaseService. Express only dispatches the four-argument error handler
@@ -104,7 +124,11 @@ async function bootstrap() {
     app.listen(PORT);
 
     // Not awaited: reading every class's PDFs must not hold up the healthcheck.
-    void backfillPdfText(createPdfTextRepository(databaseService.getPrisma()));
+    // The worker starts after it, so it never fails a resume whose text is
+    // still being extracted, and takes up any screens a restart left pending.
+    void backfillPdfText(createPdfTextRepository(databaseService.getPrisma())).then(() =>
+      worker?.wake()
+    );
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
