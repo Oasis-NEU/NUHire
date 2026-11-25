@@ -58,6 +58,36 @@ export const requireClassModerator =
     });
   };
 
+// For a route scoped to one group by :classId and :groupId. A student passes
+// only for their own class and group, as their session has them, since the
+// params are client-supplied. A professor passes only for a class they teach.
+export const requireGroupMember =
+  (db: Pool) =>
+  (req: AuthRequest, res: Response, next: NextFunction): void => {
+    requireAuth(req, res, () => {
+      const classId = Number(req.params.classId);
+      const groupId = Number(req.params.groupId);
+      if (
+        !Number.isInteger(classId) ||
+        classId <= 0 ||
+        !Number.isInteger(groupId) ||
+        groupId <= 0
+      ) {
+        res.status(400).json({ error: 'classId and groupId must be positive integers' });
+        return;
+      }
+      if (isAdmin(req.user)) {
+        requireClassModerator(db, 'classId')(req, res, next);
+        return;
+      }
+      if (req.user?.class !== classId || req.user?.group_id !== groupId) {
+        res.status(403).json({ error: 'Forbidden: that is not your group' });
+        return;
+      }
+      next();
+    });
+  };
+
 // Accepts either a Keycloak admin session or the legacy moderator login
 // (session.isModerator, set by POST /auth/moderator-login). The /moderator/crns
 // routes are driven from /mod-dashboard, which still uses the legacy login.

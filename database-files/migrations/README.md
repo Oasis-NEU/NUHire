@@ -99,3 +99,4 @@ the way the API does at start, and then all of them twice more.
 | `008-pdf-extracted-text.sql`        | `extracted_text` on `Resume_pdfs` and `job_descriptions`, for the ATS       |
 | `009-drop-unused-tables.sql`        | Drops five unused tables (irreversible)                                     |
 | `010-screening-results.sql`         | `Screening_Results` table; the screener's result per resume, group and job  |
+| `011-job-keywords-and-screen-runs.sql` | `job_descriptions.keywords`, and `Screening_Results.run` so a re-run is not overwritten |

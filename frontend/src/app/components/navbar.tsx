@@ -20,6 +20,11 @@ const Navbar = () => {
 
   const showHelpButton = progressStepPages.includes(pathname);
 
+  // From the group review on, after each student has voted on their own
+  // (docs/ATS_DECISION.md). A new tab keeps the activity page and its socket live.
+  const screenerPages = ['/res-review-group', '/interview-stage', '/makeOffer'];
+  const showScreenerLink = screenerPages.includes(pathname);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -57,12 +62,33 @@ const Navbar = () => {
             ▶
           </span>
         </button>
-        <div className="absolute left-1/2 transform -translate-x-1/2">
+        {/* Below sm the Notes button sits where the centred logo would; Menu still has Dashboard. */}
+        <div className="absolute left-1/2 hidden transform -translate-x-1/2 sm:block">
           <Link href="/dashboard" className="text-2xl font-bold text-neu-red drop-shadow-lg">
             NUHire
           </Link>
         </div>
         <div className="flex items-center gap-2 ml-auto">
+          {showScreenerLink && (
+            <a
+              href="/screener"
+              target="_blank"
+              rel="noopener"
+              aria-label="Screener results (opens in a new tab)"
+              className="relative inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-white/60 px-1.5 py-1 text-sm font-bold text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white after:absolute after:-inset-x-[7px] after:-inset-y-[9px] after:content-[''] sm:px-3 sm:after:inset-x-0 sm:after:-inset-y-[7px]"
+            >
+              <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" aria-hidden="true">
+                <path
+                  d="M3 13V8M8 13V3M13 13V6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+              {/* Below sm the bar has room for the icon only; the label is the link's name. */}
+              <span className="hidden sm:inline">Screener results</span>
+            </a>
+          )}
           {/* Help button - smaller */}
           {showHelpButton && (
             <div className="bg-neu-red text-white px-3 py-1 rounded-md hover:bg-white border-2 border-black transition text-sm">
@@ -71,12 +97,12 @@ const Navbar = () => {
               </button>
             </div>
           )}
-          <div className="w-40 flex items-center">
+          <div className="flex w-auto shrink-0 items-center sm:w-40">
             <NotesPage />
           </div>
           <Link
             href="/userProfile"
-            className="flex items-center justify-center w-8 h-8 rounded-full bg-neu-red cursor-pointer transition duration-300 ease-in-out hover:bg-black hover:border-2 hover:border-neu-red relative"
+            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-neu-red cursor-pointer transition duration-300 ease-in-out hover:bg-black hover:border-2 hover:border-neu-red relative"
           >
             <div
               className="w-5 h-5 bg-cover bg-center rounded-full border-2 border-white"

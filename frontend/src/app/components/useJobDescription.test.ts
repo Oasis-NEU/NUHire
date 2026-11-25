@@ -32,11 +32,11 @@ describe('loadJobDescription', () => {
   it('finds the job title and then its PDF path', async () => {
     const urls = stubFetch(
       { ok: true, body: { job: 'Two Six Labs' } },
-      { ok: true, body: { file_path: 'uploads/jobdescription/two-six.pdf' } }
+      { ok: true, body: { id: 5, file_path: 'uploads/jobdescription/two-six.pdf' } }
     );
     const result = await loadJobDescription(1, 42, true);
     expect(result).toEqual({
-      job: { title: 'Two Six Labs', filePath: 'uploads/jobdescription/two-six.pdf' },
+      job: { title: 'Two Six Labs', filePath: 'uploads/jobdescription/two-six.pdf', id: 5 },
       error: null,
     });
     expect(urls[0]).toMatch(/\/jobs\/assignment\/1\/42$/);
@@ -46,7 +46,10 @@ describe('loadJobDescription', () => {
   it('stops after the title when the file is not wanted (the dashboard)', async () => {
     const urls = stubFetch({ ok: true, body: { job: 'Carbonite' } });
     const result = await loadJobDescription(1, 42, false);
-    expect(result).toEqual({ job: { title: 'Carbonite', filePath: null }, error: null });
+    expect(result).toEqual({
+      job: { title: 'Carbonite', filePath: null, id: null },
+      error: null,
+    });
     expect(urls).toHaveLength(1);
   });
 
