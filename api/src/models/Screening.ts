@@ -1,4 +1,5 @@
 import { DbBool } from './DbBool';
+import { GroupKey } from './GroupKey';
 
 export type ScreeningStatus = 'pending' | 'done' | 'failed';
 
@@ -29,3 +30,36 @@ export type ScreeningOutcome = Pick<
   ScreeningResult,
   'matched_keywords' | 'missed_keywords' | 'ai_summary'
 > & { score: number };
+
+/**
+ * One queued screen: a row's key and the run it was queued on. A result is
+ * saved only to the run it started on, so a re-run is never overwritten.
+ */
+export interface ScreeningRun extends ScreeningTarget {
+  group: GroupKey;
+  run: number;
+}
+
+/** What a screen needs. Text is null until extracted from the PDF. */
+export interface ScreeningInputs {
+  job: { title: string; text: string | null; keywords: string[] };
+  /** `names` are the candidate's own, from their Candidates row. */
+  resume: { text: string | null; names: string[] };
+}
+
+/** Which assigned groups and resumes to queue; each field left out means all. */
+export interface QueueScope {
+  jobId?: number;
+  resumeId?: number;
+  groupIds?: readonly number[];
+}
+
+/** What replacing a posting's keywords did to its results. */
+export interface KeywordChange {
+  /** False when the new list was the same, so nothing was touched. */
+  changed: boolean;
+  /** Results queued again against the new keywords. */
+  requeued: number;
+  /** Results deleted because the posting now has no keywords. */
+  cleared: number;
+}

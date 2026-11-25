@@ -11,6 +11,7 @@ import { createServer, Server as HTTPServer } from 'http';
 import MySQLStore from 'express-mysql-session';
 import { Pool } from 'mysql2';
 import { PrismaDb } from './config/database';
+import { Screens } from './config/screeningQueue';
 import { requireAdmin } from './middleware/auth.middleware';
 
 // Import routes
@@ -43,7 +44,8 @@ export class App {
 
   constructor(
     private db: Pool,
-    private prisma: PrismaDb
+    private prisma: PrismaDb,
+    private screens: Screens
   ) {
     this.app = express();
     this.server = createServer(this.app);
@@ -200,10 +202,10 @@ export class App {
     // API routes
     this.app.use('/auth', authRoutes(this.db));
     this.app.use('/users', userRoutes(this.db, this.io));
-    this.app.use('/resume', resumeRoutes(this.db, this.io));
-    this.app.use('/resume_pdf', resumePdfRoutes(this.db, this.io));
+    this.app.use('/resume', resumeRoutes(this.db, this.io, this.screens));
+    this.app.use('/resume_pdf', resumePdfRoutes(this.db, this.prisma, this.io, this.screens));
     this.app.use('/interview', interviewRoutes(this.db, this.io));
-    this.app.use('/jobs', jobRoutes(this.db, this.io, this.onlineStudents));
+    this.app.use('/jobs', jobRoutes(this.db, this.io, this.onlineStudents, this.screens));
     this.app.use('/groups', groupRoutes(this.db, this.io));
     this.app.use('/moderator', moderatorRoutes(this.db, this.prisma));
     this.app.use('/notes', noteRoutes(this.prisma));
@@ -217,7 +219,7 @@ export class App {
     this.app.use('/uploads', uploadedFileRoutes());
     this.app.use('/csv', csvRoutes(this.db, this.io));
     this.app.use('/facts', factsRoutes(this.prisma, this.io));
-    this.app.use('/delete', deleteRoutes(this.db, this.io, this.onlineStudents));
+    this.app.use('/delete', deleteRoutes(this.db, this.io, this.onlineStudents, this.screens));
 
     // Last. A throw inside a route used to become an unhandled rejection with
     // the request left hanging. Express only treats a handler as an error
