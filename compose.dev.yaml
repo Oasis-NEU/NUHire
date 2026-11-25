@@ -57,6 +57,10 @@ services:
         - action: sync
           path: ./api/src
           target: /apicode/src
+        # Read on every screen, so an edit is live without a restart.
+        - action: sync
+          path: ./api/GEMINI.md
+          target: /apicode/GEMINI.md
         - action: rebuild
           path: ./api/package-lock.json
         # A new schema.prisma from `npm run db:pull` needs a regenerated client.
