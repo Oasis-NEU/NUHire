@@ -117,6 +117,14 @@ export interface ResumePdf {
   uploaded_at: string | null;
 }
 
+/** A row of `GET /resume_pdf?class_id=`: a `Resume_pdfs` row with its
+ *  candidate's name. The name comes from a LEFT JOIN on `Candidates`, so a
+ *  resume uploaded without a candidate has null names. */
+export type ResumeListing = Pick<ResumePdf, 'id' | 'title' | 'file_path' | 'class_id'> & {
+  first_name: string | null;
+  last_name: string | null;
+};
+
 /** One card on the make-offer page: a candidate with their interview video and
  *  resume file resolved. `candidate_id` is the candidate's `resume_id`, which is
  *  what `InterviewPage.candidate_id` stores. */
@@ -130,6 +138,13 @@ export type OfferCandidate = Pick<Candidate, 'f_name' | 'l_name'> & {
 export interface JobOption {
   id: number;
   title: string;
+}
+
+/** The `jobUpdated` socket event: the professor changed a group's job.
+ *  `reset` is true only when that change also erased the group's work. */
+export interface JobUpdatedEvent {
+  job: string;
+  reset: boolean;
 }
 
 /** A candidate as the teacher panel lists one: id plus display name. */

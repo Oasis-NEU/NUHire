@@ -992,7 +992,7 @@ export default function ResumesPage() {
 
           <div className="flex-1 flex justify-center items-start overflow-hidden bg-gray-100">
             <div
-              className={`${fadingEffect ? 'fade-out' : 'fade-in'} h-full w-full overflow-auto flex justify-center`}
+              className={`${fadingEffect ? 'fade-out' : 'fade-in'} h-full w-full overflow-auto flex [justify-content:safe_center]`}
               ref={resumeRef}
             >
               {showJobDescription && currentJobDescFile ? (
