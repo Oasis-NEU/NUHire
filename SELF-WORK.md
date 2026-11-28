@@ -43,6 +43,17 @@ start.** Those break in ways you won't see until a full class is on it.
 
 ## In progress
 
+### Start the dev API only after its first compile
+
+- **Who:** Shlok Patel
+- **What:** In the dev API container, start `node --watch` once `tsc --watch` has finished its first compile, rather than alongside it.
+- **Why it matters:** That first compile rewrites `dist/`, so the server restarts just after its healthcheck has passed. A request in that window gets `ECONNRESET`, which is why the "Simulated class" CI job fails now and then (#144 and #145 both hit it).
+- **Files:** `api/dockerfile.dev`, `compose.dev.yaml`
+- **Touches auth / sockets / schema / deploy?** No. Local dev and CI only; production builds from `api/dockerfile`.
+- **Size:** hours
+- **Status:** building
+- **Branch:** `patels15/dev-api-start-after-compile`
+
 ## Done
 
 _Move entries here when they merge or get dropped._

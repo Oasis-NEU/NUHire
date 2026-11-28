@@ -28,7 +28,7 @@ page is the bug.
               └──────── HTTP ─────────────┤
                                           ▼
                                      MySQL :3306
-                                   (21 tables)
+                                   (18 tables)
 
       Keycloak :8080  ── login, redirects back to the API
 ```
@@ -70,7 +70,7 @@ This is the single most common mistake in this codebase. Always carry both.
 
 ## The database
 
-21 tables. Three kinds.
+18 tables. Three kinds.
 
 **Who people are**
 

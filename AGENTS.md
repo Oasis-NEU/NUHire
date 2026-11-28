@@ -30,7 +30,7 @@ does not page an on-call engineer, it derails a class.
 | ----------- | ---------------------------------------------------------------- |
 | `frontend/` | Next.js 15 App Router, React 19, Tailwind, Socket.IO client      |
 | `api/`      | Express + TypeScript, Socket.IO server, Passport + Keycloak OIDC |
-| MySQL       | 21 tables, schema in `database-files/Pandployer.sql`             |
+| MySQL       | 18 tables, schema in `database-files/Pandployer.sql`             |
 | Keycloak    | Login. Moving to Khoury IT SSO                                   |
 
 Deployed via Coolify on a Khoury self-hosted runner. `.github/workflows/deploy.yml`
